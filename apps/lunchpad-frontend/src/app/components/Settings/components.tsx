@@ -35,12 +35,37 @@ export const Container = styled(({ children, ...rest}) => (
 
   display: flex;
   flex-direction: column;
+ 
+  
+  & > div {
+    padding: 1rem;
+  }
 
   & > div:nth-child(odd) {
     background-color ${COLOR_BLACK};
   }
 
   & > div:nth-child(even) {
+    
     flex-grow: 1;
+
+    div {
+      margin-bottom: .5rem;
+      display: flex;
+      flex-direction;
+      align-items: center;
+
+      div:nth-child(1) {
+        flex-basis: 25%;
+        padding-right: 1rem;
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      &:nth-child(2) {
+        flex-grow: 1;
+      }
+    }
+
   }
 `
