@@ -1,5 +1,5 @@
 import * as easymidi from 'easymidi';
-
+import os from 'os';
 import { EventEmitter } from 'events';
 
 // Hacking the system
@@ -12,6 +12,12 @@ easymidi.Output.prototype.send = function (type, args) {
     this._output.sendMessage(this.parseMessage(type, args));
   }
 };
+
+export interface OSRegex {
+  win32?: RegExp
+  linux?: RegExp
+  darwin?: RegExp
+}
 
 interface LaunchpadInterface { }
 
@@ -27,15 +33,15 @@ class Launchpad extends EventEmitter implements LaunchpadInterface {
   protected GetInputs = (): string[] => easymidi.getInputs();
   protected GetOutputs = () : string[] => easymidi.getOutputs();
 
-  public static InputMatcher = (): RegExp | Error => new Error("Not Implemented!");
-  public static OutputMatcher = (): RegExp | Error => new Error("Not Implemented!");
+  public static InputMatcher = (): OSRegex | Error => new Error("Not Implemented!");
+  public static OutputMatcher = (): OSRegex | Error => new Error("Not Implemented!");
   public static GetName = (): string => "";
 /*   public static ButtonToXY = (button: number): { x: number, y: number } => null;
   public static XYToButton = (x: number, y: number): number => null
  */
 
   public static IsConnected(): boolean {
-    const inputRegex: RegExp = this.InputMatcher() as RegExp;
+    const inputRegex: RegExp = this.InputMatcher()[os.platform()]  as RegExp;
     const rawInputs: string[] = easymidi.getInputs().filter(s => inputRegex.test(s));
 
     return rawInputs.length > 0;
@@ -44,12 +50,13 @@ class Launchpad extends EventEmitter implements LaunchpadInterface {
   public GetStatic = () => <typeof Launchpad>this.constructor;
   
   public Initialize() {
-    const inputRegex: RegExp = this.GetStatic().InputMatcher() as RegExp
-    const outputRegex: RegExp = this.GetStatic().OutputMatcher() as RegExp
+    console.log(os.platform())
+    const inputRegex: RegExp = this.GetStatic().InputMatcher()[os.platform()]  as RegExp;
+    const outputRegex: RegExp = this.GetStatic().OutputMatcher()[os.platform()]  as RegExp;
 
     const inputs: string[] = easymidi.getInputs().filter(i => inputRegex.test(i));
     const outputs: string[] = easymidi.getOutputs().filter(o => outputRegex.test(o));
-    
+    console.log(inputRegex, outputRegex)
     if (inputs.length > 0 && outputs.length > 0) {
       const input = inputs.pop();
       const output = outputs.pop();

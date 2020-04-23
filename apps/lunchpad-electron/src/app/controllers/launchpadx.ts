@@ -1,12 +1,20 @@
-import Launchpad from './launchpadbase';
+import Launchpad, { OSRegex } from './launchpadbase';
 import * as lodash from 'lodash';
 
 import { SYSEX_HEADER, SYSEX_COLOR } from '@lunchpad/types'
 class LaunchpadX extends Launchpad {
   private buttonsPressed: Map<number, any> = new Map();
 
-  public static InputMatcher = () => new RegExp("MIDIIN2 \\(LPX MIDI\\)");
-  public static OutputMatcher = () => new RegExp("^LPX MIDI");
+  public static InputMatcher = (): OSRegex => ({
+    win32: new RegExp("^MIDIIN2 \\(LPX MIDI\\)"),
+    darwin: new RegExp("Launchpad X LPX MIDI Out")
+  })
+
+  public static OutputMatcher = (): OSRegex => ({
+    win32: new RegExp("(^LPX MIDI)|()$"),
+    darwin: new RegExp("Launchpad X LPX MIDI In")
+  })
+
   public static GetName = () => "Launchpad X";
 
   /* public static ButtonToXY(button: number): { x: number, y: number } {

@@ -31,6 +31,9 @@ export default class MidiEvents {
   static boostrapMidiEvents() {
     /* MidiEvents.output = new Midi.output();
     MidiEvents.input = new Midi.input(); */
+    console.log("inputs", easymidi.getInputs());
+    console.log("outputs", easymidi.getOutputs());
+
     ipcMain.handle('ENUM_GET_INPUTS', async (event) => await easymidi.getInputs());
     ipcMain.handle('ENUM_GET_OUTPUTS', async (event) => await easymidi.getOutputs());
     

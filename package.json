@@ -62,7 +62,7 @@
     "@testing-library/react": "9.4.0",
     "@types/electron": "^1.6.10",
     "@types/jest": "25.1.4",
-    "@types/node": "^8.9.5",
+    "@types/node": "^8.10.60",
     "@types/react": "16.9.17",
     "@types/react-dom": "16.9.4",
     "@types/styled-components": "^5.0.1",
