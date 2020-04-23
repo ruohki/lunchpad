@@ -25,6 +25,12 @@
     "lunchpad-frontend-e2e": {
       "tags": [],
       "implicitDependencies": ["lunchpad-frontend"]
+    },
+    "lunchpad-electron": {
+      "tags": []
+    },
+    "types": {
+      "tags": []
     }
   }
 }
