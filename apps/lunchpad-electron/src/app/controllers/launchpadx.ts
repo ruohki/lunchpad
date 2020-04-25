@@ -1,7 +1,9 @@
 import Launchpad, { OSRegex } from './launchpadbase';
 import * as lodash from 'lodash';
 
-import { SYSEX_HEADER, SYSEX_COLOR } from '@lunchpad/types'
+export const SYSEX_HEADER = [ 0, 32, 41, 2, 12 ];
+export const SYSEX_COLOR = [...SYSEX_HEADER, 3];
+
 class LaunchpadX extends Launchpad {
   private buttonsPressed: Map<number, any> = new Map();
 

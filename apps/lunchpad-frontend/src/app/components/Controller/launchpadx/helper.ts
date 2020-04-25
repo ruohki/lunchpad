@@ -2,11 +2,7 @@ import range from 'lodash/range';
 
 import { ButtonConfiguration } from '@lunchpad/types';
 
-export const XYToButton = (x, y) => {
-  if (y < 8 ) {
-    return (y + 1) * 10 + x + 1
-  } else return 104 + x
-}
+export const XYToButton = (x, y) => (y + 1) * 10 + x + 1
 
 export const GetDefaultButtonState = () => {
   const stateMap = new Map<number, ButtonConfiguration>();
@@ -18,7 +14,7 @@ export const GetDefaultButtonState = () => {
     spec: [ 0,0,0 ]
   })));
   
-  //stateMap.delete(99);
+  stateMap.delete(99);
 
   return stateMap;
 }

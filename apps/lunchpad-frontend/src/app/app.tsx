@@ -29,7 +29,7 @@ const ProviderGarden = ({ children }) => (
     <ContextMenuProvider>
       <DndProvider backend={Backend}>
         <ControllerConfigurationProvider>
-          <Settings visible={true} />
+        <Settings visible={true} />
           {children}
         </ControllerConfigurationProvider>
       </DndProvider>

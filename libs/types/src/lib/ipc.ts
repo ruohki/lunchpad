@@ -1,5 +1,6 @@
 
 /* type LightingType = 'Static' | 'Flash' | 'Pulse' | 'RGB' */
+/* 
 
 export enum LightingType {
   Static = 0,
@@ -67,4 +68,4 @@ export class Colorspec implements BaseColorSpec {
       return [ this.type, this.button, color.r, color.g, color.b ]
     }
   }
-}
+} */

@@ -2,7 +2,7 @@
 /// <reference path="../../../../../../types/window.require.d.ts" />
 
 import React, { useState, useEffect } from 'react';
-import { ipcChannels as ipc, ControllerConfigurationStoreProps, ButtonConfiguration, Colorspec } from '@lunchpad/types';
+import { ipcChannels as ipc, ControllerConfigurationStoreProps, ButtonConfiguration } from '@lunchpad/types';
 
 import { GetDefaultButtonState } from '../Controller/launchpadmk2/helper';
 
@@ -97,21 +97,16 @@ const ControllerConfigurationProvider = ({ children }) => {
   }
 
   const activatePage = (name: string) => {
+    if (activePage === name) return false;
     if (!pages.has(name)) return false;
     setActivePage(name);
     const page = pages.get(name);
-    console.log(Array.from(page))
 
-    const specs: Colorspec[] = Array.from(page).map(([ id, conf ]): Colorspec => {
-      console.log(conf)
-      return new Colorspec({
-        button: id,
-        type: conf.spec.type,
-        color: conf.spec.color
-      })
+    const specs = Array.from(page).map(([ id, conf ]) => {
+      return [id, conf.spec]
     })
-    console.log(specs)
-    ipcRenderer.send(ipc.onSetColor, specs);
+    
+    ipcRenderer.send(ipc.onSetManyColors, specs);
     return true;
   }
 

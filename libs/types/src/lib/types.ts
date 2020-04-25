@@ -1,12 +1,9 @@
-import { Colorspec } from './ipc';
 
-export * from './ipc';
 export * from './ipcChannels';
+export * from './settingLabels';
 
-export const SYSEX_HEADER = [ 0, 32, 41, 2, 12 ];
-
-export const SYSEX_COLOR = [...SYSEX_HEADER, 3];
-
+/* export const SYSEX_HEADER = [ 0, 32, 41, 2, 12 ];
+export const SYSEX_COLOR = [...SYSEX_HEADER, 3]; */
 
 export type ButtonState = 'pressed' | 'released';
 
@@ -24,7 +21,7 @@ export interface ButtonConfiguration {
 
   state?: ButtonState
 
-  spec?: Colorspec
+  spec?: RGBColor
 }
 
 export interface ControllerConfigurationStoreProps {
@@ -41,3 +38,11 @@ export interface ControllerConfigurationStoreProps {
   activatePage?(name: string): boolean
   updateButton?(pageId: string, id: number, config: ButtonConfiguration): void
 }
+
+type ArrayLengthMutationKeys = 'splice' | 'push' | 'pop' | 'shift' | 'unshift' | number
+type ArrayItems<T extends Array<any>> = T extends Array<infer TItems> ? TItems : never
+type FixedLengthArray<T extends any[]> =
+  Pick<T, Exclude<keyof T, ArrayLengthMutationKeys>>
+  & { [Symbol.iterator]: () => IterableIterator< ArrayItems<T> > }
+
+export type RGBColor = FixedLengthArray<[number, number, number]>

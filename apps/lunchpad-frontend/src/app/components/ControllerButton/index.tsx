@@ -10,7 +10,6 @@ import { useNotification } from '../Message';
 import buttonMask from '../../../assets/buttonmask.png';
 import { Severity } from '../Message/components';
 import { store as controllerConfigurationContext } from '../Provider/controllerConfigurationStore';
-import { LightingType, Colorspec } from '@lunchpad/types';
 
 import { ipcChannels as ipc } from '@lunchpad/types';
 
@@ -58,7 +57,7 @@ const StyledControllerButton = styled.button<StyledButtonProps>`
   font-weight: 600;
 `;
 
-const ClipContainer = styled.div`
+const ClipContainer = styled.div<StyledButtonProps>`
   /* background-color: rgba(0,0,0, 0.8); */
   height: 100%;
   width: 100%;
@@ -69,6 +68,7 @@ const ClipContainer = styled.div`
     background-size: cover;
     background-image: url(${buttonMask});
     color: white;
+    border-radius: ${({ round }) => round ? "999px" : 0};
     background: rgba(0,0,0, 0.90);
     mix-blend-mode: multiply;
 
@@ -87,10 +87,11 @@ interface ButtonProps {
   clip?: boolean
   color?: string
   keyId: string | number,
+  
   onContextMenu: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, id: number) => void
 }
 
-const ControllerButton: SFC<ButtonProps> = ({ children, onContextMenu, keyId, clip = false, color = "#b1b1b1", ...rest }) => {
+const ControllerButton = ({ children, onContextMenu, keyId, clip = false, color = "#b1b1b1", ...rest }) => {
   const [ show, remove ] = useNotification();
   const [ showWithDelay ] = useNotification();
   
@@ -103,7 +104,7 @@ const ControllerButton: SFC<ButtonProps> = ({ children, onContextMenu, keyId, cl
 
   const [, drop] = useDrop({
     accept: [ NativeTypes.FILE ,"BUTTON"],
-    canDrop: (item, monitor) => {
+    canDrop: (item: any) => {
       if ('files' in item) return true;
       if (item.id !== keyId) return true;
       
@@ -121,7 +122,7 @@ const ControllerButton: SFC<ButtonProps> = ({ children, onContextMenu, keyId, cl
     hover: (item) => {
       //console.log(item)
     },
-    drop: (item) => {
+    drop: (item: any) => {
       if ('files' in item) {
         if (item.files.length > 1) {
           return showWithDelay(`Too many files, please just drop one audiofile on a button.`, 25000, Severity.error);
@@ -147,7 +148,7 @@ const ControllerButton: SFC<ButtonProps> = ({ children, onContextMenu, keyId, cl
   )
   return (
     <StyledButtonContainer color={color} ref={drop} {...rest}>
-      {clip ? <ClipContainer>{Button}</ClipContainer> : Button}
+      {clip ? <ClipContainer round={rest.round}>{Button}</ClipContainer> : Button}
     </StyledButtonContainer>
   )
 }

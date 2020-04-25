@@ -1,6 +1,7 @@
 import * as easymidi from 'easymidi';
-import os from 'os';
+import * as os from 'os';
 import { EventEmitter } from 'events';
+import { RGBColor } from '@lunchpad/types';
 
 // Hacking the system
 //@ts-ignore
@@ -26,6 +27,13 @@ declare interface Launchpad {
   on(event: 'released', listener: (button: number) => void): this;
 }
 
+
+type SetColorsArg = {
+  button: number,
+  color: RGBColor
+}
+
+
 class Launchpad extends EventEmitter implements LaunchpadInterface {
   protected MIDIInput: easymidi.Input;
   protected MIDIOutput: easymidi.Output;
@@ -36,9 +44,9 @@ class Launchpad extends EventEmitter implements LaunchpadInterface {
   public static InputMatcher = (): OSRegex | Error => new Error("Not Implemented!");
   public static OutputMatcher = (): OSRegex | Error => new Error("Not Implemented!");
   public static GetName = (): string => "";
-/*   public static ButtonToXY = (button: number): { x: number, y: number } => null;
+  
+  public static ButtonToXY = (button: number): { x: number, y: number } => null;
   public static XYToButton = (x: number, y: number): number => null
- */
 
   public static IsConnected(): boolean {
     const inputRegex: RegExp = this.InputMatcher()[os.platform()]  as RegExp;
@@ -50,13 +58,12 @@ class Launchpad extends EventEmitter implements LaunchpadInterface {
   public GetStatic = () => <typeof Launchpad>this.constructor;
   
   public Initialize() {
-    console.log(os.platform())
     const inputRegex: RegExp = this.GetStatic().InputMatcher()[os.platform()]  as RegExp;
     const outputRegex: RegExp = this.GetStatic().OutputMatcher()[os.platform()]  as RegExp;
 
     const inputs: string[] = easymidi.getInputs().filter(i => inputRegex.test(i));
     const outputs: string[] = easymidi.getOutputs().filter(o => outputRegex.test(o));
-    console.log(inputRegex, outputRegex)
+
     if (inputs.length > 0 && outputs.length > 0) {
       const input = inputs.pop();
       const output = outputs.pop();
@@ -67,10 +74,18 @@ class Launchpad extends EventEmitter implements LaunchpadInterface {
   }
 
   public Destroy() {
+    this.MIDIInput.removeAllListeners();
+
+    console.log(this)
     this.MIDIInput.close();
-    this.MIDIOutput.close();
+    this.MIDIOutput.close(); 
   }
 
+  public static GetAllButtons = (): number[] => []
+
+  public setColor(button: number, color: RGBColor): void {}
+  public setManyColors(args: Array<[number, RGBColor]>, clear: boolean = false): void {}
+  
   public send(type: 'noteon' , msg: easymidi.NoteOnOffMsg): void;
   public send(type: 'noteoff' , msg: easymidi.NoteOnOffMsg): void;
   public send(type: 'cc' , msg: easymidi.ContinuousControllerMsg): void;
@@ -81,7 +96,6 @@ class Launchpad extends EventEmitter implements LaunchpadInterface {
   public send(type: 'position' , msg: easymidi.PositionMsg): void;
   public send(type: 'select' , msg: easymidi.SelectMsg): void;
   public send(type: 'sysex' , msg: number[]): void;
-  public send(type: 'raw' , msg: number[]): void;
   public send(type: 'clock' | 'start' | 'continue' | 'stop'): void;
   public send(type: 'noteon' | 'noteoff' | 'cc' | 'poly aftertouch' | 'channel aftertouch' | 'program' | 'pitch' | 'position' | 'select' | 'sysex' | 'raw' | 'clock' | 'start' | 'continue' | 'stop', msg?): void {
     switch (type) {
@@ -107,4 +121,4 @@ class Launchpad extends EventEmitter implements LaunchpadInterface {
   public clear(): void {}
 }
 
-export default Launchpad;
+export default Launchpad; 

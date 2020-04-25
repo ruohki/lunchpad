@@ -7,6 +7,11 @@ export const ipcChannels = {
    
   onButtonPressed: "onButtonPressed",
   onButtonReleased: "onButtonReleased",
-  onButtonStateUpdate: "onButtonStateUpdate"
+  onButtonStateUpdate: "onButtonStateUpdate",
+
+  onSettingsGet: "onSettingsGet",
+  onSettingsSet: "onSettingsSet",
+  onSettingsWatch: "onSettingsWatch",
+  onSettingsUnwatch: "onSettingsUnwatch"
 }
 

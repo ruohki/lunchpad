@@ -1,7 +1,10 @@
 import Launchpad, { OSRegex } from './launchpadbase';
 import * as lodash from 'lodash';
+import { RGBColor } from '@lunchpad/types';
 
-import { SYSEX_HEADER, SYSEX_COLOR } from '@lunchpad/types'
+export const SYSEX_HEADER = [ 0, 32, 41, 2, 24 ];
+export const SYSEX_COLOR = [...SYSEX_HEADER, 11];
+
 class LaunchpadMK2 extends Launchpad {
   private buttonsPressed: Map<number, any> = new Map();
 
@@ -9,7 +12,7 @@ class LaunchpadMK2 extends Launchpad {
     win32: new RegExp("Launchpad MK2"),
     darwin: new RegExp("Launchpad MK2")
   })
-
+ 
   public static OutputMatcher = (): OSRegex => ({
     win32: new RegExp("Launchpad MK2"),
     darwin: new RegExp("Launchpad MK2")
@@ -17,27 +20,13 @@ class LaunchpadMK2 extends Launchpad {
 
   public static GetName = () => "Launchpad MK2";
 
-  /* public static ButtonToXY(button: number): { x: number, y: number } {
-    const base = button 
-    
-    const x = (base % 10) -1 
-    const y = ((base - (x + 1)) / 10) - 1
-    return { x, y }
-  }
-
-  public static XYToButton(x: number, y: number): number {
-    return (y + 1) * 10 + x + 1
-  } */
-
   public Initialize() {
     super.Initialize();
 
     this.buttonsPressed.clear();
 
-    this.send('sysex', [...SYSEX_HEADER, 14, 0 ]);
-    this.send('sysex', [...SYSEX_HEADER, 0, 127 ]);
-
     this.MIDIInput.on('noteon', (msg) => {
+      console.log("Noteon", msg)
       if (msg.velocity === 0) {
 
         if (!this.buttonsPressed.has(msg.note)) return;
@@ -65,6 +54,7 @@ class LaunchpadMK2 extends Launchpad {
     })
 
     this.MIDIInput.on('cc', (msg) => {
+      console.log("CC", msg)
       if (msg.value > 0) {
         this.emit('pressed', msg.controller);
       } else {
@@ -74,10 +64,35 @@ class LaunchpadMK2 extends Launchpad {
 
     this.clear();
   }
+  
+  public static GetAllButtons = (): number[] => [
+    ...lodash.flatten(lodash.range(0, 8).map(y => lodash.range(0,9).map(x => ((y+1) * 10) + 1 + x))),
+    ...lodash.range(104, 112).map(e => e)
+  ]
+
+  public setColor(button: number, color: RGBColor): void {
+    this.send('sysex', [...SYSEX_COLOR, button, ...color ])
+  } 
+
+  public setManyColors(args: Array<[number, RGBColor]>, clear: boolean = false): void {
+    if (clear) {
+      //Clears the board and sets the desired colors
+      const data = lodash.flatten(LaunchpadMK2.GetAllButtons().map(b => {
+        const el = lodash.find(args, a => a[0] === b);
+        return el ? [b, ...el[1]] : [b, 0, 0, 0]
+      }))
+      this.send('sysex', [...SYSEX_COLOR, ...data ])
+
+    } else {
+      // Sets the desired colors ontop existing ones (does not clear)
+      const data = lodash.flatten(args.map(([button, color]) => [button, ...color]));
+      this.send('sysex', [...SYSEX_COLOR, ...data ])
+    }
+  }
 
   public clear() {
-    const rest = lodash.flatten(lodash.range(11, 11+89).map(i => (i === 99 ? [2, 99, 45] : [0, i, 0])))
-    this.send('sysex', [ ...SYSEX_COLOR, ...rest ])
+    const data = lodash.flatten(LaunchpadMK2.GetAllButtons().map(b => [b, 0, 0, 0]))
+    this.send('sysex', [ ...SYSEX_COLOR, ...data ])
   }
 }
 

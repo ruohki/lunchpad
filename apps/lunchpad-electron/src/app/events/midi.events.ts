@@ -1,11 +1,13 @@
 import * as easymidi from 'easymidi';
 import * as lodash from 'lodash';
 
+import * as settings from 'electron-settings';
+
 import App from '../app';
 
 import { ipcMain  } from 'electron';
 
-import { ipcChannels as ipc, Colorspec, BaseColorSpec, SYSEX_COLOR } from '@lunchpad/types'
+import { ipcChannels as ipc, RGBColor, settingsLabels } from '@lunchpad/types'
 
 import LaunchpadBase from '../controllers/launchpadbase';
 import LaunchpadX from '../controllers/launchpadx';
@@ -23,9 +25,6 @@ const mapToObj = (map) => Array.from(map).reduce((obj, [key, value]) => {
 }, {});
 
 export default class MidiEvents {
-  private static input: any;
-  private static output: any;
-
   private static Launchpad: LaunchpadBase;
   
   static boostrapMidiEvents() {
@@ -69,37 +68,65 @@ export default class MidiEvents {
       }
     })  
  
-    ipcMain.on(ipc.onSetColor, async (event, spec: BaseColorSpec | BaseColorSpec[]) => {
+    ipcMain.on(ipc.onSetColor, async (event, button: number, color: RGBColor) => {
       if (!this.Launchpad || !!this.Launchpad && !this.Launchpad.GetStatic().IsConnected()) return;
-      if (Array.isArray(spec)) {
-        this.Launchpad.send('sysex', [...SYSEX_COLOR, ...lodash.flatten(spec.map(s => (new Colorspec(s)).toArray())) ])
-      } else {
-        this.Launchpad.send('sysex', [...SYSEX_COLOR, ...(new Colorspec(spec)).toArray() ])
-      }
-
+      this.Launchpad.setColor(button, color);
     })
 
-    this.registerLaunchpad();
+    ipcMain.on(ipc.onSetManyColors, async (event, args: Array<[number, RGBColor]>) => {
+      console.log(args)
+      if (!this.Launchpad || !!this.Launchpad && !this.Launchpad.GetStatic().IsConnected()) return;
+      this.Launchpad.setManyColors(args, true);
+    })
+
+    settings.watch('settings.device', (n,o) => {
+      console.log('received', n, o)
+      if (n !== o) {
+        if (this.Launchpad) this.Launchpad.Destroy();
+        this.registerLaunchpad(n);
+      }
+    });
+
+    const settingsDevice = settings.get('settings.device', null)
+    if (settingsDevice) {
+      this.registerLaunchpad(settingsDevice)
+    }
+
+    setInterval(() => {
+      if (this.Launchpad) {
+        if (!this.Launchpad.GetStatic().IsConnected()) {
+          this.Launchpad.Destroy();
+          this.Launchpad = null;
+          console.log("Launchpad disconnected")
+        }
+      } else {
+        const controller = settings.get(settingsLabels.controller, null);
+        if (controller) {
+          this.registerLaunchpad(controller);
+        }
+      }
+    }, 500)
   }
 
-  static registerLaunchpad() {
-    this.Launchpad = new LaunchpadMK2();
+  static registerLaunchpad(deviceName: string ) {
+    if (deviceName === LaunchpadMK2.GetName()) {
+      if (!LaunchpadMK2.IsConnected()) return;
+      this.Launchpad = new LaunchpadMK2();
+    } else if (deviceName === LaunchpadX.GetName()) {
+      if (!LaunchpadX.IsConnected()) return;
+      this.Launchpad = new LaunchpadX();
+    }
     
     const pressedButtons: Set<number> = new Set<number>();
-    let counter = 0;
+    
     this.Launchpad.on('pressed', btn => {
       pressedButtons.add(btn);
-      //lodash.range(11, 98).map(i => ([2, i, i, i, i]))
-      //this.Launchpad.send('sysex', [ 0, 32, 41, 2, 12, 3, 3, btn, 0, 0, counter ])
-      //const rest = lodash.flatten(lodash.range(11, 11+89).map(i => ([3, i, 20, 20, 20])))
-      //this.Launchpad.send('sysex', [  0, 32, 41, 2, 12, 3, ...rest ])
+ 
+      this.Launchpad.send('sysex', [  0, 32, 41, 2, 24, 11, btn, 0, 0, 63 ])
+
       App.mainWindow.webContents.send(ipc.onButtonStateUpdate, [...pressedButtons])
-       
-      /* const xy = LaunchpadX.ButtonToXY(btn)
-      console.log(LaunchpadX.XYToButton(xy.x, xy.y)); */
     })
     this.Launchpad.on('released', btn => {
-      //this.Launchpad.send('sysex', [ 0, 32, 41, 2, 12, 3, 3, btn, 0, 0, 0 ])
       pressedButtons.delete(btn);
       
       App.mainWindow.webContents.send(ipc.onButtonStateUpdate, [...pressedButtons])

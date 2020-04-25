@@ -1,10 +1,11 @@
 import { app, BrowserWindow } from 'electron';
-import settings from 'electron-settings';
+import * as settings from 'electron-settings';
 
 import SquirrelEvents from './app/events/squirrel.events';
 import ElectronEvents from './app/events/electron.events';
 import UpdateEvents from './app/events/update.events';
 import MidiEvents from './app/events/midi.events';
+import SettingsEvents from './app/events/settings.events';
 
 import App from './app/app';
 
@@ -27,6 +28,8 @@ export default class Main {
     static bootstrapAppEvents() {
         ElectronEvents.bootstrapElectronEvents();
         MidiEvents.boostrapMidiEvents();
+        SettingsEvents.boostrapSettingsEvents();
+        
         // initialize auto updater service
         if (!App.isDevelopmentMode()) {
             // UpdateEvents.initAutoUpdateService();

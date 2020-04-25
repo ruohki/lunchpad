@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { transparentize } from 'polished';
 
 import { motion } from 'framer-motion'
-import { COLOR_BLACK, COLOR_MENU } from '../gobalStyle';
+import { COLOR_BLACK, COLOR_MENU, COLOR_ALMOSTBLACK } from '../gobalStyle';
 
 export const Backdrop = styled(({ children, ...rest}) => (
   <motion.div {...rest}>{children}</motion.div>
@@ -68,4 +68,9 @@ export const Container = styled(({ children, ...rest}) => (
     }
 
   }
+`
+
+export const Divider = styled.hr`
+  margin: .5rem .5rem 1rem .5rem;
+  border: 1px solid ${COLOR_ALMOSTBLACK};
 `
