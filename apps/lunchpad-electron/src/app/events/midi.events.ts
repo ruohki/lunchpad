@@ -83,7 +83,7 @@ export default class MidiEvents {
   }
 
   static registerLaunchpad() {
-    this.Launchpad = new LaunchpadX();
+    this.Launchpad = new LaunchpadMK2();
     
     const pressedButtons: Set<number> = new Set<number>();
     let counter = 0;
