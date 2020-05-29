@@ -1,5 +1,6 @@
 {
   "files.associations": {
-    "BURFMAN.C": "cpp"
+    "BURFMAN.C": "cpp",
+    "R_BSP.C": "cpp"
   }
 }

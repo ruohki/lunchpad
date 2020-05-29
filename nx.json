@@ -19,17 +19,38 @@
     }
   },
   "projects": {
-    "lunchpad-frontend": {
+    "frontend": {
       "tags": []
     },
-    "lunchpad-frontend-e2e": {
+    "frontend-e2e": {
       "tags": [],
-      "implicitDependencies": ["lunchpad-frontend"]
+      "implicitDependencies": ["frontend"]
     },
-    "lunchpad-electron": {
+    "application": {
       "tags": []
     },
     "types": {
+      "tags": []
+    },
+    "base": {
+      "tags": []
+    },
+    "launchpadmk2": {
+      "tags": []
+    },
+    "launchpadx": {
+      "tags": []
+    },
+    "icons": {
+      "tags": []
+    },
+    "contexts": {
+      "tags": []
+    },
+    "hooks": {
+      "tags": []
+    },
+    "controller": {
       "tags": []
     }
   }

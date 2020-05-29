@@ -1,9 +1,9 @@
 {
   "version": 1,
   "projects": {
-    "lunchpad-frontend": {
-      "root": "apps/lunchpad-frontend",
-      "sourceRoot": "apps/lunchpad-frontend/src",
+    "frontend": {
+      "root": "apps/frontend",
+      "sourceRoot": "apps/frontend/src",
       "projectType": "application",
       "schematics": {},
       "architect": {
@@ -11,14 +11,14 @@
           "builder": "@nrwl/web:build",
           "options": {
             "baseHref": "/",
-            "outputPath": "dist/apps/lunchpad-frontend",
-            "index": "apps/lunchpad-frontend/src/index.html",
-            "main": "apps/lunchpad-frontend/src/main.tsx",
-            "polyfills": "apps/lunchpad-frontend/src/polyfills.ts",
-            "tsConfig": "apps/lunchpad-frontend/tsconfig.app.json",
+            "outputPath": "dist/apps/frontend",
+            "index": "apps/frontend/src/index.html",
+            "main": "apps/frontend/src/main.tsx",
+            "polyfills": "apps/frontend/src/polyfills.ts",
+            "tsConfig": "apps/frontend/tsconfig.app.json",
             "assets": [
-              "apps/lunchpad-frontend/src/favicon.ico",
-              "apps/lunchpad-frontend/src/assets"
+              "apps/frontend/src/favicon.ico",
+              "apps/frontend/src/assets"
             ],
             "styles": [],
             "scripts": [],
@@ -28,8 +28,8 @@
             "production": {
               "fileReplacements": [
                 {
-                  "replace": "apps/lunchpad-frontend/src/environments/environment.ts",
-                  "with": "apps/lunchpad-frontend/src/environments/environment.prod.ts"
+                  "replace": "apps/frontend/src/environments/environment.ts",
+                  "with": "apps/frontend/src/environments/environment.prod.ts"
                 }
               ],
               "optimization": true,
@@ -52,11 +52,11 @@
         "serve": {
           "builder": "@nrwl/web:dev-server",
           "options": {
-            "buildTarget": "lunchpad-frontend:build"
+            "buildTarget": "frontend:build"
           },
           "configurations": {
             "production": {
-              "buildTarget": "lunchpad-frontend:build:production"
+              "buildTarget": "frontend:build:production"
             }
           }
         },
@@ -64,39 +64,39 @@
           "builder": "@nrwl/linter:lint",
           "options": {
             "linter": "eslint",
-            "config": "apps/lunchpad-frontend/.eslintrc",
+            "config": "apps/frontend/.eslintrc",
             "tsConfig": [
-              "apps/lunchpad-frontend/tsconfig.app.json",
-              "apps/lunchpad-frontend/tsconfig.spec.json"
+              "apps/frontend/tsconfig.app.json",
+              "apps/frontend/tsconfig.spec.json"
             ],
-            "exclude": ["**/node_modules/**", "!apps/lunchpad-frontend/**"]
+            "exclude": ["**/node_modules/**", "!apps/frontend/**"]
           }
         },
         "test": {
           "builder": "@nrwl/jest:jest",
           "options": {
-            "jestConfig": "apps/lunchpad-frontend/jest.config.js",
-            "tsConfig": "apps/lunchpad-frontend/tsconfig.spec.json",
+            "jestConfig": "apps/frontend/jest.config.js",
+            "tsConfig": "apps/frontend/tsconfig.spec.json",
             "passWithNoTests": true
           }
         }
       }
     },
-    "lunchpad-frontend-e2e": {
-      "root": "apps/lunchpad-frontend-e2e",
-      "sourceRoot": "apps/lunchpad-frontend-e2e/src",
+    "frontend-e2e": {
+      "root": "apps/frontend-e2e",
+      "sourceRoot": "apps/frontend-e2e/src",
       "projectType": "application",
       "architect": {
         "e2e": {
           "builder": "@nrwl/cypress:cypress",
           "options": {
-            "cypressConfig": "apps/lunchpad-frontend-e2e/cypress.json",
-            "tsConfig": "apps/lunchpad-frontend-e2e/tsconfig.e2e.json",
-            "devServerTarget": "lunchpad-frontend:serve"
+            "cypressConfig": "apps/frontend-e2e/cypress.json",
+            "tsConfig": "apps/frontend-e2e/tsconfig.e2e.json",
+            "devServerTarget": "frontend:serve"
           },
           "configurations": {
             "production": {
-              "devServerTarget": "lunchpad-frontend:serve:production"
+              "devServerTarget": "frontend:serve:production"
             }
           }
         },
@@ -104,27 +104,27 @@
           "builder": "@nrwl/linter:lint",
           "options": {
             "linter": "eslint",
-            "config": "apps/lunchpad-frontend-e2e/.eslintrc",
-            "tsConfig": ["apps/lunchpad-frontend-e2e/tsconfig.e2e.json"],
-            "exclude": ["**/node_modules/**", "!apps/lunchpad-frontend-e2e/**"]
+            "config": "apps/frontend-e2e/.eslintrc",
+            "tsConfig": ["apps/frontend-e2e/tsconfig.e2e.json"],
+            "exclude": ["**/node_modules/**", "!apps/frontend-e2e/**"]
           }
         }
       }
     },
-    "lunchpad-electron": {
-      "root": "apps/lunchpad-electron",
-      "sourceRoot": "apps/lunchpad-electron/src",
+    "application": {
+      "root": "apps/application",
+      "sourceRoot": "apps/application/src",
       "projectType": "application",
-      "prefix": "lunchpad-electron",
+      "prefix": "application",
       "schematics": {},
       "architect": {
         "build": {
           "builder": "nx-electron:build",
           "options": {
-            "outputPath": "dist/apps/lunchpad-electron",
-            "main": "apps/lunchpad-electron/src/main.ts",
-            "tsConfig": "apps/lunchpad-electron/tsconfig.app.json",
-            "assets": ["apps/lunchpad-electron/src/assets"]
+            "outputPath": "dist/apps/application",
+            "main": "apps/application/src/main.ts",
+            "tsConfig": "apps/application/tsconfig.app.json",
+            "assets": ["apps/application/src/assets"]
           },
           "configurations": {
             "production": {
@@ -133,8 +133,8 @@
               "inspect": false,
               "fileReplacements": [
                 {
-                  "replace": "apps/lunchpad-electron/src/environments/environment.ts",
-                  "with": "apps/lunchpad-electron/src/environments/environment.prod.ts"
+                  "replace": "apps/application/src/environments/environment.ts",
+                  "with": "apps/application/src/environments/environment.prod.ts"
                 }
               ]
             }
@@ -143,22 +143,22 @@
         "serve": {
           "builder": "nx-electron:execute",
           "options": {
-            "buildTarget": "lunchpad-electron:build"
+            "buildTarget": "application:build"
           }
         },
         "package": {
           "builder": "nx-electron:package",
           "options": {
-            "name": "lunchpad-electron",
-            "frontendProject": "lunchpad-frontend",
+            "name": "application",
+            "frontendProject": "frontend",
             "out": "dist/packages"
           }
         },
         "make": {
           "builder": "nx-electron:make",
           "options": {
-            "name": "lunchpad-electron",
-            "frontendProject": "lunchpad-frontend",
+            "name": "application",
+            "frontendProject": "frontend",
             "out": "dist/executables"
           }
         },
@@ -166,19 +166,19 @@
           "builder": "@nrwl/linter:lint",
           "options": {
             "linter": "eslint",
-            "config": "apps/lunchpad-electron/.eslintrc",
+            "config": "apps/application/.eslintrc",
             "tsConfig": [
-              "apps/lunchpad-electron/tsconfig.app.json",
-              "apps/lunchpad-electron/tsconfig.spec.json"
+              "apps/application/tsconfig.app.json",
+              "apps/application/tsconfig.spec.json"
             ],
-            "exclude": ["**/node_modules/**", "!apps/lunchpad-electron/**"]
+            "exclude": ["**/node_modules/**", "!apps/application/**"]
           }
         },
         "test": {
           "builder": "@nrwl/jest:jest",
           "options": {
-            "jestConfig": "apps/lunchpad-electron/jest.config.js",
-            "tsConfig": "apps/lunchpad-electron/tsconfig.spec.json",
+            "jestConfig": "apps/application/jest.config.js",
+            "tsConfig": "apps/application/tsconfig.spec.json",
             "passWithNoTests": true
           }
         }
@@ -207,6 +207,202 @@
           "options": {
             "jestConfig": "libs/types/jest.config.js",
             "tsConfig": "libs/types/tsconfig.spec.json",
+            "passWithNoTests": true
+          }
+        }
+      }
+    },
+    "base": {
+      "root": "libs/base",
+      "sourceRoot": "libs/base/src",
+      "projectType": "library",
+      "schematics": {},
+      "architect": {
+        "lint": {
+          "builder": "@nrwl/linter:lint",
+          "options": {
+            "linter": "eslint",
+            "config": "libs/base/.eslintrc",
+            "tsConfig": [
+              "libs/base/tsconfig.lib.json",
+              "libs/base/tsconfig.spec.json"
+            ],
+            "exclude": ["**/node_modules/**", "!libs/base/**"]
+          }
+        },
+        "test": {
+          "builder": "@nrwl/jest:jest",
+          "options": {
+            "jestConfig": "libs/base/jest.config.js",
+            "tsConfig": "libs/base/tsconfig.spec.json",
+            "passWithNoTests": true
+          }
+        }
+      }
+    },
+    "launchpadmk2": {
+      "root": "libs/launchpadmk2",
+      "sourceRoot": "libs/launchpadmk2/src",
+      "projectType": "library",
+      "schematics": {},
+      "architect": {
+        "lint": {
+          "builder": "@nrwl/linter:lint",
+          "options": {
+            "linter": "eslint",
+            "config": "libs/launchpadmk2/.eslintrc",
+            "tsConfig": [
+              "libs/launchpadmk2/tsconfig.lib.json",
+              "libs/launchpadmk2/tsconfig.spec.json"
+            ],
+            "exclude": ["**/node_modules/**", "!libs/launchpadmk2/**"]
+          }
+        },
+        "test": {
+          "builder": "@nrwl/jest:jest",
+          "options": {
+            "jestConfig": "libs/launchpadmk2/jest.config.js",
+            "tsConfig": "libs/launchpadmk2/tsconfig.spec.json",
+            "passWithNoTests": true
+          }
+        }
+      }
+    },
+    "launchpadx": {
+      "root": "libs/launchpadx",
+      "sourceRoot": "libs/launchpadx/src",
+      "projectType": "library",
+      "schematics": {},
+      "architect": {
+        "lint": {
+          "builder": "@nrwl/linter:lint",
+          "options": {
+            "linter": "eslint",
+            "config": "libs/launchpadx/.eslintrc",
+            "tsConfig": [
+              "libs/launchpadx/tsconfig.lib.json",
+              "libs/launchpadx/tsconfig.spec.json"
+            ],
+            "exclude": ["**/node_modules/**", "!libs/launchpadx/**"]
+          }
+        },
+        "test": {
+          "builder": "@nrwl/jest:jest",
+          "options": {
+            "jestConfig": "libs/launchpadx/jest.config.js",
+            "tsConfig": "libs/launchpadx/tsconfig.spec.json",
+            "passWithNoTests": true
+          }
+        }
+      }
+    },
+    "icons": {
+      "root": "libs/icons",
+      "sourceRoot": "libs/icons/src",
+      "projectType": "library",
+      "schematics": {},
+      "architect": {
+        "lint": {
+          "builder": "@nrwl/linter:lint",
+          "options": {
+            "linter": "eslint",
+            "config": "libs/icons/.eslintrc",
+            "tsConfig": [
+              "libs/icons/tsconfig.lib.json",
+              "libs/icons/tsconfig.spec.json"
+            ],
+            "exclude": ["**/node_modules/**", "!libs/icons/**"]
+          }
+        },
+        "test": {
+          "builder": "@nrwl/jest:jest",
+          "options": {
+            "jestConfig": "libs/icons/jest.config.js",
+            "tsConfig": "libs/icons/tsconfig.spec.json",
+            "passWithNoTests": true
+          }
+        }
+      }
+    },
+    "contexts": {
+      "root": "libs/contexts",
+      "sourceRoot": "libs/contexts/src",
+      "projectType": "library",
+      "schematics": {},
+      "architect": {
+        "lint": {
+          "builder": "@nrwl/linter:lint",
+          "options": {
+            "linter": "eslint",
+            "config": "libs/contexts/.eslintrc",
+            "tsConfig": [
+              "libs/contexts/tsconfig.lib.json",
+              "libs/contexts/tsconfig.spec.json"
+            ],
+            "exclude": ["**/node_modules/**", "!libs/contexts/**"]
+          }
+        },
+        "test": {
+          "builder": "@nrwl/jest:jest",
+          "options": {
+            "jestConfig": "libs/contexts/jest.config.js",
+            "tsConfig": "libs/contexts/tsconfig.spec.json",
+            "passWithNoTests": true
+          }
+        }
+      }
+    },
+    "hooks": {
+      "root": "libs/hooks",
+      "sourceRoot": "libs/hooks/src",
+      "projectType": "library",
+      "schematics": {},
+      "architect": {
+        "lint": {
+          "builder": "@nrwl/linter:lint",
+          "options": {
+            "linter": "eslint",
+            "config": "libs/hooks/.eslintrc",
+            "tsConfig": [
+              "libs/hooks/tsconfig.lib.json",
+              "libs/hooks/tsconfig.spec.json"
+            ],
+            "exclude": ["**/node_modules/**", "!libs/hooks/**"]
+          }
+        },
+        "test": {
+          "builder": "@nrwl/jest:jest",
+          "options": {
+            "jestConfig": "libs/hooks/jest.config.js",
+            "tsConfig": "libs/hooks/tsconfig.spec.json",
+            "passWithNoTests": true
+          }
+        }
+      }
+    },
+    "controller": {
+      "root": "libs/controller",
+      "sourceRoot": "libs/controller/src",
+      "projectType": "library",
+      "schematics": {},
+      "architect": {
+        "lint": {
+          "builder": "@nrwl/linter:lint",
+          "options": {
+            "linter": "eslint",
+            "config": "libs/controller/.eslintrc",
+            "tsConfig": [
+              "libs/controller/tsconfig.lib.json",
+              "libs/controller/tsconfig.spec.json"
+            ],
+            "exclude": ["**/node_modules/**", "!libs/controller/**"]
+          }
+        },
+        "test": {
+          "builder": "@nrwl/jest:jest",
+          "options": {
+            "jestConfig": "libs/controller/jest.config.js",
+            "tsConfig": "libs/controller/tsconfig.spec.json",
             "passWithNoTests": true
           }
         }
@@ -278,5 +474,5 @@
       }
     }
   },
-  "defaultProject": "lunchpad-frontend"
+  "defaultProject": "frontend"
 }

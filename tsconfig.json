@@ -16,7 +16,14 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@lunchpad/types": ["libs/types/src/index.ts"]
+      "@lunchpad/types": ["libs/types/src/index.ts"],
+      "@lunchpad/base": ["libs/base/src/index.ts"],
+      "@lunchpad/launchpadmk2": ["libs/launchpadmk2/src/index.ts"],
+      "@lunchpad/launchpadx": ["libs/launchpadx/src/index.ts"],
+      "@lunchpad/icons": ["libs/icons/src/index.ts"],
+      "@lunchpad/contexts": ["libs/contexts/src/index.ts"],
+      "@lunchpad/hooks": ["libs/hooks/src/index.ts"],
+      "@lunchpad/controller": ["libs/controller/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
