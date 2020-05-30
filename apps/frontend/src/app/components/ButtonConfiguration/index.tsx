@@ -36,13 +36,13 @@ const ButtonConfigDialog: React.SFC<IButtonConfigDialog> = (props) => {
   
   const [ title, setTitle ] = React.useState<string>(props.button.title ?? '');
   
-  const [ color, setColor ] = React.useState<Color>({ r: button.color.r * 4, g: button.color.g * 4, b: button.color.b * 4 });
+  const [ color, setColor ] = React.useState<Color>({ r: button.color.r, g: button.color.g, b: button.color.b });
   const [ pillComponents, setPills ] = React.useState<JSX.Element[]>([])
 
   const [ actions, setActions ] = React.useState<Action[]>(button.pressed);
 
   const accept = () => {
-    const btn = new ControllerButton(title, button.x, button.y, {r: color.r / 4, g: color.g / 4, b: color.b / 4})
+    const btn = new ControllerButton(title, button.x, button.y, {r: color.r, g: color.g, b: color.b})
     btn.pressed = actions;
     onAccept(btn);
   }

@@ -7,6 +7,7 @@ import { settingsLabels as settings } from '@lunchpad/types'
 import { Split, Child, Select } from '@lunchpad/base';
 import { Divider, Row } from './components';
 
+import * as Devices from '@lunchpad/controller';
 
 import KeyCapture from '../KeyCapture';
 
@@ -18,18 +19,21 @@ export default () => {
   const [ mode, saveMode ] = useSettings(settings.mode, "software");
   const [ layout, saveLayout ] = useSettings(settings.software.layout, "small8");
   const [ controller, setController ] = useSettings(settings.controller, "");
+  const [ midiInput, setMidiInput ] = useSettings(settings.midiInput, "");
+  const [ midiOutput, setMidiOutput ] = useSettings(settings.midiOutput, "");
+  
   const [ output, saveOutput ] = useSettings(settings.soundOutput, "default");
   
   const [ ptt, savePtt ] = useSettings(settings.ptt.label, "off");
   const [ pttMouse, savePttMouse ] = useSettings(settings.ptt.mouse, "mouse4");
   const [ pttKeyboard, savePttKeyboard ] = useSettings(settings.ptt.keyboard, "[]");
   
-  React.useEffect(() => {
+/*   React.useEffect(() => {
     console.log(midiDevices, controller, mode)
     if (!controller && mode === "midi" && outputDevices.length > 0) {
       setController(midiDevices.inputs[0].name)
     }
-  }, [outputDevices, controller, mode])
+  }, [outputDevices, controller, mode]) */
   
   return (
     <Child grow>
@@ -39,23 +43,44 @@ export default () => {
           onChange={e => saveMode(e.target.value)}
         >
           <option value="software">Software Only</option>
-          <option value="midi">MIDI Device</option>
+          <option value="midi">Launchpad</option>
         </Select>
       </Row>
+      <Split padding="1rem 1rem 0 1rem">
+        <Child basis="0">
+          <Divider />
+        </Child>
+      </Split>
       {mode === "midi" && (
-        <Row title="MIDI Device">
-          <Select
-            value={controller}
-            onChange={e => setController(e.target.value)}
-            disabled={isEmpty(midiDevices)}
-          >
-            {isEmpty(midiDevices) ? (
-              <option>No compatible devices found</option>
-            ): (
-              midiDevices.inputs.map(d => <option key={d.id} value={d.name}>{d.name}</option>)
-            )}
-          </Select>
-        </Row>
+        <>
+          <Row title="Launchpad">
+            <Select
+              value={controller}
+              onChange={e => setController(e.target.value)}
+            >
+              {!controller && <option>Please select your Launchpad</option>}
+              {Object.keys(Devices).map(k => <option key={Devices[k].name} value={k}>{Devices[k].name}</option> )}
+            </Select>
+          </Row>
+          <Row title="MIDI Input">
+            <Select
+              value={midiInput}
+              onChange={e => setMidiInput(e.target.value)}
+            >
+              {!midiInput && <option>Please select the target midi Input</option>}
+              {midiDevices.inputs.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+            </Select>
+          </Row>
+          <Row title="MIDI Output">
+            <Select
+              value={midiOutput}
+              onChange={e => setMidiOutput(e.target.value)}
+            >
+              {!midiOutput && <option>Please select the target midi Output</option>}
+              {midiDevices.outputs.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+            </Select>
+          </Row>
+        </>
       )}
       {mode === "software" && (
         <Row title="Software Layout">
@@ -69,7 +94,11 @@ export default () => {
           </Select>
         </Row>
       )}
-
+      <Split padding="1rem 1rem 0 1rem">
+        <Child basis="0">
+          <Divider />
+        </Child>
+      </Split>
       <Row title="Sound Output">
         <Select
           value={output}

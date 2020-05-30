@@ -27,10 +27,10 @@ export const GetDefaultButtonState = () => {
 export const MakeButtonColor = ({ r, g, b}) => {
   let color = "#f1f1f1";
   
-  const luminance = (((0.2126*(r * 4)) + (0.7152*(g * 4)) + (0.0722* (b* 4))) / 255) || 0.1
-  color = `rgb(${clamp(r * 4, 255)},${clamp(g * 4, 255)}, ${clamp(b * 4, 255)})`
+  const luminance = (((0.2126*(r)) + (0.7152*(g)) + (0.0722* (b))) / 255) || 0.1
+  color = `rgb(${r},${g}, ${b})`
   if (luminance <= 0.1) {
-    color = lighten((1 / Math.sinh(luminance)) / 50, `rgb(${clamp(r * 4, 255)},${clamp(g * 4, 255)}, ${clamp(b * 4, 255)})`)
+    color = lighten((1 / Math.sinh(luminance)) / 50, `rgb(${r},${g}, ${b})`)
   }
 
   return color;

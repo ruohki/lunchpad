@@ -106,21 +106,17 @@ const buildColors = (output: Output, page: Page) => {
   const colors = flatten(Object.keys(page.buttons).map(x => {
     return Object.keys(page.buttons[x]).map(y => {
       const { r, g, b } = page.buttons[parseInt(x)][parseInt(y)].color;
-      return [XYToButton(parseInt(x),parseInt(y)), r, g, b]
+      // RGB / 4 for MK2
+      return [XYToButton(parseInt(x),parseInt(y)), Math.floor(r / 4), Math.floor(g / 4), Math.floor(b / 4)]
     })
   }))
   output.sendSysex(Vendor, [...Color, ...colors]);
 }
 
 export const LaunchpadMK2 = {
+  name: "Launchpad MK2",
   buildColors,
-  Name: "Launchpad MK2",
-  ColorFromRGB,
-  Vendor: [0x0, 0x20, 0x29],
-  Mode: [0x2, 0x18, 0x22, 0x0],
-  Color: [0x2, 0x18, 0x0B],
   XYToButton,
   ButtonToXY,
-
   Component,
 }

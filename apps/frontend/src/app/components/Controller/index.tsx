@@ -27,15 +27,16 @@ export default () => {
   // Repaint the Pad when the active layout changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(() => {
+    console.log(mode, controller, output)
     if (mode === "software") {
       setController("");
       return;
     }
+    
     if (output) {
-      
       if (!pad) {
-        const Launchpad: Devices.ILaunchpad = Object.keys(Devices).map(k => Devices[k]).filter(d => d.Name === controller).pop()
-        
+        const Launchpad: Devices.ILaunchpad = Devices[controller]
+        console.log(controller)
         if (Launchpad) {
           setPad(Launchpad)
           Launchpad.buildColors(output, activePage)
@@ -104,9 +105,9 @@ export default () => {
           x,
           y,
           {
-            r: Math.floor(Math.random() * 63),
-            g: Math.floor(Math.random() * 63),
-            b: Math.floor(Math.random() * 63),
+            r: Math.floor(Math.random() * 255),
+            g: Math.floor(Math.random() * 255),
+            b: Math.floor(Math.random() * 255),
           }
         ), x, y, activePage.id)
         onButtonPressed(e, Devices.LaunchpadMK2.XYToButton(x,y))

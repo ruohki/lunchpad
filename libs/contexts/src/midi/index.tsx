@@ -27,25 +27,24 @@ declare interface MidiEvents {
 class MidiEvents extends EventEmitter {}
 
 const MidiProvider = ({ children }) => {
-  //const { activePage, setButton } = useContext(Layout.Context);
-  const [ controller ] = useSettings(settingsLabels.controller, "");
+  const [ midiInput ] = useSettings(settingsLabels.midiInput, "");
+  const [ midiOutput ] = useSettings(settingsLabels.midiOutput, "");
+
   const [ emitter, setEmitter ] = React.useState(new MidiEvents());
   const [ input, setInput ] = useState<false | Input>();
   const [ output, setOutput ] = useState<false | Output>();
-console.log(input, output)
-  //const Launchpad = Object.keys(Devices).map(k => Devices[k]).filter(d => d.Name === controller).pop();
-  
+
   useEffect(() => {
     WebMidi.enable((err) => {
       if (err) return console.error(err);
-      setInput(WebMidi.getInputByName(controller));
-      setOutput(WebMidi.getOutputByName(controller))
+      setInput(WebMidi.getInputByName(midiInput));
+      setOutput(WebMidi.getOutputByName(midiOutput))
     }, true);
 
     return () => {
       WebMidi.disable();
     }
-  }, [ controller ])
+  }, [ midiInput, midiOutput ])
 
   useEffect(() => {
     if (!input) return;
@@ -53,30 +52,23 @@ console.log(input, output)
     const messageHandler = (event) => {
       const [ msg, note, value] = event.data;
       
-      //const [x,y] = Launchpad.ButtonToXY(note);
       if (msg === NOTE_OFF) {
         if (value === 0) {
           emitter.emit('ButtonReleased', note)
-          //buttonReleased(x, y, note);
         } else if ( value >= 25) {
           emitter.emit('ButtonPressed', note, false)
-          //buttonPressed(x, y, note);
         }
       } else if (msg === CONTROL_CHANGE) {
         if (value) {
           emitter.emit('ButtonPressed', note, false)
-          //buttonPressed(x, y, note);
         } else {
           emitter.emit('ButtonReleased', note)
-          //buttonReleased(x, y, note);
         }
       } else if (msg === POLY_AFTERTOUCH) {
         if (value > 50) {
           emitter.emit('ButtonPressed', note, false)
-          //buttonPressed(x, y, note);
         } else if (value === 0) {
           emitter.emit('ButtonReleased', note)
-          //buttonReleased(x, y, note);
         }
       }
     }
@@ -88,23 +80,6 @@ console.log(input, output)
     }
 
   }, [ input, output, emitter /* setButton */, /* activePage */ ])
-
-  useEffect(() => {
-    if(!output) return;
-    //const Launchpad = Object.keys(Devices).map(k => Devices[k]).filter(d => d.Name === "Launchpad MK2").pop();
-    // If there is a Mode switch switch it first
-    //if (Launchpad.Mode) output.sendSysex([...Launchpad.Vendor], [...Launchpad.Mode]);
-
-    // build colors
-    /* const colors = flatten(Object.keys(activePage.buttons).map(x => {
-      return Object.keys(activePage.buttons[x]).map(y => {
-        const { r, g, b } = activePage.buttons[parseInt(x)][parseInt(y)].color;
-        return [Launchpad.XYToButton(parseInt(x),parseInt(y)), r, g, b]
-      })
-    })) */
-    //send one sysex to change the board
-    //output.sendSysex([...Launchpad.Vendor], [...Launchpad.Color, ...colors]);
-  }) //, [ output, activePage])
   
   const onButtonPressed = (event, note) => {
     // Clicks wont get looped sounds etc
@@ -126,7 +101,6 @@ console.log(input, output)
 export const MidiContext = {
   Provider: MidiProvider,
   Context: midiContext,
-  //useModal
 }
 
 

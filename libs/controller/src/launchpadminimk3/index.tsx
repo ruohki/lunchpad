@@ -49,7 +49,7 @@ const RightRow = [
 ]
 
 const Vendor = [0x0, 0x20, 0x29];
-const Mode = [0x2, 0x0D, 0x0, 0x7F] //, []];
+const Mode = [0x2, 0xD, 0x0, 0x7F];
 const Color = [0x2, 0xD, 0x3];
 
 const Component: React.SFC<LaunchpadProps> = ({ onButtonPressed, onContextMenu, onSettingsButtonClick, activePage }) => {
@@ -96,13 +96,10 @@ const Component: React.SFC<LaunchpadProps> = ({ onButtonPressed, onContextMenu, 
   )
 }
 
-// conversion from full rgb to MiniMK3 rgb = / 2 | max 127
-const ColorFromRGB = (color: {[key: string]: number}): [number, number, number] => [color.r / 2, color.g / 2, color.b / 2]
-
 const buildColors = (output: Output, page: Page) => {
   if (!output) return;
   // Switch to programmers mode
-  output.sendSysex(Vendor, [0x2, 0xD, 0x0, 0x7F]);
+  output.sendSysex(Vendor, Mode);
 
   // Clear Pad
   const clear = _.flatten(_.range(11, 11+89).map(i => (i === 99 ? [2, 99, 45] : [0, i, 0])))
@@ -112,7 +109,8 @@ const buildColors = (output: Output, page: Page) => {
   const colors = _.flattenDeep(Object.keys(page.buttons).map(x => {
     return Object.keys(page.buttons[x]).map(y => {
       const { r, g, b } = page.buttons[parseInt(x)][parseInt(y)].color;
-      return [3, XYToButton(parseInt(x),parseInt(y)), r, g, b]
+      // conversion from full rgb to MiniMK3 rgb = / 2 | max 127
+      return [3, XYToButton(parseInt(x),parseInt(y)), Math.floor(r / 2), Math.floor(g / 2), Math.floor(b / 2)]
     })
   }))
 
@@ -121,7 +119,7 @@ const buildColors = (output: Output, page: Page) => {
 }
 
 export const LaunchpadMiniMK3 = {
-  Name: "MIDIIN2 (LPMiniMK3 MIDI)",
+  name: "Launchpad Mini MK3",
   buildColors,
   XYToButton,
   ButtonToXY,

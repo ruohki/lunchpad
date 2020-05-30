@@ -4,7 +4,7 @@ import set from 'lodash/setWith';
 import { v4 as uuid } from 'uuid';
 
 
-import { Page, Button } from '@lunchpad/types';
+import { Page, Button, settingsLabels } from '@lunchpad/types';
 
 
 export interface ILayoutContext {
@@ -32,7 +32,7 @@ const defaultPage = {
 }
 
 const LayoutProvider = ({ children }) => {
-  const configLayout = new Map<string, Page>(localStorage.getItem("layout") ? JSON.parse(localStorage.getItem("layout")): [[ "default", defaultPage ]]);
+  const configLayout = new Map<string, Page>(localStorage.getItem(settingsLabels.layout) ? JSON.parse(localStorage.getItem(settingsLabels.layout)): [[ "default", defaultPage ]]);
   const [ layout, _setLayout ] = React.useState<Map<string, Page>>(new Map<string, Page>(configLayout))
   const [ activePage, _setActivePage ] = React.useState<Page>(layout.get("default"));
 

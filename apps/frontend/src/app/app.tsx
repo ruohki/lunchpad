@@ -14,24 +14,27 @@ import { useSettings, useEssentialCSSVariable } from '@lunchpad/hooks';
 import { settingsLabels as settings } from '@lunchpad/types';
 
 import Controller from './components/Controller';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const ProviderGarden = ({ children }) => {
   const [output] = useSettings(settings.soundOutput, 'default');
 
   return (
-    <AudioContext.Provider sinkId={output}>
-      <LayoutContext.Provider>
-        <MidiContext.Provider>
-          <NotificationContext.Provider>
+    <NotificationContext.Provider>
+      <ErrorBoundary>
+        <AudioContext.Provider sinkId={output}>
+          <LayoutContext.Provider>
+            <MidiContext.Provider>
               <MenuContext.Provider>
                 <ModalContext.Provider>
                   <DndProvider backend={Backend}>{children}</DndProvider>
                 </ModalContext.Provider>
               </MenuContext.Provider>
-          </NotificationContext.Provider>
-        </MidiContext.Provider>
-      </LayoutContext.Provider>
-    </AudioContext.Provider>
+            </MidiContext.Provider>
+          </LayoutContext.Provider>
+        </AudioContext.Provider>
+      </ErrorBoundary>
+    </NotificationContext.Provider>
   );
 };
 
