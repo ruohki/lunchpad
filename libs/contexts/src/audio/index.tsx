@@ -1,13 +1,8 @@
 import * as React from 'react';
 import AudioManager from './audiomanager';
 import useMediaDevices from './useMediaDevices';
+import { IMediaDevice } from '@lunchpad/types';
 
-interface IMediaDevice {
-  deviceId: string
-  groupId: string
-  label: string
-  kind: "audioinput" | "audiooutput"
-}
 
 export interface IAudioContext {
   loadFile(filename: string, loop: boolean, context: boolean): Promise<string>

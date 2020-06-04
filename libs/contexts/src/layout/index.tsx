@@ -5,6 +5,7 @@ import { v4 as uuid } from 'uuid';
 
 
 import { Page, Button, settingsLabels } from '@lunchpad/types';
+import { useSettings } from '@lunchpad/hooks';
 
 
 export interface ILayoutContext {
@@ -32,15 +33,16 @@ const defaultPage = {
 }
 
 const LayoutProvider = ({ children }) => {
-  const configLayout = new Map<string, Page>(localStorage.getItem(settingsLabels.layout) ? JSON.parse(localStorage.getItem(settingsLabels.layout)): [[ "default", defaultPage ]]);
+  const configLayout = new Map<string, Page>(localStorage.getItem(settingsLabels.layout.config) ? JSON.parse(localStorage.getItem(settingsLabels.layout.config)): [[ "default", defaultPage ]]);
   const [ layout, _setLayout ] = React.useState<Map<string, Page>>(new Map<string, Page>(configLayout))
-  const [ activePage, _setActivePage ] = React.useState<Page>(layout.get("default"));
-
+  const [ activePageID, setActivePageID ] = useSettings(settingsLabels.layout.active, "default")
+  const [ activePage, _setActivePage ] = React.useState<Page>(layout.get(activePageID));
 
   const updateLayout = (l) => {
-    localStorage.setItem("layout", JSON.stringify(Array.from(layout.entries())))
+    localStorage.setItem(settingsLabels.layout.config, JSON.stringify(Array.from(layout.entries())))
     _setLayout(new Map(l));
   }
+  
   const setLayout = (key: string, page: Page) => {
     layout.set(key, page);
     updateLayout(new Map(layout));
@@ -48,6 +50,7 @@ const LayoutProvider = ({ children }) => {
 
   const setActivePage = (id: string) => {
     if (!layout.has(id)) return;
+    setActivePageID(id);
     _setActivePage(layout.get(id));
   }
   
@@ -100,6 +103,11 @@ const LayoutProvider = ({ children }) => {
     if (pageId === activePage.id) _setActivePage(page);
   }
 
+  React.useEffect(() => {
+    const oldPageID = activePage.id;
+    if (activePageID !== activePage.id) setActivePage(activePageID)
+    else if (!layout.has(activePageID)) setActivePageID(activePage.id)
+  }, [ activePageID ])
  /*  const swapButtons = (xA: number, yA: number, pageIdA: string, xB: number, yB: number, pageIdB: string) => {
     if (!layout.has(pageNameA) || !layout.has(pageNameB)) return;
     if (!layout.get(pageNameA)[xA][yA] && !layout.get(pageNameB)[xB][yB]) return;

@@ -67,7 +67,7 @@ export default class App {
         webSecurity: false,
         nodeIntegration: true,
         backgroundThrottling: false,
-        nodeIntegrationInWorker: true
+        nodeIntegrationInWorker: true,
       },
       minHeight: 756,
       minWidth: 756,

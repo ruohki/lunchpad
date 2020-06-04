@@ -1,16 +1,9 @@
 import React from 'react';
 
-import { IconVolumeUp, IconMute, IconTerminal, IconGloba, IconKeyboard } from '@lunchpad/icons';
+import { IconVolumeUp, IconMap, IconTerminal, IconKeyboard, IconStopwatch, IconTrafficLightStop, IconComment } from '@lunchpad/icons';
 
-import { MenuParent, MenuItem, MenuDivider, VolumeParent } from './components'
+import { MenuParent, MenuItem } from '@lunchpad/base'
 import { ActionType } from '@lunchpad/types';
-
-interface IMenu {
-  x: number
-  y: number
-  onSelect: (x: number, y: number, key: string, value: string | number | object | undefined) => void
-  onClose: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void
-}
 
 export default ({ onSelect, onClose }) => {
   return (
@@ -21,11 +14,15 @@ export default ({ onSelect, onClose }) => {
         onClose(e)
       }}
     >
+      <MenuItem id={ActionType.Delay}><IconStopwatch />Delay</MenuItem>
       <MenuItem id={ActionType.PlaySound}><IconVolumeUp />Play a sound</MenuItem>
-      <MenuItem id={ActionType.StopAllSounds}><IconMute />Stop all sounds</MenuItem>
-      <MenuItem id={ActionType.LaunchApplication}><IconTerminal />Launch a shell command</MenuItem>
-      <MenuItem id={ActionType.PerformWebrequest}><IconGloba />Perform a webrequest</MenuItem>
-      <MenuItem id={ActionType.PressAHotkey}><IconKeyboard />Press a hotkey</MenuItem>
+      <MenuItem id={ActionType.SwitchPage}><IconMap />Switch active page</MenuItem>
+      {/* <MenuItem id={ActionType.StopAllSounds}><IconMute />Stop all sounds</MenuItem> */}
+      <MenuItem id={ActionType.TextToSpeech}><IconComment />Text-to-speech</MenuItem>
+      <MenuItem id={ActionType.LaunchApplication}><IconTerminal />Launch application</MenuItem>
+      {/* <MenuItem id={ActionType.PerformWebrequest}><IconGloba />Perform a webrequest</MenuItem> */}
+      <MenuItem id={ActionType.PressAHotkey}><IconKeyboard />Hotkey sequence</MenuItem>
+      <MenuItem id={ActionType.StopAllMacros}><IconTrafficLightStop />Stop all macros</MenuItem>
     </MenuParent>
   )
 }

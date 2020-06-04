@@ -1,5 +1,5 @@
 import React, { useContext } from 'react'
-import * as _ from 'lodash';
+import * as lodash from 'lodash';
 
 import ButtonContextMenu from '../ContextMenu/button';
 import {MenuContext, MidiContext,LayoutContext, AudioContext, useModal } from '@lunchpad/contexts';
@@ -10,60 +10,33 @@ import Settings from '../Settings';
 import ConfigDialog from '../ButtonConfiguration';
 
 import * as Devices from '@lunchpad/controller';
+import { IPad } from '@lunchpad/controller';
 
 export default () => {
-  const [ mode ] = useSettings(settingsLabels.mode, "software");
-  const [ controller, setController ] = useSettings(settingsLabels.controller, "4x4");
+  const [ mode ] = useSettings(settingsLabels.mode, "Software");
+  const [ controller, setController ] = useSettings(settingsLabels.controller, "Software6x6");
 
-  const [ pad, setPad ] = React.useState<Devices.ILaunchpad | false>(false);
-  const { onButtonPressed, output, emitter } = React.useContext(MidiContext.Context);
+  const [ pad, setPad ] = React.useState<IPad>();
+  const { onButtonPressed, output } = React.useContext(MidiContext.Context);
   const { setButton, clearButton, activePage } = React.useContext(LayoutContext.Context);
 
   const [ openSettings, closeSettings ] = useModal();
   const { showContextMenu, closeMenu } = useContext(MenuContext.Context);
   const [ showConfigDialog, closeConfigDialog ] = useModal();
   
-  
+  const Component = pad?.Component
   // Repaint the Pad when the active layout changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(() => {
-    console.log(mode, controller, output)
-    if (mode === "software") {
-      setController("");
-      return;
+    const Launchpad = Devices[controller as string] as IPad
+    if (Launchpad) {
+      setPad(Launchpad)
     }
-    
-    if (output) {
-      if (!pad) {
-        const Launchpad: Devices.ILaunchpad = Devices[controller]
-        console.log(controller)
-        if (Launchpad) {
-          setPad(Launchpad)
-          Launchpad.buildColors(output, activePage)
-        }
-      } else {
-        pad.buildColors(output, activePage)
-      }
-    }
-  })
+  }, [ controller ])
 
   React.useEffect(() => {
-    const pressed = (note, sw) => {
-      console.log(note)
-    }
-    
-    const released = (note) => {
-      console.log(note)
-    }
-    
-    emitter.on('ButtonPressed', pressed)
-    emitter.on('ButtonReleased', released)
-
-    return () => {
-      emitter.removeListener('ButtonPressed', pressed)
-      emitter.removeListener('ButtonReleased', released)
-    }
-  }, [ emitter ])
+    if (output) pad.buildColors(output, activePage);
+  })
 
   const handleContextMenu = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, id: number) => {
     showContextMenu(e.clientX, e.clientY, (
@@ -73,7 +46,7 @@ export default () => {
             clearButton(x, y, activePage.id);
           } else if (key === "editButton") {
             const pageId = activePage.id
-            const button = activePage.buttons[x][y] ?? new Button("",x,y)
+            const button = lodash.get(activePage, `buttons.${x}.${y}`, new Button("",x,y));
             showConfigDialog(
               <ConfigDialog
                 button={button}
@@ -81,8 +54,8 @@ export default () => {
                 onAccept={(button) => {
                   console.log(button)
                   setButton(button, button.x, button.y, pageId)
-                  closeConfigDialog()}
-                }
+                  closeConfigDialog()
+                }}
               />
             )
           }
@@ -94,13 +67,11 @@ export default () => {
     ))
   }
 
-  return (
-    <Devices.LaunchpadMiniMK3.Component
+  return Component ? (
+    <Component
       activePage={activePage}
-
       onButtonPressed={(e, x, y) => {
-        
-        setButton(new Button(
+        /* setButton(new Button(
           "Test",
           x,
           y,
@@ -109,11 +80,13 @@ export default () => {
             g: Math.floor(Math.random() * 255),
             b: Math.floor(Math.random() * 255),
           }
-        ), x, y, activePage.id)
-        onButtonPressed(e, Devices.LaunchpadMK2.XYToButton(x,y))
+        ), x, y, activePage.id) */
+        onButtonPressed(e, pad.XYToButton(x,y))
       }}
       onSettingsButtonClick={() => openSettings(<Settings onClose={() => closeSettings()} />)}
       onContextMenu={handleContextMenu}
     />
-  );
+  ) : (
+    <div />
+  )
 }

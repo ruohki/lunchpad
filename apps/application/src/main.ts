@@ -18,7 +18,7 @@ global.settings = settings;
 //@ts-ignore
 global.robot = robot;
 
-settings
+
 
 export default class Main {
 

@@ -40,6 +40,7 @@
     "framer-motion": "^1.10.3",
     "keyboardjs": "^2.5.1",
     "lodash": "^4.17.15",
+    "logrocket": "^1.0.7",
     "midi": "^1.0.0",
     "naudiodon": "^2.2.1",
     "polished": "^3.5.2",

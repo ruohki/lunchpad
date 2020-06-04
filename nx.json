@@ -22,10 +22,6 @@
     "frontend": {
       "tags": []
     },
-    "frontend-e2e": {
-      "tags": [],
-      "implicitDependencies": ["frontend"]
-    },
     "application": {
       "tags": []
     },
@@ -33,12 +29,6 @@
       "tags": []
     },
     "base": {
-      "tags": []
-    },
-    "launchpadmk2": {
-      "tags": []
-    },
-    "launchpadx": {
       "tags": []
     },
     "icons": {
@@ -51,6 +41,9 @@
       "tags": []
     },
     "controller": {
+      "tags": []
+    },
+    "macro": {
       "tags": []
     }
   }

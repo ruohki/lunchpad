@@ -9,17 +9,11 @@ import flatten from 'lodash/flattenDeep';
 import { LaunchpadButton, Tooltip } from '@lunchpad/base'
 import { IconCaretRight, IconCaretUpSolid, IconCaretDownSolid, IconCaretLeftSolid, IconCaretRightSolid } from '@lunchpad/icons';
 import { LayoutContext, MidiContext } from '@lunchpad/contexts'
-import { Page } from '@lunchpad/types'
+import { Page, ControllerType } from '@lunchpad/types'
 
 import { Container } from './components';
 import { XYToButton, ButtonToXY, MakeButtonColor } from './helper'
-
-interface LaunchpadProps {
-  activePage: Page
-  onButtonPressed: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number) => void
-  onContextMenu: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number) => void
-  onSettingsButtonClick: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void
-}
+import { IPadProps } from '..';
 
 const EmptyButton = (x, y) => ({
   title: "",
@@ -54,7 +48,7 @@ const Vendor = [0x0, 0x20, 0x29];
 const Mode = [0x2, 0x18, 0x22, 0x0];
 const Color = [0x2, 0x18, 0x0B];
 
-const Component: React.SFC<LaunchpadProps> = ({ onButtonPressed, onContextMenu, onSettingsButtonClick, activePage }) => {
+const Component: React.SFC<IPadProps> = ({ onButtonPressed, onContextMenu, onSettingsButtonClick, activePage }) => {
   
   return (
     <Container>
@@ -115,6 +109,7 @@ const buildColors = (output: Output, page: Page) => {
 
 export const LaunchpadMK2 = {
   name: "Launchpad MK2",
+  type: ControllerType.Launchpad,
   buildColors,
   XYToButton,
   ButtonToXY,

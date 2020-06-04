@@ -1,17 +1,24 @@
-import { Page } from '@lunchpad/types';
+import { Page, ControllerType } from '@lunchpad/types';
 import { Output } from 'webmidi';
 
 export * from './launchpadminimk3';
 export * from './launchpadmk2';
 
-export interface ILaunchpad {
+export * from './software6x6';
+
+export interface IPadProps {
+  activePage: Page
+  onButtonPressed: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number) => void
+  onContextMenu: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number) => void
+  onSettingsButtonClick: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void
+}
+
+export interface IPad {
   buildColors: (output: Output, page: Page) => void
-  Name: string
+  name: string
+  type: ControllerType
   ColorFromRGB: (color: {[key: string]: number}) => [number, number, number]
-  Vendor: number[]
-  Mode: number[]
-  Color: number[]
   XYToButton: (x: number, y: number) => number
   ButtonToXY: (button: number) => [number, number]
-  Component: JSX.Element
+  Component: React.SFC<IPadProps>
 };

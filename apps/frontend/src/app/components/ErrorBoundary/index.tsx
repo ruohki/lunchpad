@@ -29,7 +29,7 @@ export class ErrorBoundary extends React.Component<{}, IErrorBoundary> {
 
   copyConfiguration() {
     const { addNotification } = this.context
-    const config = localStorage.getItem(settingsLabels.layout);
+    const config = localStorage.getItem(settingsLabels.layout.config);
     remote.clipboard.writeText(config);
     addNotification("Your current configuration has been copied to your clipboard.", 2500)
   }

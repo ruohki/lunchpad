@@ -28,7 +28,14 @@ import {
   faVolumeMute,
   faKeyboard,
   faTerminal,
-  faGlobe
+  faGlobe,
+  faStopwatch,
+  faMap,
+  faTrafficLightStop,
+  faComment,
+  faSortAlt,
+  faLongArrowAltUp,
+  faLongArrowAltDown
 } from '@fortawesome/pro-light-svg-icons';
 
 
@@ -44,6 +51,7 @@ export const IconCaretDownSolid = () => <Icon icon={faCaretDown} />
 export const IconCaretLeftSolid = () => <Icon icon={faCaretLeft} />
 export const IconCaretRightSolid = () => <Icon icon={faCaretRightSolid} />
 
+export const IconMap = () => <Icon icon={faMap} />
 export const IconVolumeUp = () => <Icon icon={faVolumeUp} />
 export const IconMute = () => <Icon icon={faVolumeMute} />
 export const IconKeyboard = () => <Icon icon={faKeyboard} />
@@ -55,6 +63,8 @@ export const IconMinus = () => <Icon icon={faMinus} />
 
 export const IconPlay = () => <Icon icon={faPlay} />
 export const IconStop = () => <Icon icon={faStop} />
+export const IconTrafficLightStop = () => <Icon icon={faTrafficLightStop} />
+export const IconComment = () => <Icon icon={faComment} />
 
 export const IconCheck = () => <Icon icon={faCheck} />
 export const IconTimes = () => <Icon icon={faTimes} />
@@ -62,6 +72,10 @@ export const IconTimes = () => <Icon icon={faTimes} />
 export const IconUp = () => <Icon icon={faArrowUp} />
 export const IconDown = () => <Icon icon={faArrowDown} />
 
+export const IconSortAlt = () => <Icon icon={faSortAlt} />
+export const IconLongArrowAltDown = () => <Icon icon={faLongArrowAltDown} />
+export const IconLongArrowAltUp = () => <Icon icon={faLongArrowAltUp} />
+export const IconStopwatch = () => <Icon icon={faStopwatch} />
 export const IconCaretRight = () => <Icon icon={faCaretRight} />
 export const IconVolume = () => <Icon icon={faVolume} />
 export const IconEdit = () => <Icon icon={faEdit} />

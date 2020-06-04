@@ -9,10 +9,12 @@ interface IButtonProps {
   color?: string;
   padding?: string;
   height?: string;
+  width?: string;
 }
 
 export const Button = styled.button<IButtonProps>`
   height: ${props => props.height};
+  width: ${props => props.width};
   white-space: nowrap;
   appearance: none;
   display: block;
@@ -44,7 +46,8 @@ export const Button = styled.button<IButtonProps>`
 Button.defaultProps = {
   color: COLOR_BLURPLE,
   padding: "4px 50px 8px 50px",
-  height: "35px"
+  height: "35px",
+  width: "auto"
 }
 
 interface IIconButton {

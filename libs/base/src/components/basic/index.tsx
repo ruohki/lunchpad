@@ -7,3 +7,6 @@ export * from './scrollbox'
 export * from './scalebox'
 export * from './file'
 export * from './slider'
+export * from './switch'
+
+export * from './contextmenu'

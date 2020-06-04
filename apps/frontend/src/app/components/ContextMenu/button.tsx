@@ -2,7 +2,7 @@ import React from 'react';
 
 import { IconEdit, IconCopy, IconPaste, IconCut } from '@lunchpad/icons';
 
-import { MenuParent, MenuItem, MenuDivider, VolumeParent } from './components'
+import { MenuParent, MenuItem, MenuDivider } from '@lunchpad/base'
 
 interface IMenu {
   x: number

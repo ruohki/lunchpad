@@ -7,17 +7,11 @@ import * as _ from 'lodash'
 import { LaunchpadButton } from '@lunchpad/base'
 import { IconChevronRight, IconCaretUpSolid, IconCaretDownSolid, IconCaretLeftSolid, IconCaretRightSolid } from '@lunchpad/icons';
 
-import { Page } from '@lunchpad/types'
+import { Page, ControllerType } from '@lunchpad/types'
 
 import { Container } from './components';
 import { XYToButton, ButtonToXY, MakeButtonColor } from './helper'
-
-interface LaunchpadProps {
-  activePage: Page
-  onButtonPressed: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number) => void
-  onContextMenu: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number) => void
-  onSettingsButtonClick: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void
-}
+import { IPadProps } from '..';
 
 const EmptyButton = (x, y) => ({
   title: "",
@@ -52,7 +46,7 @@ const Vendor = [0x0, 0x20, 0x29];
 const Mode = [0x2, 0xD, 0x0, 0x7F];
 const Color = [0x2, 0xD, 0x3];
 
-const Component: React.SFC<LaunchpadProps> = ({ onButtonPressed, onContextMenu, onSettingsButtonClick, activePage }) => {
+const Component: React.SFC<IPadProps> = ({ onButtonPressed, onContextMenu, onSettingsButtonClick, activePage }) => {
   
   return (
     <Container>
@@ -120,6 +114,7 @@ const buildColors = (output: Output, page: Page) => {
 
 export const LaunchpadMiniMK3 = {
   name: "Launchpad Mini MK3",
+  type: ControllerType.Launchpad,
   buildColors,
   XYToButton,
   ButtonToXY,

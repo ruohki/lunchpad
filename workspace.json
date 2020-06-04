@@ -82,35 +82,6 @@
         }
       }
     },
-    "frontend-e2e": {
-      "root": "apps/frontend-e2e",
-      "sourceRoot": "apps/frontend-e2e/src",
-      "projectType": "application",
-      "architect": {
-        "e2e": {
-          "builder": "@nrwl/cypress:cypress",
-          "options": {
-            "cypressConfig": "apps/frontend-e2e/cypress.json",
-            "tsConfig": "apps/frontend-e2e/tsconfig.e2e.json",
-            "devServerTarget": "frontend:serve"
-          },
-          "configurations": {
-            "production": {
-              "devServerTarget": "frontend:serve:production"
-            }
-          }
-        },
-        "lint": {
-          "builder": "@nrwl/linter:lint",
-          "options": {
-            "linter": "eslint",
-            "config": "apps/frontend-e2e/.eslintrc",
-            "tsConfig": ["apps/frontend-e2e/tsconfig.e2e.json"],
-            "exclude": ["**/node_modules/**", "!apps/frontend-e2e/**"]
-          }
-        }
-      }
-    },
     "application": {
       "root": "apps/application",
       "sourceRoot": "apps/application/src",
@@ -240,62 +211,6 @@
         }
       }
     },
-    "launchpadmk2": {
-      "root": "libs/launchpadmk2",
-      "sourceRoot": "libs/launchpadmk2/src",
-      "projectType": "library",
-      "schematics": {},
-      "architect": {
-        "lint": {
-          "builder": "@nrwl/linter:lint",
-          "options": {
-            "linter": "eslint",
-            "config": "libs/launchpadmk2/.eslintrc",
-            "tsConfig": [
-              "libs/launchpadmk2/tsconfig.lib.json",
-              "libs/launchpadmk2/tsconfig.spec.json"
-            ],
-            "exclude": ["**/node_modules/**", "!libs/launchpadmk2/**"]
-          }
-        },
-        "test": {
-          "builder": "@nrwl/jest:jest",
-          "options": {
-            "jestConfig": "libs/launchpadmk2/jest.config.js",
-            "tsConfig": "libs/launchpadmk2/tsconfig.spec.json",
-            "passWithNoTests": true
-          }
-        }
-      }
-    },
-    "launchpadx": {
-      "root": "libs/launchpadx",
-      "sourceRoot": "libs/launchpadx/src",
-      "projectType": "library",
-      "schematics": {},
-      "architect": {
-        "lint": {
-          "builder": "@nrwl/linter:lint",
-          "options": {
-            "linter": "eslint",
-            "config": "libs/launchpadx/.eslintrc",
-            "tsConfig": [
-              "libs/launchpadx/tsconfig.lib.json",
-              "libs/launchpadx/tsconfig.spec.json"
-            ],
-            "exclude": ["**/node_modules/**", "!libs/launchpadx/**"]
-          }
-        },
-        "test": {
-          "builder": "@nrwl/jest:jest",
-          "options": {
-            "jestConfig": "libs/launchpadx/jest.config.js",
-            "tsConfig": "libs/launchpadx/tsconfig.spec.json",
-            "passWithNoTests": true
-          }
-        }
-      }
-    },
     "icons": {
       "root": "libs/icons",
       "sourceRoot": "libs/icons/src",
@@ -403,6 +318,34 @@
           "options": {
             "jestConfig": "libs/controller/jest.config.js",
             "tsConfig": "libs/controller/tsconfig.spec.json",
+            "passWithNoTests": true
+          }
+        }
+      }
+    },
+    "macro": {
+      "root": "libs/macro",
+      "sourceRoot": "libs/macro/src",
+      "projectType": "library",
+      "schematics": {},
+      "architect": {
+        "lint": {
+          "builder": "@nrwl/linter:lint",
+          "options": {
+            "linter": "eslint",
+            "config": "libs/macro/.eslintrc",
+            "tsConfig": [
+              "libs/macro/tsconfig.lib.json",
+              "libs/macro/tsconfig.spec.json"
+            ],
+            "exclude": ["**/node_modules/**", "!libs/macro/**"]
+          }
+        },
+        "test": {
+          "builder": "@nrwl/jest:jest",
+          "options": {
+            "jestConfig": "libs/macro/jest.config.js",
+            "tsConfig": "libs/macro/tsconfig.spec.json",
             "passWithNoTests": true
           }
         }

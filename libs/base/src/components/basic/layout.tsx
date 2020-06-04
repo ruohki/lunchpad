@@ -5,7 +5,7 @@ import { COLOR_MENU, COLOR_GRAY, COLOR_NOTBLACK } from '../../theme';
 export interface IOuterProps {
   width?: string
   height?: string
-
+  radius?: string
   padding?: string
   margin?: string
 
@@ -17,6 +17,7 @@ export interface IOuterProps {
 
 export interface ISplitProps extends IOuterProps {
   direction?: "row" | "column"
+  content?: "flex-start" | "flex-end" | "center" | "space-between" | "space-around" | "space-evenly" | "stretch"
   justify?: "flex-start" | "flex-end" | "center"
 }
 
@@ -29,7 +30,7 @@ export interface IChildProps extends IOuterProps {
 
 export const Outer = styled.div<IOuterProps>`
   box-sizing: border-box;
-
+  border-radius: ${props => props.radius};
   width: ${props => props.width};
   height: ${props => props.height};
   padding: ${props => props.padding};
@@ -48,23 +49,24 @@ Outer.defaultProps = {
   backgroundColor: "inherit",
   scroll: "visible",
   whiteSpace: "initial",
-  textOverflow: "inherit"
+  textOverflow: "inherit",
+  radius: "0"
 }
 
 export const Split = styled(Outer)<ISplitProps>`
   display: flex;
   flex-direction: ${props => props.direction};
-
   justify-content: ${props => props.justify};
   align-items: stretch;
-  align-content: center;
-`
+  align-content: ${props => props.content};
+`;
 Split.defaultProps = {
   width: "auto",
   height: "auto",
   direction: "column",
-  justify: "flex-start"
-}
+  justify: "flex-start",
+  content: "center"
+};
 
 export const Child = styled(Outer)<IChildProps>`
   align-self: ${props => props.align};
@@ -104,12 +106,12 @@ export const VerticalPipe = styled.div`
 
 export const Row = ({ title, children }) => (
   <Split margin="1rem 1rem 0 1rem" direction="row">
-    <Child basis="15%" align="center" text="right"  margin="0 1rem 0 0">
+    <Child basis="20%" align="center" text="right"  margin="0 1rem 0 0">
       <div>
         {title}
       </div>
     </Child>
-    <Child basis="85%">
+    <Child basis="80%">
       {children}
     </Child>
   </Split>

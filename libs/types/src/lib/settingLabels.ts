@@ -4,6 +4,10 @@ export const settingsLabels = {
   soundOutput: 'general.soundOutput',
   midiInput: 'general.midiInput',
   midiOutput: 'general.midiOutput',
+  debug: {
+    userId: "debug.userId",
+    lockRocket: "debug.logrocket"
+  },
   ptt: {
     label: 'general.pushtotalk',
     mouse: 'pushtotalk.mouse',
@@ -12,6 +16,9 @@ export const settingsLabels = {
   software: {
     layout: 'software.layout'
   },
-  layout: 'layout'
+  layout: {
+    config: 'layout.config',
+    active: 'layout.activePage',
+  },
 }
 

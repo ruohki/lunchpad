@@ -3,8 +3,8 @@ import isEmpty from 'lodash/isEmpty';
 
 import { useSettings, useMidiDevices } from '@lunchpad/hooks';
 import { AudioContext } from '@lunchpad/contexts'
-import { settingsLabels as settings } from '@lunchpad/types'
-import { Split, Child, Select } from '@lunchpad/base';
+import { settingsLabels as settings, ControllerType } from '@lunchpad/types'
+import { Split, Child, Select, Switch } from '@lunchpad/base';
 import { Divider, Row } from './components';
 
 import * as Devices from '@lunchpad/controller';
@@ -16,9 +16,9 @@ export default () => {
   
   const { outputDevices } = useContext(AudioContext.Context)
 
-  const [ mode, saveMode ] = useSettings(settings.mode, "software");
-  const [ layout, saveLayout ] = useSettings(settings.software.layout, "small8");
-  const [ controller, setController ] = useSettings(settings.controller, "");
+  const [ mode, _saveMode ] = useSettings(settings.mode, ControllerType.Software);
+  
+  const [ controller, setController ] = useSettings(settings.controller, "Software6x6");
   const [ midiInput, setMidiInput ] = useSettings(settings.midiInput, "");
   const [ midiOutput, setMidiOutput ] = useSettings(settings.midiOutput, "");
   
@@ -26,15 +26,23 @@ export default () => {
   
   const [ ptt, savePtt ] = useSettings(settings.ptt.label, "off");
   const [ pttMouse, savePttMouse ] = useSettings(settings.ptt.mouse, "mouse4");
-  const [ pttKeyboard, savePttKeyboard ] = useSettings(settings.ptt.keyboard, "[]");
+  //const [ pttKeyboard, savePttKeyboard ] = useSettings(settings.ptt.keyboard, "[]");
   
+  const [ logRocket, setLogRocket ] = useSettings(settings.debug.lockRocket, false);
+
+  const saveMode = mode => {
+    if (mode === ControllerType.Software) setController("Software6x6")
+    else if (mode === ControllerType.Launchpad) setController("LaunchpadMK2")
+
+    _saveMode(mode)
+  }
 /*   React.useEffect(() => {
     console.log(midiDevices, controller, mode)
     if (!controller && mode === "midi" && outputDevices.length > 0) {
       setController(midiDevices.inputs[0].name)
     }
   }, [outputDevices, controller, mode]) */
-  
+  console.log(Devices)
   return (
     <Child grow>
       <Row title="Mode">
@@ -42,8 +50,8 @@ export default () => {
           value={mode}
           onChange={e => saveMode(e.target.value)}
         >
-          <option value="software">Software Only</option>
-          <option value="midi">Launchpad</option>
+          <option value={ControllerType.Software}>Software Only</option>
+          <option value={ControllerType.Launchpad}>Launchpad</option>
         </Select>
       </Row>
       <Split padding="1rem 1rem 0 1rem">
@@ -51,7 +59,7 @@ export default () => {
           <Divider />
         </Child>
       </Split>
-      {mode === "midi" && (
+      {mode === ControllerType.Launchpad && (
         <>
           <Row title="Launchpad">
             <Select
@@ -59,7 +67,7 @@ export default () => {
               onChange={e => setController(e.target.value)}
             >
               {!controller && <option>Please select your Launchpad</option>}
-              {Object.keys(Devices).map(k => <option key={Devices[k].name} value={k}>{Devices[k].name}</option> )}
+              {Object.keys(Devices).map(k => Devices[k].type === ControllerType.Launchpad ? <option key={Devices[k].name} value={k}>{Devices[k].name}</option> : '' )}
             </Select>
           </Row>
           <Row title="MIDI Input">
@@ -82,15 +90,14 @@ export default () => {
           </Row>
         </>
       )}
-      {mode === "software" && (
+      {mode === ControllerType.Software && (
         <Row title="Software Layout">
           <Select
-            value={layout}
-            onChange={e => saveLayout(e.target.value)}
+            value={controller}
+            onChange={e => setController(e.target.value)}
           >
-            <option value="small4">Small (4x4)</option>
-            <option value="small8">Small (4x8)</option>
-            <option value="big">Small (8x8)</option>
+            <option value="Software6x6">Small (6x6)</option>
+            <option value="Software9x9">Big (9x9)</option>
           </Select>
         </Row>
       )}
@@ -112,7 +119,7 @@ export default () => {
           <Divider />
         </Child>
       </Split>
-      <Row title="Push-to-talk">
+      {/* <Row title="Push-to-talk">
         <Select
           value={ptt}
           onChange={e => savePtt(e.target.value)}
@@ -121,8 +128,8 @@ export default () => {
           <option value="mouse">Use mouse button</option>
           <option value="keyboard">Use keyboard</option>
         </Select>
-      </Row>
-      {ptt === "mouse" && (
+      </Row> */}
+      {/* {ptt === "mouse" && (
         <Row title="Mouse Button">
           <Select
             value={pttMouse}
@@ -135,15 +142,29 @@ export default () => {
             <option value="mouse5">Mouse 5 (ex: Thumb Button 2)</option>
           </Select>
         </Row>
-      )}
-      {ptt === "keyboard" && (
+      )} */}
+      {/* {ptt === "keyboard" && (
         <Row title="Keyboard">
           <KeyCapture
             value={JSON.parse(pttKeyboard)}
-            onChange={(e) => savePttKeyboard(JSON.stringify(e))}
+            onChange={(e) => savePttKeyboard((JSON.stringify(e) as string))}
           />
         </Row>
-      )}
+      )} */}
+      <Row title="">
+        <Split direction="row">
+          <Child padding="0 1rem 0 0">
+            <Switch
+              value={!!logRocket}
+              onChange={setLogRocket}
+            />
+          </Child>
+          <Child grow>
+            <span>Send anonymous metrics</span>
+          </Child>
+        </Split>
+        
+      </Row>
     </Child>
   )
 };

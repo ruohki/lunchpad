@@ -1,6 +1,5 @@
 import range from 'lodash/range';
 
-import { ButtonConfiguration } from '@lunchpad/types';
 import { lighten } from 'polished';
 import { clamp } from 'lodash';
 
@@ -9,19 +8,6 @@ export const XYToButton = (x, y) => {
 }
 
 export const ButtonToXY = (note) => [(note % 10) - 1, Math.floor(note / 10) - 1] 
-
-export const GetDefaultButtonState = () => {
-  const stateMap = new Map<number, ButtonConfiguration>();
-
-  range(0, 9).map((y) => range(0,9).map((x) => stateMap.set(XYToButton(x,y), {
-    buttonId: XYToButton(x,y),
-    label: `${x}${y} - ${XYToButton(x,y)}`,
-    state: 'released',
-    spec: [ 0,0,0 ]
-  })));
-
-  return stateMap;
-}
 
 // WTF!?
 export const MakeButtonColor = ({ r, g, b}) => {

@@ -16,6 +16,7 @@ interface IAudioRange {
   onChange?(start: number, end: number): void
 }
 
+const fs = window.require('fs');
 const audioContext = new AudioContext();
 
 const filterData = (audioBuffer, samples = 140) => {
@@ -55,6 +56,8 @@ export const WaveForm: React.SFC<IWaveForm> = ({ file }) => {
 
     context.clearRect(0, 0, canvas.width, canvas.height);
 
+    if (!fs.existsSync(file.replace('file://',''))) return;
+    
     fetch(file)
       .then(response => response.arrayBuffer())
       .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
@@ -106,27 +109,32 @@ export const AudioRange: React.SFC<IAudioRange> = ({ file, start, end, playbackP
   const [draggingRight, setDraggingRight] = React.useState(false);
 
   const [inMark, setInMark] = React.useState(start);
-  const [outMark, setOutMark] = React.useState(100 - end);
+  const [outMark, setOutMark] = React.useState(1 - end);
 
   const ref = React.useRef<HTMLDivElement>();
+
+  React.useEffect(() => {
+    setInMark(start);
+    setOutMark(1 - end);
+  }, [ start, end, setInMark, setOutMark ])
 
   const mouseMove = e => {
     if (e.buttons !== 1) return;
     const offsetX = ref.current.getBoundingClientRect().left;
     if (draggingLeft) {
       const val = _.clamp(
-        ((e.clientX - offsetX) / ref.current.clientWidth) * 100,
+        ((e.clientX - offsetX) / ref.current.clientWidth),
         0,
-        100 - outMark
+        1 - outMark
       );
       setInMark(val);
     } else if (draggingRight) {
       const val = _.clamp(
-        ((e.clientX - offsetX) / ref.current.clientWidth) * 100,
+        ((e.clientX - offsetX) / ref.current.clientWidth),
         inMark,
-        100
+        1
       );
-      setOutMark(100 - val);
+      setOutMark(1 - val);
     }
   };
 
@@ -134,7 +142,7 @@ export const AudioRange: React.SFC<IAudioRange> = ({ file, start, end, playbackP
     const onMouseUp = () => {
       setDraggingLeft(false);
       setDraggingRight(false);
-      onChange(inMark, 100 - outMark);
+      onChange(inMark, 1 - outMark);
     };
     window.addEventListener("mouseup", onMouseUp);
 
@@ -145,17 +153,17 @@ export const AudioRange: React.SFC<IAudioRange> = ({ file, start, end, playbackP
     <div ref={ref}>
       <Container  onMouseMove={mouseMove}>
         <RangeContainer>
-          <RangeLeft style={{ width: `${inMark}%` }}>
+          <RangeLeft style={{ width: `${inMark*100}%` }}>
             <GrabberLeft onMouseDown={() => setDraggingLeft(true)} />
           </RangeLeft>
           <RangeMiddle
-            style={{ width: `${100 - (inMark + outMark)}%` }}
+            style={{ width: `${100 - ((inMark + outMark)*100)}%` }}
           />
-          <RangeRight style={{ width: `${outMark}%` }}>
+          <RangeRight style={{ width: `${outMark*100}%` }}>
             <GrabberRight onMouseDown={() => setDraggingRight(true)} />
           </RangeRight>
         </RangeContainer>
-        <PlaybackPosition style={{ marginLeft: `${playbackPos}%` }} />
+        <PlaybackPosition style={{ marginLeft: `${playbackPos*100}%` }} />
         <WaveForm file={file} />
       </Container>
     </div>
@@ -164,7 +172,7 @@ export const AudioRange: React.SFC<IAudioRange> = ({ file, start, end, playbackP
 
 AudioRange.defaultProps = {
   start: 0,
-  end: 100,
+  end: 1,
   playbackPos: 0,
   onChange: () => {}
 }
