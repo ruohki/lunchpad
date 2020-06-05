@@ -6,16 +6,12 @@ import * as Devices from '@lunchpad/controller';
 import { MidiContext, LayoutContext, AudioContext } from '@lunchpad/contexts';
 import { IPad } from '@lunchpad/controller';
 import { useSettings } from '@lunchpad/hooks';
-import { settingsLabels, Button, ActionType, PlaySound, Action } from '@lunchpad/types';
-import { IconCaretRightSolid } from '@lunchpad/icons';
+import { settingsLabels, Button } from '@lunchpad/types';
 
 import { MacroRunner } from '@lunchpad/macroengine'
 import { uniqueId } from 'lodash';
 
-let mm: Map<string, MacroRunner> = new Map();
-
 export const MacroEngine = () => {
-  const { loadFile, playAudio } = React.useContext(AudioContext.Context);
   const { activePage } = React.useContext(LayoutContext.Context);
   const { emitter } = React.useContext(MidiContext.Context);
   const [ controller ] = useSettings(settingsLabels.controller, "Software6x6");
@@ -32,6 +28,7 @@ export const MacroEngine = () => {
 
   React.useEffect(() => {
     if (!pad) return;
+    const mm: Map<string, MacroRunner> = new Map();
 
     const pressed = (note, sw) => {
       const [ x, y ] = pad.ButtonToXY(note);
@@ -51,6 +48,7 @@ export const MacroEngine = () => {
       macro.Run().then(() => {
         mm.delete(id)
       });
+      
     }
     
     const released = (note) => {
@@ -63,6 +61,7 @@ export const MacroEngine = () => {
     return () => {
       emitter.removeListener('ButtonPressed', pressed)
       emitter.removeListener('ButtonReleased', released)
+      mm.clear();
     }
   }, [ emitter, pad, activePage ])
 

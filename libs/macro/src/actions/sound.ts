@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
 
-import { PlaySound } from '@lunchpad/types';
+import { PlaySound, FileURI } from '@lunchpad/types';
+
 import { MacroAction } from './index';
 
 class Sound extends EventEmitter {
@@ -8,6 +9,7 @@ class Sound extends EventEmitter {
   private audioElement: HTMLAudioElement = new Audio();
   private audioBuffer: AudioBuffer;
   private bufferSource: AudioBufferSourceNode;
+  private destination: MediaStreamAudioDestinationNode;
 
   public readonly file: string;
   public duration = (): number => this.audioBuffer ? this.audioBuffer.duration : 0;
@@ -28,41 +30,48 @@ class Sound extends EventEmitter {
   }
 
   public async Init(): Promise<void> {
-    const response = await fetch(this.file);
+    const response = await fetch(FileURI(this.file));
     const arrayBuffer = await response.arrayBuffer()
     this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
     
     this.bufferSource = this.audioContext.createBufferSource();
     this.bufferSource.buffer = this.audioBuffer;
     
-    const destination = this.audioContext.createMediaStreamDestination();
-    this.bufferSource.connect(destination)
+    this.destination = this.audioContext.createMediaStreamDestination();
+    this.bufferSource.connect(this.destination)
+    this.audioElement.srcObject = this.destination.stream;
 
-    this.audioElement.srcObject = destination.stream;
   }
   
   public async Play(): Promise<unknown> {
     return new Promise((resolve, reject) => {
-      
       const begin = this.audioBuffer.duration * this.start
       const duration = this.audioBuffer.duration * this.end - begin
       this.audioElement.volume = this.volume;
-      this.bufferSource.addEventListener('ended', () => {
+      this.bufferSource.addEventListener('ended', async () => {
         this.emit('onFinished');
+        this.bufferSource.stop();
+        await this.audioContext.close();
         return resolve();
       });
       this.bufferSource.start(0, begin, duration);
       this.audioElement.play();
-      
+      setTimeout(() => this.Stop(), this.audioBuffer.duration * 1000)
       //@ts-ignore //IT DOES EXIST
       this.audioElement.setSinkId(this.sinkId);
     })
   }
 
   public Stop() {
-    this.audioElement.pause();
-    this.bufferSource.stop();
-    this.bufferSource.disconnect();
+    try {
+      // crucial or else sound will stop after 48 playbacks
+      this.audioElement.srcObject = null;
+      this.bufferSource.stop();
+      this.bufferSource.disconnect();
+      this.audioElement.remove();
+      this.destination.disconnect();
+      this.audioBuffer = null;
+    } catch (ex) {}
   }
 }
 

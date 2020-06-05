@@ -46,7 +46,7 @@ const Vendor = [0x0, 0x20, 0x29];
 const Mode = [0x2, 0xD, 0x0, 0x7F];
 const Color = [0x2, 0xD, 0x3];
 
-const Component: React.SFC<IPadProps> = ({ onButtonPressed, onContextMenu, onSettingsButtonClick, activePage }) => {
+const Component: React.SFC<IPadProps> = ({ onDrop, onButtonPressed, onContextMenu, onSettingsButtonClick, activePage }) => {
   
   return (
     <Container>
@@ -67,6 +67,7 @@ const Component: React.SFC<IPadProps> = ({ onButtonPressed, onContextMenu, onSet
             onClick={(e) => {
               onButtonPressed(e, x, y, XYToButton(x,y));
             }}
+            onDrop={onDrop}
           >
             {x === 8 || y === 8 ? x === 8 ? RightRow[7 - y] : UpRow[x] : button.title}
           </LaunchpadButton>
@@ -80,6 +81,7 @@ const Component: React.SFC<IPadProps> = ({ onButtonPressed, onContextMenu, onSet
             round
             onContextMenu={() => true}
             onClick={onSettingsButtonClick}
+            onDrop={() => {}}
           >
             SET
           </LaunchpadButton>

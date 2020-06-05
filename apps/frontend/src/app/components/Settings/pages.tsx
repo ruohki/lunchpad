@@ -55,7 +55,6 @@ const PageListItem = ({ page, onClick, onDelete, onRename, active }) => {
                 setEditMode(false);
               } else if (e.keyCode === 13) {
                 if (page.name !== pageName) {
-                  console.log(pageName, page.Name)
                   onRename(page.id, pageName);
                 }
                 setEditMode(false);
@@ -80,13 +79,13 @@ const PageListItem = ({ page, onClick, onDelete, onRename, active }) => {
                 }} icon={<IconPen />} />
               </Tooltip>
             </Child>
-            <Child margin="0 3rem 0 0">
+            {/* <Child margin="0 3rem 0 0">
               <Tooltip
                 title="Export this page to a file."
               >
                 <IconButton icon={<IconFileExport />} />
               </Tooltip>
-            </Child>
+            </Child> */}
             <Child>
               <Tooltip
                 type="error"
@@ -98,11 +97,11 @@ const PageListItem = ({ page, onClick, onDelete, onRename, active }) => {
           </>
         ) : (
           <Child>
-            <Tooltip
+            {/* <Tooltip
               title="Export this page to a file."
             >
               <IconButton icon={<IconFileExport />} />
-            </Tooltip>
+            </Tooltip> */}
           </Child>
         )}
       </Split>
@@ -122,14 +121,14 @@ export default () => {
           <Child grow>
             Pages:
           </Child>
-          <Child padding="1rem">
+          {/* <Child padding="1rem">
             <Tooltip
               title="Export your entire configuration."
             >
               <IconButton icon={<IconFileExport />} />
             </Tooltip>
-          </Child>
-          <Child padding="1rem"> 
+          </Child> */}
+          <Child padding="1rem 0 1rem 1rem"> 
           <Tooltip
             title="Add a whole new page of macro goodness!"
           >

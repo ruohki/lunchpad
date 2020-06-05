@@ -1,11 +1,19 @@
 import React from 'react';
+import { v4 as uuid } from 'uuid';
 
-import { logo, Split, Child, LinkButton } from '@lunchpad/base'
+import { logo, Split, Child, LinkButton, ScrollBox } from '@lunchpad/base'
 import { Divider } from './components';
+import { useSettings } from '@lunchpad/hooks';
+import { settingsLabels } from '@lunchpad/types';
 
 export default () => {
+  const [ userId ] = useSettings(settingsLabels.debug.userId, uuid());
+
   return (
     <Child grow padding="1rem" >
+      <ScrollBox>
+
+      
       <Split direction="row">
         <Child align="flex-start">
           <img width={128} height={128} src={logo} alt="Lunchpad" />
@@ -30,9 +38,14 @@ export default () => {
               <p>You can grab a copy of this Software on Discord.</p>
               <LinkButton href="https://discord.gg/4Ys9TRR">https://discord.gg/4Ys9TRR</LinkButton>
             </Child>
+            <Child padding="0 1rem 1rem 1rem">
+              <p>If you are sending metrics this is the id to identify you</p>
+              AppID: {userId}
+            </Child>
           </Split>
         </Child>
       </Split>
+      </ScrollBox>
     </Child>
   )
 }

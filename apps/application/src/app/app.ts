@@ -64,7 +64,7 @@ export default class App {
       backgroundColor: "#23272A",
       useContentSize: true,
       webPreferences: {
-        webSecurity: false,
+        webSecurity: true,
         nodeIntegration: true,
         backgroundThrottling: false,
         nodeIntegrationInWorker: true,

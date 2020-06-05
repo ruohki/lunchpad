@@ -4,7 +4,7 @@ import isEmpty from 'lodash/isEmpty';
 import { useSettings, useMidiDevices } from '@lunchpad/hooks';
 import { AudioContext } from '@lunchpad/contexts'
 import { settingsLabels as settings, ControllerType } from '@lunchpad/types'
-import { Split, Child, Select, Switch } from '@lunchpad/base';
+import { Split, Child, Select, Switch, Tooltip } from '@lunchpad/base';
 import { Divider, Row } from './components';
 
 import * as Devices from '@lunchpad/controller';
@@ -42,7 +42,7 @@ export default () => {
       setController(midiDevices.inputs[0].name)
     }
   }, [outputDevices, controller, mode]) */
-  console.log(Devices)
+  
   return (
     <Child grow>
       <Row title="Mode">
@@ -154,10 +154,14 @@ export default () => {
       <Row title="">
         <Split direction="row">
           <Child padding="0 1rem 0 0">
-            <Switch
-              value={!!logRocket}
-              onChange={setLogRocket}
-            />
+            <Tooltip
+              title="Please restart the application when you switched this off."
+            >
+              <Switch
+                value={JSON.parse(logRocket)}
+                onChange={setLogRocket}
+              />
+            </Tooltip>
           </Child>
           <Child grow>
             <span>Send anonymous metrics</span>

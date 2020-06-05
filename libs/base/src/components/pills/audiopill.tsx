@@ -4,6 +4,7 @@ import * as _ from 'lodash';
 import { PlaySound, IMediaDevice } from '@lunchpad/types';
 import { useAnimationFrame } from '@lunchpad/hooks';
 import { IconPlay, IconStop, IconEdit, IconTimes, IconCheck, IconTrash, IconUp, IconDown, IconVolumeUp } from '@lunchpad/icons';
+import { FileURI } from '@lunchpad/types';
 
 import { AudioRange } from '../audiorange';
 import { PillHeader, PillBorder } from './pill'
@@ -112,7 +113,7 @@ export const PlaySoundPill: React.SFC<IPlaySoundPill> = ({ action, expanded, out
   });
 
   React.useEffect(() => {
-    fetch(file)
+    fetch(FileURI(file))
       .then(response => response.arrayBuffer())
       .then(arrayBuffer => audio.decodeAudioData(arrayBuffer))
       .then(setAudioBuffer);
@@ -186,7 +187,6 @@ export const PlaySoundPill: React.SFC<IPlaySoundPill> = ({ action, expanded, out
                 setPlaybackRange([0, 1]);
                 setPlaybackPos(0);
                 setFile(f)
-                console.log("Resetted")
               }} />
             </Row>
             <Row title="Sound Output">
@@ -214,7 +214,7 @@ export const PlaySoundPill: React.SFC<IPlaySoundPill> = ({ action, expanded, out
               </Split>
             </Row>
             <Row title="In/Out:">
-              <AudioRange onChange={onAudioRangeChange} file={file} playbackPos={playbackPos} start={inMark} end={outMark} />
+              <AudioRange onChange={onAudioRangeChange} file={FileURI(file)} playbackPos={playbackPos} start={inMark} end={outMark} />
             </Row>
             <Row title="">
               <span style={{float:'left'}}><IconPlay /> {((audioBuffer?.duration ?? 0) * inMark).toFixed(2)}s ({Math.round(inMark * 100)}%)</span>

@@ -211,7 +211,6 @@ export const HotkeyPill: React.SFC<IHotkeyPill> = ({
   const change = () => {
     const actn = new Hotkey(keystrokes, releaseEnd, action.id);
     actn.wait = wait;
-    console.log(actn)
     onChange(actn);
     setExpanded(false);
   };

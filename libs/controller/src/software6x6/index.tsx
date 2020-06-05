@@ -22,7 +22,7 @@ const EmptyButton = (x, y) => ({
   color: {r: 0, g: 0, b: 0}
 })
 
-const Component: React.SFC<IPadProps> = ({ onButtonPressed, onContextMenu, onSettingsButtonClick, activePage }) => {
+const Component: React.SFC<IPadProps> = ({ onDrop, onButtonPressed, onContextMenu, onSettingsButtonClick, activePage }) => {
   
   return (
     <Container>
@@ -36,7 +36,7 @@ const Component: React.SFC<IPadProps> = ({ onButtonPressed, onContextMenu, onSet
             y={y}
             color={color}
             keyId={XYToButton(x,y)}
-            
+            onDrop={onDrop}
             key={`${x}${y}`}
             onContextMenu={onContextMenu}
             onClick={(e) => {
@@ -55,6 +55,7 @@ const Component: React.SFC<IPadProps> = ({ onButtonPressed, onContextMenu, onSet
             round
             onContextMenu={() => true}
             onClick={onSettingsButtonClick}
+            onDrop={() => {}}
           >
             SET
           </LaunchpadButton>

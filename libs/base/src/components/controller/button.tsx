@@ -85,6 +85,7 @@ interface ButtonProps {
   y: number,
   onClick?: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number) => void,
   onContextMenu?: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number) => void,
+  onDrop: ( target: any, payload: any) => void;
 }
 
 interface IDragPayload {
@@ -93,13 +94,11 @@ interface IDragPayload {
   files?: File[]
 }
 
-export const LaunchpadButton: React.SFC<ButtonProps> = ({ children, onClick, onContextMenu, x, y, keyId, clip = false, color = "#b1b1b1", ...rest }) => {
-  /* const [ show, remove ] = useNotification();
-  const [ showWithDelay ] = useNotification(); */
+export const LaunchpadButton: React.SFC<ButtonProps> = ({ onDrop, children, onClick, onContextMenu, x, y, keyId, clip = false, color = "#b1b1b1", ...rest }) => {
   const [ disabled, setDisabled ] = React.useState(false);
 
   const [, drag] = useDrag({
-    item: { id: keyId, type: "BUTTON"},
+    item: { id: keyId, type: "BUTTON", x, y},
     begin: () => setDisabled(true),
     end: (result) => {
       //remove();
@@ -128,10 +127,9 @@ export const LaunchpadButton: React.SFC<ButtonProps> = ({ children, onClick, onC
     hover: (item) => {
       //console.log(item)
     },
-    drop: (item) => {
-      const data = item as IDragPayload;
+    drop: (item) => onDrop({ x, y }, item)
+      /* const data = item as IDragPayload;
       if ('files' in data) {
-        
         if (data.files.length > 1) {
           //return showWithDelay(`Too many files, please just drop one audiofile on a button.`, 25000, Severity.error);
         } else if (!data.files[0].type.match("audio")) {
@@ -140,9 +138,8 @@ export const LaunchpadButton: React.SFC<ButtonProps> = ({ children, onClick, onC
       } else if ('id' in data) {
         //onSwitch(data.id, )
         //showWithDelay(`Switched buttons`, 1000)
-      }
-    }
-
+      } */
+    //}
   })
   
   const Button = (

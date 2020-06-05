@@ -1,23 +1,10 @@
 import { app, BrowserWindow } from 'electron';
 
-import * as settings from 'electron-settings';
-import * as naudio from 'naudiodon'
-import * as robot from 'robotjs';
-import easymidi from 'easymidi';
-
 import SquirrelEvents from './app/events/squirrel.events';
 import ElectronEvents from './app/events/electron.events';
 import UpdateEvents from './app/events/update.events';
-import MidiEvents from './app/events/midi.events';
-import SettingsEvents from './app/events/settings.events';
 
 import App from './app/app';
-
-//@ts-ignore
-global.settings = settings;
-//@ts-ignore
-global.robot = robot;
-
 
 
 export default class Main {
@@ -35,8 +22,7 @@ export default class Main {
 
     static bootstrapAppEvents() {
         ElectronEvents.bootstrapElectronEvents();
-        SettingsEvents.boostrapSettingsEvents();
-        
+
         // initialize auto updater service
         if (!App.isDevelopmentMode()) {
             // UpdateEvents.initAutoUpdateService();

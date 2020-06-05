@@ -73,8 +73,6 @@ const ButtonConfigDialog: React.SFC<IButtonConfigDialog> = props => {
   const [ actions, setActions ] = React.useState<Action[]>(button.pressed);
   const { pages } = React.useContext(LayoutContext.Context);
 
-console.log("Actions.", actions.length)
-
   const accept = () => {
     const btn = new ControllerButton(title, button.x, button.y, {
       r: color.r,
@@ -82,11 +80,8 @@ console.log("Actions.", actions.length)
       b: color.b
     });
     btn.pressed = actions;
-    console.log(actions)
     onAccept(btn);
   };
-
-  console.log(actions)
 
   const addAction = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     showContextMenu(
@@ -94,7 +89,6 @@ console.log("Actions.", actions.length)
       e.clientY,
       <AddActionMenu
         onSelect={key => {
-          console.log(key);
           if (key === ActionType.PlaySound) {
             setActions([...actions, new PlaySound('')]);
           } else if (key === ActionType.Delay) {
@@ -139,7 +133,6 @@ console.log("Actions.", actions.length)
   
   //useEffect(() => {
     const updateAction = (action: Action) => {
-      console.log(actions, action)
       setActions([...actions.map(a => (a.id === action.id ? action : a))]);
     };
 

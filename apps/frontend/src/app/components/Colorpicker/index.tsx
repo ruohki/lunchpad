@@ -52,7 +52,6 @@ const LaunchpadColorPicker: React.SFC<ILaunchpadColorPicker> = ({ color, onChang
         colors={colors}
         color={color}
         onChangeComplete={(args) => {
-          console.log(args)
           change(args)
         }}
       />

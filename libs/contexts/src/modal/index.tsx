@@ -35,7 +35,6 @@ const ModalProvider = ({ children }) => {
   const [ modals, setModals ] = React.useState<JSX.Element[]>([])
 
   const closeModal = (id: string) => {
-    console.log("Closing", id)
     setModals([...modals.filter(m => m.props.id !== id)])
   }
 

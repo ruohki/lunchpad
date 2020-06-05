@@ -1,3 +1,33 @@
 {
-    "$schema": "../../../../../node_modules/nx-electron/src/validation/maker.schema.json"
+    "$schema": "../../../../../node_modules/nx-electron/src/validation/maker.schema.json",
+    "productName": "Lunchpad",
+    "copyright": "Copyright © 2020 Tillmann Hübner",
+    "npmRebuild": true,
+    "asar": true,
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "ruohki",
+        "repo": "test-stuff"
+      }
+    ],
+    "win": {
+      "target": "appx",
+      "icon": "../assets/logo.ico",
+      "publisherName": "Tillmann Hübner",
+      "asar": true
+    },
+    "mac": {
+        "target":"dmg",
+        "icon": "build/icon.png"
+    },
+    "dmg": {
+      "background": "build/background.png"
+    },
+    "appId": "com.electron.lunchpad",
+    "appx": {   
+      "displayName": "Lunchpad",
+      "publisherDisplayName": "Tillmann Hübner",
+      "backgroundColor": "transparent"
+    }
 }   

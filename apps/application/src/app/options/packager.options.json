@@ -1,5 +1,9 @@
 {
     "$schema": "../../../../../node_modules/nx-electron/src/validation/packager.schema.json",
     "prune": true,
-    "asar": true
+    "asar": true,
+    "executableName": "Lunchpad",
+    "appCopyright": "Copyright © 2020 Tillmann Hübner",
+    "ignore": ["tools", "libs", "dist/apps/unwanted-app","(angular|nx)\\.json", "\\.vscode"],
+    "ignoreSourceMap": true
 }
