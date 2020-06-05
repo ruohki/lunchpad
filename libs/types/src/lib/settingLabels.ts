@@ -17,6 +17,7 @@ export const settingsLabels = {
     layout: 'software.layout'
   },
   layout: {
+    old: 'layout.old',
     config: 'layout.config',
     active: 'layout.activePage',
   },

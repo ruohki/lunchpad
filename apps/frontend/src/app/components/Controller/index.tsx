@@ -46,7 +46,9 @@ export default () => {
   }, [ controller ])
 
   React.useEffect(() => {
-    if (output) pad.buildColors(output, activePage);
+    if (pad && pad.buildColors) {
+      if (output) pad.buildColors(output, activePage);
+    }
   })
 
   const copyButton = (x: number, y: number) => {
@@ -60,11 +62,12 @@ export default () => {
     }
   }
 
-  const editButton = (x: number, y: number) => {
+  const editButton = (x: number, y: number, limitedColor = false) => {
     const pageId = activePage.id
     const button = lodash.get(activePage, `buttons.${x}.${y}`, new Button("",x,y));
     showConfigDialog(
       <ConfigDialog
+        limitedColor={limitedColor}
         button={button}
         onCancel={() => closeConfigDialog()}
         onAccept={(button) => {
@@ -99,7 +102,7 @@ export default () => {
             clearButton(x,y,activePage.id);
             addNotification(`Button (${x},${y}) was cut`, 1000)
           } else if (key === "editButton") {
-            editButton(x, y);
+            editButton(x, y, pad.limitedColor);
           }
         }}
         onClose={closeMenu}
@@ -145,7 +148,7 @@ export default () => {
   return Component ? (
     <Component
       activePage={activePage}
-      onButtonPressed={(e, x, y) => onButtonPressed(e, pad.XYToButton(x,y))}
+      onButtonPressed={(e, x, y, note, cc) => onButtonPressed(e, pad.XYToButton(x,y), cc)}
       onSettingsButtonClick={() => openSettings(<Settings onClose={() => closeSettings()} />)}
       onContextMenu={handleContextMenu}
       onDrop={onDrop}

@@ -9,20 +9,20 @@ export interface IMidiContext {
   input: false | Input
   output: false | Output
   emitter: MidiEvents
-  onButtonPressed: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, note: number) => void
+  onButtonPressed: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, note: number, cc: boolean) => void
 }
 
 const CONTROL_CHANGE = 0xB0;
-/* const NOTE_ON = 0x80; */
-const NOTE_OFF = 0x90;
+/* const NOTE_OFF = 0x80; */
+const NOTE_ON = 0x90;
 const POLY_AFTERTOUCH = 0xA0;
 
 const midiContext = React.createContext<Partial<IMidiContext>>({})
 const { Provider } = midiContext;
 
 declare interface MidiEvents {
-  on(event: 'ButtonPressed', listener: (note: number, sw: boolean) => void): this;
-  on(event: 'ButtonReleased', listener: (note: number) => void): this;
+  on(event: 'ButtonPressed', listener: (note: number, cc: boolean, sw: boolean) => void): this;
+  on(event: 'ButtonReleased', listener: (note: number, cc: boolean) => void): this;
 }
 class MidiEvents extends EventEmitter {}
 
@@ -52,23 +52,23 @@ const MidiProvider = ({ children }) => {
     const messageHandler = (event) => {
       const [ msg, note, value] = event.data;
       
-      if (msg === NOTE_OFF) {
+      if (msg === NOTE_ON) {
         if (value === 0) {
-          emitter.emit('ButtonReleased', note)
+          emitter.emit('ButtonReleased', note, false, false)
         } else if ( value >= 25) {
-          emitter.emit('ButtonPressed', note, false)
+          emitter.emit('ButtonPressed', note, false, false)
         }
       } else if (msg === CONTROL_CHANGE) {
         if (value) {
-          emitter.emit('ButtonPressed', note, false)
+          emitter.emit('ButtonPressed', note, true, false)
         } else {
-          emitter.emit('ButtonReleased', note)
+          emitter.emit('ButtonReleased', note, true)
         }
       } else if (msg === POLY_AFTERTOUCH) {
         if (value > 50) {
-          emitter.emit('ButtonPressed', note, false)
+          emitter.emit('ButtonPressed', note, false, false)
         } else if (value === 0) {
-          emitter.emit('ButtonReleased', note)
+          emitter.emit('ButtonReleased', note, false)
         }
       }
     }
@@ -81,9 +81,9 @@ const MidiProvider = ({ children }) => {
 
   }, [ input, output, emitter /* setButton */, /* activePage */ ])
   
-  const onButtonPressed = (event, note) => {
+  const onButtonPressed = (event, note, cc = false) => {
     // Clicks wont get looped sounds etc
-    emitter.emit('ButtonPressed', note, true);
+    emitter.emit('ButtonPressed', note, cc, true);
   }
 
   return (

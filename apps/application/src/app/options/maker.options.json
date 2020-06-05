@@ -8,13 +8,23 @@
       {
         "provider": "github",
         "owner": "ruohki",
-        "repo": "test-stuff"
+        "repo": "lunchpad"
       }
     ],
+    "linux": {
+      "target": "zip",
+      "asar": true
+    },
     "win": {
-      "target": "appx",
-      "icon": "../assets/logo.ico",
-      "publisherName": "Tillmann Hübner",
+      "icon": "build/logo.ico",
+      "target": [
+        {
+          "target": "msi",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "asar": true
     },
     "mac": {
@@ -25,9 +35,5 @@
       "background": "build/background.png"
     },
     "appId": "com.electron.lunchpad",
-    "appx": {   
-      "displayName": "Lunchpad",
-      "publisherDisplayName": "Tillmann Hübner",
-      "backgroundColor": "transparent"
-    }
-}   
+    "generateUpdatesFilesForAllChannels": true
+}

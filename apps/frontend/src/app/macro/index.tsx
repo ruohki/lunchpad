@@ -30,8 +30,9 @@ export const MacroEngine = () => {
     if (!pad) return;
     const mm: Map<string, MacroRunner> = new Map();
 
-    const pressed = (note, sw) => {
-      const [ x, y ] = pad.ButtonToXY(note);
+    const pressed = (note, cc, sw) => {
+      console.log(note, cc,pad.ButtonToXY(note, cc))
+      const [ x, y ] = pad.ButtonToXY(note, cc);
       const button = lodash.get(activePage, `buttons.${x}.${y}`) as Button;
       if (!button) return;
       

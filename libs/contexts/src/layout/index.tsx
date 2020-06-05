@@ -39,6 +39,7 @@ const LayoutProvider = ({ children }) => {
   const [ activePage, _setActivePage ] = React.useState<Page>(layout.get(activePageID));
 
   const updateLayout = (l) => {
+    localStorage.setItem(settingsLabels.layout.old, localStorage.getItem(settingsLabels.layout.config))
     localStorage.setItem(settingsLabels.layout.config, JSON.stringify(Array.from(layout.entries())))
     _setLayout(new Map(l));
   }

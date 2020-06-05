@@ -11,7 +11,7 @@ import { IconCaretRight, IconCaretUpSolid, IconCaretDownSolid, IconCaretLeftSoli
 import { LayoutContext, MidiContext } from '@lunchpad/contexts'
 import { Page, ControllerType } from '@lunchpad/types'
 
-import { Container } from './components';
+import { PadContainer } from '../components';
 import { XYToButton, ButtonToXY, MakeButtonColor } from './helper'
 import { IPadProps } from '..';
 
@@ -56,7 +56,7 @@ const Component: React.SFC<IPadProps> = ({
   onDrop,
 }) => {
   return (
-    <Container>
+    <PadContainer width={9} height={9}>
       {reverse(range(0, 9)).map((y) => range(0,9).map((x) => {
         const button  = get(activePage?.buttons ?? {}, `[${x}][${y}]`, EmptyButton(x,y)) // as Button;
         const color = MakeButtonColor(button.color)
@@ -72,7 +72,7 @@ const Component: React.SFC<IPadProps> = ({
             key={`${x}${y}`}
             onContextMenu={onContextMenu}
             onClick={(e) => {
-              onButtonPressed(e, x, y, XYToButton(x,y));
+              onButtonPressed(e, x, y, XYToButton(x,y), false);
             }}
             onDrop={onDrop}
           >
@@ -95,7 +95,7 @@ const Component: React.SFC<IPadProps> = ({
         )
       }
       ))}
-    </Container>
+    </PadContainer>
   )
 }
 
@@ -121,4 +121,5 @@ export const LaunchpadMK2 = {
   XYToButton,
   ButtonToXY,
   Component,
+  limitedColor: false
 }

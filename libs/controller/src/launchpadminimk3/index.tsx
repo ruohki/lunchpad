@@ -9,7 +9,7 @@ import { IconChevronRight, IconCaretUpSolid, IconCaretDownSolid, IconCaretLeftSo
 
 import { Page, ControllerType } from '@lunchpad/types'
 
-import { Container } from './components';
+import { PadContainer } from '../components';
 import { XYToButton, ButtonToXY, MakeButtonColor } from './helper'
 import { IPadProps } from '..';
 
@@ -49,7 +49,7 @@ const Color = [0x2, 0xD, 0x3];
 const Component: React.SFC<IPadProps> = ({ onDrop, onButtonPressed, onContextMenu, onSettingsButtonClick, activePage }) => {
   
   return (
-    <Container>
+    <PadContainer width={9} height={9}>
       {_.reverse(_.range(0, 9)).map((y) => _.range(0,9).map((x) => {
         const button  = _.get(activePage?.buttons ?? {}, `[${x}][${y}]`, EmptyButton(x,y)) // as Button;
         const color = MakeButtonColor(button.color)
@@ -65,7 +65,7 @@ const Component: React.SFC<IPadProps> = ({ onDrop, onButtonPressed, onContextMen
             key={`${x}${y}`}
             onContextMenu={onContextMenu}
             onClick={(e) => {
-              onButtonPressed(e, x, y, XYToButton(x,y));
+              onButtonPressed(e, x, y, XYToButton(x,y), false);
             }}
             onDrop={onDrop}
           >
@@ -88,7 +88,7 @@ const Component: React.SFC<IPadProps> = ({ onDrop, onButtonPressed, onContextMen
         )
       }
       ))}
-    </Container>
+    </PadContainer>
   )
 }
 
@@ -121,4 +121,5 @@ export const LaunchpadMiniMK3 = {
   XYToButton,
   ButtonToXY,
   Component,
+  limitedColor: false
 }

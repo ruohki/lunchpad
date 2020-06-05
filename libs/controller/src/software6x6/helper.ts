@@ -4,7 +4,11 @@ import { lighten, toColorString } from 'polished';
 
 export const XYToButton = (x, y) => y * 6 + x
 
-export const ButtonToXY = (note) => note < 104 ? [(note % 10) - 1, Math.floor(note / 10) - 1] : [note - 104, 8 ]
+export const ButtonToXY = (note) => {
+  const y = Math.floor(note / 6)
+  const x = note % 6
+  return [x,y]
+}
 
 export const MakeButtonColor = ({ r, g, b}) => {
   let color = "#f1f1f1";

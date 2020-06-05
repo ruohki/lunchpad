@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Button, COLOR_REDISH, Split, Child, Tooltip } from '@lunchpad/base';
+import { Button, COLOR_REDISH, Split, Child, Tooltip, COLOR_GREENISH } from '@lunchpad/base';
 import { settingsLabels } from '@lunchpad/types';
 import { NotificationContext } from '@lunchpad/contexts';
 
@@ -39,6 +39,13 @@ export class ErrorBoundary extends React.Component<{}, IErrorBoundary> {
     window.location.reload();
   }
 
+  tryBackup() {
+    const old = localStorage.getItem(settingsLabels.layout.old);
+    localStorage.setItem(settingsLabels.layout.config, old);
+    localStorage.setItem(settingsLabels.layout.active, "default");
+    window.location.reload();
+  }
+
   render() {
     if (this.state.hasError) {
       // You can render any custom fallback UI
@@ -52,6 +59,12 @@ export class ErrorBoundary extends React.Component<{}, IErrorBoundary> {
             <Child padding="0 0 5rem 0" width="auto">
               <Tooltip delay={50} title="Copy your current configuration to your clipboard. Helpful for errorfinding or manual debugging.">
               <Button onClick={this.copyConfiguration.bind(this)}>Copy configuration to clipboard</Button>
+              </Tooltip>
+            </Child>
+
+            <Child padding="0 0 5rem 0" width="auto" align="center">
+              <Tooltip delay={50} type="error" title="Try to restore the configuration from an automatic backup">
+                <Button color={COLOR_GREENISH} onClick={this.tryBackup.bind(this)}>Try last configuration</Button>
               </Tooltip>
             </Child>
 

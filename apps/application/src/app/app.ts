@@ -64,10 +64,9 @@ export default class App {
       backgroundColor: "#23272A",
       useContentSize: true,
       webPreferences: {
-        webSecurity: true,
+        webSecurity: false,
         nodeIntegration: true,
-        backgroundThrottling: false,
-        nodeIntegrationInWorker: true,
+        backgroundThrottling: false
       },
       minHeight: 756,
       minWidth: 756,

@@ -97,7 +97,6 @@ export default () => {
             onChange={e => setController(e.target.value)}
           >
             <option value="Software6x6">Small (6x6)</option>
-            <option value="Software9x9">Big (9x9)</option>
           </Select>
         </Row>
       )}
