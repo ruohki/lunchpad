@@ -80,9 +80,9 @@ const buildColors = (output: Output, page: Page) => {
     Object.keys(page.buttons[x]).forEach(y => {
       const { r, g, b } = page.buttons[parseInt(x)][parseInt(y)].color;
       // Probably the right colors
-      if ((r % 85) && (g % 85) && b === 0) {
+      if ((r % 85 === 0) && (g % 85 === 0) && (b === 0)) {
         const brightnessR = r / 85
-        const brightnessG = r / 85
+        const brightnessG = g / 85
 
         // From the programmers reference manual
         // 0x10 * 0-3 Greens + 0-3 Reds + 0xC Normal LED
@@ -91,11 +91,16 @@ const buildColors = (output: Output, page: Page) => {
           // Toprow needs CC
           output.send(0xB0, [ XYToButton(parseInt(x),parseInt(y)), color ])
         } else {
-
+          output.send(0x90, [ XYToButton(parseInt(x),parseInt(y)), color ])
         }
       } else {
         // Invalid color - make it red then
-        output.send(0x90, [ XYToButton(parseInt(x),parseInt(y)), 0x0F ])
+        if (parseInt(y) === 8) {
+          // Toprow needs CC
+          output.send(0xB0, [ XYToButton(parseInt(x),parseInt(y)), 0x0F ])
+        } else {
+          output.send(0x90, [ XYToButton(parseInt(x),parseInt(y)), 0x0F ])
+        }
       }
     })
   })
