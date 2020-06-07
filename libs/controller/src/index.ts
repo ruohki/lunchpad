@@ -1,6 +1,7 @@
 import { Page, ControllerType, Button } from '@lunchpad/types';
 import { Output } from 'webmidi';
 
+export * from './launchpadx';
 export * from './launchpadminimk3';
 export * from './launchpadmk2';
 export * from './launchpads';
