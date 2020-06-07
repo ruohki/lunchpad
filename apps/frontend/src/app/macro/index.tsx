@@ -31,7 +31,7 @@ export const MacroEngine = () => {
     const mm: Map<string, MacroRunner> = new Map();
 
     const pressed = (note, cc, sw) => {
-      console.log(note, cc,pad.ButtonToXY(note, cc))
+      //console.log(note, cc,pad.ButtonToXY(note, cc))
       const [ x, y ] = pad.ButtonToXY(note, cc);
       const button = lodash.get(activePage, `buttons.${x}.${y}`) as Button;
       if (!button) return;
