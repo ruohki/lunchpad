@@ -12,15 +12,12 @@ import { DndProvider } from 'react-dnd';
 import { GlobalStyle, AppContainer, ScaleBox } from '@lunchpad/base';
 import { AudioContext, MidiContext, ModalContext, LayoutContext, MenuContext, NotificationContext } from '@lunchpad/contexts';
 import { useSettings, useEssentialCSSVariable } from '@lunchpad/hooks';
-import { settingsLabels as settings, PlaySound } from '@lunchpad/types';
+import { settingsLabels as settings } from '@lunchpad/types';
 
 import Controller from './components/Controller';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { MacroEngine } from './macro/index';
 
-/* const audio = new AudioManager();
-console.log(audio)
-audio.playSound('file:///Users/ruohki/Downloads/Bells.mp3', "default", .25, 0.5, 1); */
 import LogRocket from 'logrocket';
 
 const ProviderGarden = ({ children }) => {
@@ -38,6 +35,7 @@ const ProviderGarden = ({ children }) => {
       });
     }
   }, [useLogRocket] )
+
   return (
     <NotificationContext.Provider>
       <ErrorBoundary>

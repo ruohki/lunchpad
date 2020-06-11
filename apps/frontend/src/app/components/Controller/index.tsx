@@ -5,7 +5,7 @@ import { v4 as uuid } from 'uuid';
 
 import ButtonContextMenu from '../ContextMenu/button';
 import {MenuContext, MidiContext,LayoutContext, NotificationContext, AudioContext, useModal } from '@lunchpad/contexts';
-import { Button, PlaySound, FileURI } from '@lunchpad/types';
+import { Button, PlaySound, FileURI, ActionType } from '@lunchpad/types';
 import { useSettings } from '@lunchpad/hooks';
 import { settingsLabels } from '@lunchpad/types'
 import Settings from '../Settings';
@@ -13,6 +13,7 @@ import ConfigDialog from '../ButtonConfiguration';
 
 import * as Devices from '@lunchpad/controller';
 import { IPad } from '@lunchpad/controller';
+import { SoundAction } from '@lunchpad/macroengine';
 
 const { remote } = window.require('electron');
 
@@ -78,6 +79,7 @@ export default () => {
     )
   }
   const handleContextMenu = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, id: number) => {
+    
     showContextMenu(e.clientX, e.clientY, (
       <ButtonContextMenu
         onSelect={(x, y, key, value) => {
@@ -113,20 +115,36 @@ export default () => {
   }
 
   const onDrop = (a: ILocation, payload: Record<string, string>) => {
+    const soundOutput = localStorage.getItem(settingsLabels.soundOutput) ?? "default"
     if ('files' in payload) {
       const ButtonTarget = Object.assign<Object, Button>({}, lodash.get(activePage, `buttons.${a.x}.${a.y}`));
       //D&D a file
+      console.log(ButtonTarget)
       if (lodash.isEmpty(ButtonTarget)) {
         //@ts-ignore
         const name = payload.files[0].name.split('.').slice(0, -1).join('.')
         const button = new Button(name, a.x, a.y);
         //@ts-ignore
-        button.pressed.push(new PlaySound(FileURI(payload.files[0].path)))
+        button.pressed.push(new PlaySound(FileURI(payload.files[0].path), soundOutput))
 
         setButton(button, a.x, a.y, activePage.id);
         editButton(a.x, a.y);
       } else {
+        const playSoundIdx = ButtonTarget.pressed.findIndex(action => action.type === ActionType.PlaySound);
+        if (playSoundIdx !== -1) {
+          // TODO: Clean way
+          //@ts-ignore
+          const name = payload.files[0].name.split('.').slice(0, -1).join('.')
+          ButtonTarget.title = name;
+          //@ts-ignore
+          ButtonTarget.pressed[playSoundIdx].soundfile = FileURI(payload.files[0].path);
+          //@ts-ignore
+          ButtonTarget.pressed[playSoundIdx].start = 0;
+          //@ts-ignore
+          ButtonTarget.pressed[playSoundIdx].end = 1;
 
+          setButton(ButtonTarget, a.x, a.y, activePage.id);
+        }
       }
     } else if (payload.type === "BUTTON") {
       const ButtonTarget = Object.assign<Object, Button>({}, lodash.get(activePage, `buttons.${a.x}.${a.y}`));

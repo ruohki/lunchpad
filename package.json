@@ -1,6 +1,6 @@
 {
   "name": "lunchpad",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "license": "ISC",
   "author": "Tillmann Hübner <ruohki@gmail.com>",
   "repository": "https://gitlab.com/ruohki/lunchpad",
@@ -52,6 +52,7 @@
     "react-dom": "16.12.0",
     "react-scroll-box": "^0.3.5",
     "react-tippy": "^1.4.0",
+    "react-toast-notifications": "^2.4.0",
     "react-tooltip": "^4.2.6",
     "react-use": "^14.3.0",
     "robotjs": "^0.6.0",

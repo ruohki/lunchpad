@@ -38,7 +38,8 @@ import {
   HotkeyKeystrokeDelay,
   HotkeyKeystrokeString,
   HotkeyKeystrokeSimple,
-  HotkeyKeystrokeEvent
+  HotkeyKeystrokeEvent,
+  settingsLabels
 } from '@lunchpad/types';
 import { IconPlus } from '@lunchpad/icons';
 import { MenuContext, AudioContext, LayoutContext } from '@lunchpad/contexts';
@@ -49,6 +50,7 @@ import { Border } from './components';
 import { StyledCircle } from '../Colorpicker/components';
 import { Small, Limited } from '../Colorpicker/palettes';
 import { FullPillPicker } from '../Colorpicker/full';
+import { useSettings } from '@lunchpad/hooks';
 
 interface IButtonConfigDialog {
   button: ControllerButton
@@ -61,7 +63,7 @@ const ButtonConfigDialog: React.SFC<IButtonConfigDialog> = props => {
   const { button, onCancel, onAccept, limitedColor } = props;
   const { outputDevices } = React.useContext(AudioContext.Context);
   const { showContextMenu, closeMenu } = React.useContext(MenuContext.Context);
-
+  const [ outputDevice ] = useSettings(settingsLabels.soundOutput, "default");
   const [title, setTitle] = React.useState<string>(props.button.title ?? '');
 
   const [color, setColor] = React.useState<Color>({
@@ -90,7 +92,7 @@ const ButtonConfigDialog: React.SFC<IButtonConfigDialog> = props => {
       <AddActionMenu
         onSelect={key => {
           if (key === ActionType.PlaySound) {
-            setActions([...actions, new PlaySound('')]);
+            setActions([...actions, new PlaySound('', outputDevice)]);
           } else if (key === ActionType.Delay) {
             setActions([...actions, new Delay(1000)]);
           } else if (key === ActionType.SwitchPage) {

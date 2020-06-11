@@ -43,9 +43,24 @@ function useTimeout(callback, delay) {
 }
 
 const Selfdestroy = ({ interval, onDestroy }) => {
-  useTimeout(() => {
+  const [ time ] = React.useState(Date.now());
+  const [ destroying, setDestroying ] = React.useState(false);
+
+  React.useEffect(() => {
+    
+    const handle = setInterval(() => {
+      if (time + interval <= Date.now()) {
+        if (!destroying) {
+          setDestroying(true);
+          onDestroy();
+        }
+      }
+    })
+  }, [ time, interval, destroying ])
+
+  /* useTimeout(() => {
     onDestroy();
-  }, interval);
+  }, interval); */
   return (
     <div />
   );
@@ -55,8 +70,9 @@ const NotificationProvider = ( { children } ) => {
   const [ state, setState ] = useState([]);
   
   const addNotification = (text: string, delay = 10000, severity = Severity.info): string => {
+    return;
     const id = uuid();
-
+    console.log(state.length)
     setState([{
       id,
       text,
@@ -68,6 +84,7 @@ const NotificationProvider = ( { children } ) => {
   }
 
   const removeNotification = (id: string) => {
+    console.log(id)
     setState(_.filter(state, (m) => m.id !== id))
   }
 
@@ -77,20 +94,19 @@ const NotificationProvider = ( { children } ) => {
       removeNotification
     }}>
       <NotificationContainer>
-        <AnimatePresence initial={true}>
+        <AnimatePresence>
           {state.map(({ id, text, delay, severity}) => (
-            <Notification 
+            <Notification
+              id={id}
               severity={severity}
               key={`notification-${id}`}
-              /* positionTransition */
-              initial={{ opacity: 0, y: -50 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 50, transition: { duration: 0.2, delay: 0.1 } }}
+              positionTransition
+              initial={{ opacity: 0, y: -50}}
+              animate={{ opacity: 1, y: 0}}
+              exit={{ opacity: 0, y: 50 }}
+              delay={delay}
+              onDestroy={removeNotification}
             >
-              {delay > 0 && <Selfdestroy
-                interval={delay}
-                onDestroy={() => setState(_.filter(state, (m) => m.id !== id))}
-              />}
               {text}
             </Notification>
           ))}

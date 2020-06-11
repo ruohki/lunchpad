@@ -3,7 +3,9 @@ import styled from 'styled-components';
 import { motion } from 'framer-motion';
 
 import { FontAwesomeIcon as Icon } from '@fortawesome/react-fontawesome';
+
 import { faExclamationTriangle, faBan } from '@fortawesome/pro-light-svg-icons';
+import { useTimeout } from '@lunchpad/hooks';
 
 export const NotificationContainer = styled.div`
   position: fixed;
@@ -37,9 +39,13 @@ export enum Severity {
   info = "info"
 }
 
-export const Notification = styled(({ children, severity, ...rest }) => (
-  <motion.div {...rest}>{SeverityIcons[severity] && <Icon icon={SeverityIcons[severity]} />}{children}</motion.div>
-))<{ severity: Severity }>`
+export const Notification = styled(({ id, children, severity, onDestroy = () => {}, delay = 0, ...rest }) => {
+  useTimeout(() => onDestroy(id), delay);
+
+  return (
+    <motion.div key={id} {...rest}>{SeverityIcons[severity] && <Icon icon={SeverityIcons[severity]} />}{children}</motion.div>
+  )
+})<{ severity: Severity }>`
   padding: 2rem 5rem;
   border-radius: 8px;
   margin-bottom: 1rem;

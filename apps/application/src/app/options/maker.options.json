@@ -17,14 +17,8 @@
     },
     "win": {
       "icon": "build/logo.ico",
-      "target": [
-        {
-          "target": "msi",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
+      "target": "msi",
+      "publisherName": "Tillmann Hübner",
       "asar": true
     },
     "mac": {
@@ -35,5 +29,10 @@
       "background": "build/background.png"
     },
     "appId": "com.electron.lunchpad",
-    "generateUpdatesFilesForAllChannels": true
+    "generateUpdatesFilesForAllChannels": true,
+    "appx": {   
+      "displayName": "Lunchpad",
+      "publisherDisplayName": "Tillmann Hübner",
+      "backgroundColor": "transparent"
+    }
 }
