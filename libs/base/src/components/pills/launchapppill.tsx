@@ -42,7 +42,7 @@ export const LaunchAppPill: React.SFC<ILaunchAppPill> = ({ action, expanded, onC
       onExpand={() => setExpanded(true)}
       onCollapse={() => setExpanded(false)}
     >
-      <Split>
+      <Split padding="0 0 1rem 0">
         <Row title="">
           <Split direction="row">
             <Child padding="0 1rem 0 0">

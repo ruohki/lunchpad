@@ -2,7 +2,7 @@ import React from 'react';
 
 import { IconVolumeUp, IconMap, IconTerminal, IconKeyboard, IconStopwatch, IconTrafficLightStop, IconComment } from '@lunchpad/icons';
 
-import { MenuParent, MenuItem } from '@lunchpad/base'
+import { MenuParent, MenuItem, MenuDivider } from '@lunchpad/base'
 import { ActionType } from '@lunchpad/types';
 
 export default ({ onSelect, onClose }) => {
@@ -22,7 +22,10 @@ export default ({ onSelect, onClose }) => {
       <MenuItem id={ActionType.LaunchApplication}><IconTerminal />Launch application</MenuItem>
       {/* <MenuItem id={ActionType.PerformWebrequest}><IconGloba />Perform a webrequest</MenuItem> */}
       <MenuItem id={ActionType.PressAHotkey}><IconKeyboard />Hotkey sequence</MenuItem>
+      <MenuDivider />
       <MenuItem id={ActionType.StopAllMacros}><IconTrafficLightStop />Stop all macros</MenuItem>
+      <MenuItem id={ActionType.StopThisMacro}><IconTrafficLightStop />Stop this macro</MenuItem>
+      <MenuItem id={ActionType.RestartThisMacro}><IconTrafficLightStop />Restart this macro</MenuItem>
     </MenuParent>
   )
 }

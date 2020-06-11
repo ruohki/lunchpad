@@ -30,4 +30,6 @@ export * from './stopallmacros'
 export * from './texttospeech'
 export * from './launchapppill'
 export * from './hotkeypill'
+export * from './stopthismacro'
+export * from './restartthismacro'
 

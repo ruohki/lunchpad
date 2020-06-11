@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useContext } from 'react';
+import * as React from 'react';
 import { Notification, NotificationContainer, Severity } from './components'
 import { AnimatePresence } from "framer-motion";
 import { v4 as uuid } from 'uuid';
@@ -13,99 +13,54 @@ export interface INotificationContext {
 const notificationContext = React.createContext<Partial<INotificationContext>>({});
 const { Provider } = notificationContext;
 
-function useTimeout(callback, delay) {
-  const savedCallback = useRef()
-
-  // Remember the latest callback.
-  useEffect(
-    () => {
-      savedCallback.current = callback
-    },
-    [callback]
-  )
-
-  // Set up the interval.
-  useEffect(
-    () => {
-      function tick() {
-        if (savedCallback) {
-          //@ts-ignore
-          savedCallback.current()
-        }
-      }
-      if (delay !== null) {
-        const id = setTimeout(tick, delay)
-        return () => clearTimeout(id)
-      }
-    },
-    [delay]
-  )
-}
-
-const Selfdestroy = ({ interval, onDestroy }) => {
-  const [ time ] = React.useState(Date.now());
-  const [ destroying, setDestroying ] = React.useState(false);
-
-  React.useEffect(() => {
-    
-    const handle = setInterval(() => {
-      if (time + interval <= Date.now()) {
-        if (!destroying) {
-          setDestroying(true);
-          onDestroy();
-        }
-      }
-    })
-  }, [ time, interval, destroying ])
-
-  /* useTimeout(() => {
-    onDestroy();
-  }, interval); */
-  return (
-    <div />
-  );
-};
-
 const NotificationProvider = ( { children } ) => {
-  const [ state, setState ] = useState([]);
+  const [ notifications, setNotifications ] = React.useState([]);
   
-  const addNotification = (text: string, delay = 10000, severity = Severity.info): string => {
-    return;
+  const removeNotification = React.useCallback((id: string) => {
+    setNotifications(notifications => {
+      const index = notifications.findIndex((notification) => notification.id === id);
+      notifications.splice(index, 1);
+      return [...notifications];
+    });
+  }, []) ;
+
+  const addNotification = React.useCallback((text: string, delay = 10000, severity = Severity.info): string => {
     const id = uuid();
-    console.log(state.length)
-    setState([{
+
+    setNotifications([{
       id,
       text,
       delay,
       severity
-    }, ...state])
+    }, ...notifications])
+
+    if (delay > 0) {
+      setTimeout(() => removeNotification(id), delay);
+    }
 
     return id;
-  }
+  }, [ notifications, removeNotification ]);
 
-  const removeNotification = (id: string) => {
-    console.log(id)
-    setState(_.filter(state, (m) => m.id !== id))
-  }
+  const value = React.useMemo(() => ({
+    addNotification,
+    removeNotification
+  }), [addNotification, removeNotification])
 
   return (
-    <Provider value={{
-      addNotification,
-      removeNotification
-    }}>
+    <Provider value={value}>
       <NotificationContainer>
-        <AnimatePresence>
-          {state.map(({ id, text, delay, severity}) => (
+        <AnimatePresence
+          custom
+          onExitComplete={() => console.log("Done")}
+        >
+          {notifications.map(({ id, text, delay, severity}) => (
             <Notification
               id={id}
               severity={severity}
               key={`notification-${id}`}
-              positionTransition
               initial={{ opacity: 0, y: -50}}
               animate={{ opacity: 1, y: 0}}
               exit={{ opacity: 0, y: 50 }}
-              delay={delay}
-              onDestroy={removeNotification}
             >
               {text}
             </Notification>
@@ -118,8 +73,8 @@ const NotificationProvider = ( { children } ) => {
 };
 
 export const useNotification = (): [(text: string, delay?: number, severity?: Severity) => void, () => void] => {
-  const { addNotification, removeNotification } = useContext(notificationContext);
-  const [ ids, setIds ] = useState([]);
+  const { addNotification, removeNotification } = React.useContext(notificationContext);
+  const [ ids, setIds ] = React.useState([]);
 
   const show = (text: string, delay = 10000, severity: Severity = Severity.info) => {
     if (ids.length > 0 && delay === 0) return;
@@ -138,7 +93,6 @@ export const useNotification = (): [(text: string, delay?: number, severity?: Se
     remove
   ]
 }
-
 
 export const NotificationContext = {
   Provider: NotificationProvider,

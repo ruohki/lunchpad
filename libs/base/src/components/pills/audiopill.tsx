@@ -96,7 +96,7 @@ export const PlaySoundPill: React.SFC<IPlaySoundPill> = ({ action, expanded, out
 
   const Collapsed = (
     <Split direction="row">
-      <Child grow basis="75%" whiteSpace="nowrap" padding="0 1rem 0 0"><div style={{textOverflow: "ellipsis", overflow: "hidden"}}>Play: {filename}</div></Child>
+      <Child grow basis="75%" whiteSpace="nowrap" padding="0 1rem 0 0"><div style={{textOverflow: "ellipsis", overflow: "hidden"}}>Play: {_.truncate(filename, { length: 30})}</div></Child>
       <Child grow basis="25%">
         <Slider
           value={action.volume * 100}
@@ -111,7 +111,7 @@ export const PlaySoundPill: React.SFC<IPlaySoundPill> = ({ action, expanded, out
 
   const Expanded = (
     <Split direction="row">
-      <Child grow whiteSpace="nowrap" padding="0 1rem 0 0"><div style={{textOverflow: "ellipsis", overflow: "hidden"}}>Play: {filename}</div></Child>
+      <Child grow whiteSpace="nowrap" padding="0 1rem 0 0"><div style={{textOverflow: "ellipsis", overflow: "hidden"}}>Play: {_.truncate(filename, { length: 45})}</div></Child>
     </Split>
   )
 

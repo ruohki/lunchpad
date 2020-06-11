@@ -54,16 +54,17 @@ interface IIconButton {
   hover?: string
   rotation?: number
   disabled?: boolean
+  active?: boolean | number
   icon?: JSX.Element
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void
 }
 
-const IconButtonSFC: React.SFC<IIconButton> = ({ icon, ...rest }) => <button {...rest}>{icon}</button>
+const IconButtonSFC: React.SFC<IIconButton> = ({ icon, children, ...rest }) => <button {...rest}><span style={{ whiteSpace: 'nowrap'}}>{icon}{' '}{children}</span></button>
 
-export const IconButton = styled(IconButtonSFC)<IIconButton>`
+export const IconButton = styled(IconButtonSFC)`
   background: none;
   border: none;
-  color: ${(props) => props.disabled ? darken(0.3, COLOR_GRAY) : COLOR_GRAY};
+  color: ${(props) => props.disabled ? darken(0.3, COLOR_GRAY) : props.active ? props.hover : COLOR_GRAY};
   outline: none;
   transition: all 0.2s ease;
   cursor: ${(props) => props.disabled ? 'cursor' : 'pointer'};
@@ -78,6 +79,7 @@ export const IconButton = styled(IconButtonSFC)<IIconButton>`
 IconButton.defaultProps = {
   hover: COLOR_WHITE,
   disabled: false,
+  active: 0,
   rotation: 0,
   onClick: () => {}
 }

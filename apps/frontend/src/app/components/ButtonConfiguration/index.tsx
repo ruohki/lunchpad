@@ -1,6 +1,4 @@
-import React, { useEffect } from 'react';
-import * as lodash from 'lodash';
-import { motion, AnimatePresence } from 'framer-motion';
+import * as React from 'react';
 
 import {
   COLOR_BLACK,
@@ -12,45 +10,22 @@ import {
   COLOR_REDISH,
   ScrollBox,
   IconButton,
-  Tooltip,
-  PillList,
-  PlaySoundPill,
-  DelayPill,
-  SwitchPagePill,
-  StopAllMacrosPill,
-  TextToSpeechPill,
-  LaunchAppPill,
-  HotkeyPill
+  Switch
 } from '@lunchpad/base';
 
 import {
   Button as ControllerButton,
   Color,
   Action,
-  ActionType,
-  PlaySound,
-  Delay,
-  SwitchPage,
-  StopAllMacros,
-  TextToSpeech,
-  LaunchApp,
-  Hotkey,
-  HotkeyKeystrokeDelay,
-  HotkeyKeystrokeString,
-  HotkeyKeystrokeSimple,
-  HotkeyKeystrokeEvent,
-  settingsLabels
 } from '@lunchpad/types';
-import { IconPlus } from '@lunchpad/icons';
-import { MenuContext, AudioContext, LayoutContext } from '@lunchpad/contexts';
 
-import AddActionMenu from '../ContextMenu/addAction';
 import { Tab, Divider, Row } from '../Settings/components';
 import { Border } from './components';
 import { StyledCircle } from '../Colorpicker/components';
 import { Small, Limited } from '../Colorpicker/palettes';
 import { FullPillPicker } from '../Colorpicker/full';
-import { useSettings } from '@lunchpad/hooks';
+import { ActionEditor } from '../ActionEditor';
+import { IconLongArrowAltDown, IconLongArrowAltUp } from '@lunchpad/icons';
 
 interface IButtonConfigDialog {
   button: ControllerButton
@@ -61,10 +36,9 @@ interface IButtonConfigDialog {
 
 const ButtonConfigDialog: React.SFC<IButtonConfigDialog> = props => {
   const { button, onCancel, onAccept, limitedColor } = props;
-  const { outputDevices } = React.useContext(AudioContext.Context);
-  const { showContextMenu, closeMenu } = React.useContext(MenuContext.Context);
-  const [ outputDevice ] = useSettings(settingsLabels.soundOutput, "default");
   const [title, setTitle] = React.useState<string>(props.button.title ?? '');
+  
+  const [loop, setLoop] = React.useState<boolean>(props.button.loop);
 
   const [color, setColor] = React.useState<Color>({
     r: button.color.r,
@@ -72,146 +46,31 @@ const ButtonConfigDialog: React.SFC<IButtonConfigDialog> = props => {
     b: button.color.b
   });
 
-  const [ actions, setActions ] = React.useState<Action[]>(button.pressed);
-  const { pages } = React.useContext(LayoutContext.Context);
+  const [ activeTab, setTab ] = React.useState<number>(0);
 
+  const [ pressed, setPressed ] = React.useState<Action[]>(button.pressed);
+  const [ released, setReleased ] = React.useState<Action[]>(button.released);
+  
   const accept = () => {
     const btn = new ControllerButton(title, button.x, button.y, {
       r: color.r,
       g: color.g,
       b: color.b
     });
-    btn.pressed = actions;
+    btn.pressed = pressed;
+    btn.released = released;
+    btn.loop = loop;
+
     onAccept(btn);
   };
 
-  const addAction = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-    showContextMenu(
-      e.clientX,
-      e.clientY,
-      <AddActionMenu
-        onSelect={key => {
-          if (key === ActionType.PlaySound) {
-            setActions([...actions, new PlaySound('', outputDevice)]);
-          } else if (key === ActionType.Delay) {
-            setActions([...actions, new Delay(1000)]);
-          } else if (key === ActionType.SwitchPage) {
-            setActions([...actions, new SwitchPage('default')]);
-          } else if (key === ActionType.StopAllMacros) {
-            setActions([...actions, new StopAllMacros()]);
-          } else if (key === ActionType.TextToSpeech) {
-            setActions([...actions, new TextToSpeech('1, 2, 3!')]);
-          } else if (key === ActionType.LaunchApplication) {
-            setActions([...actions, new LaunchApp()]);
-          } else if (key === ActionType.PressAHotkey) {
-            setActions([...actions, new Hotkey() ]);
-          }
-        }}
-        onClose={closeMenu}
-      />
-    );
-  };
-
-  const moveActionUp = (id: string) => {
-    const idx = lodash.findIndex(actions, a => a.id === id);
-    const temp = actions[idx];
-    actions[idx] = actions[idx - 1];
-    actions[idx - 1] = temp;
-    setActions([...actions]);
-  };
-
-  const moveActionDown = (id: string) => {
-    const idx = lodash.findIndex(actions, a => a.id === id);
-    const temp = actions[idx];
-    actions[idx] = actions[idx + 1];
-    actions[idx + 1] = temp;
-    setActions([...actions]);
-  };
-
-  const removeAction = (id: string) => {
-    setActions([...actions.filter(a => a.id !== id)]);
-  };
-
-  
-  //useEffect(() => {
-    const updateAction = (action: Action) => {
-      setActions([...actions.map(a => (a.id === action.id ? action : a))]);
-    };
-
-    const pills = actions.map((action, i) => {
-      const pillDefaults = {
-        onChange: action => updateAction(action),
-        onRemove: removeAction,
-        onMoveUp: i !== 0 ? () => moveActionUp(action.id) : null,
-        onMoveDown:
-          i < actions.length - 1 ? () => moveActionDown(action.id) : null
-      };
-
-      if (action.type === ActionType.Delay)
-        return (
-          <DelayPill
-            key={action.id}
-            action={action as Delay}
-            {...pillDefaults}
-          />
-        );
-      else if (action.type == ActionType.PlaySound)
-        return (
-          <PlaySoundPill
-            key={action.id}
-            outputDevices={outputDevices}
-            action={action as PlaySound}
-            {...pillDefaults}
-          />
-        );
-      else if (action.type === ActionType.SwitchPage)
-        return (
-          <SwitchPagePill
-            key={action.id}
-            pages={pages.map(p => ({ id: p.id, name: p.name }))}
-            action={action as SwitchPage}
-            {...pillDefaults}
-          />
-        );
-      else if (action.type === ActionType.StopAllMacros)
-        return (
-          <StopAllMacrosPill
-            key={action.id}
-            action={action as StopAllMacros}
-            {...pillDefaults}
-          />
-        );
-      else if (action.type === ActionType.TextToSpeech)
-        return (
-          <TextToSpeechPill
-            key={action.id}
-            action={action as TextToSpeech}
-            {...pillDefaults}
-          />
-        );
-      else if (action.type === ActionType.PressAHotkey)
-        return (
-          <HotkeyPill
-            key={action.id}
-            action={action as Hotkey}
-            showMenu={showContextMenu}
-            closeMenu={closeMenu}
-            {...pillDefaults}
-          />
-        );
-      else if (action.type === ActionType.LaunchApplication)
-        return (
-          <LaunchAppPill
-            key={action.id}
-            action={action as LaunchApp}
-            {...pillDefaults}
-          />
-        );
-      else return <React.Fragment key={'empty'} />;
-    });
-
-    //setPills(pills);
-  //}, [ actions, setActions ]);
+  const header = (
+    <>
+      <IconButton active={activeTab === 0} icon={<IconLongArrowAltDown />} onClick={() => setTab(0)}>Pressed ({pressed.length} action(s))</IconButton>
+      <span style={{ marginLeft: '1rem', marginRight: '1rem', color: "hsla(0,0%,5%,1)"}}> </span>
+      <IconButton active={activeTab === 1} icon={<IconLongArrowAltUp />} onClick={() => setTab(1)}>Released ({released.length} action(s))</IconButton>
+    </>
+  )
 
   return (
     <Outer height="100%">
@@ -230,7 +89,7 @@ const ButtonConfigDialog: React.SFC<IButtonConfigDialog> = props => {
                 <Input value={title} onChange={e => setTitle(e.target.value)} />
               </Row>
               <Row title="Color">
-                <Border>
+
                   <Split direction="row">
                     {limitedColor ? (
                       <Child grow padding="0 0 0.5rem 0">
@@ -262,43 +121,35 @@ const ButtonConfigDialog: React.SFC<IButtonConfigDialog> = props => {
                       </>
                     )}
                   </Split>
-                </Border>
+
               </Row>
+              <Row title="">
+                <Split direction="row">
+                  <Child padding="0 1rem 0 0">
+                    <Switch
+                      value={loop}
+                      onChange={setLoop}
+                    />
+                  </Child>
+                  <Child grow>
+                    <span>Loop the pressed actions</span>
+                  </Child>
+                </Split>
+              </Row>
+              <Child padding="1rem 0.5rem 0 0">
+                <Divider />
+              </Child>
               <Child padding="0 1rem 0 0">
-                <PillList
-                  header={
-                    <Split direction={'row'}>
-                      <Child grow>
-                        {pills.length
-                          ? `${pills.length} Action(s):`
-                          : 'No actions yet'}
-                      </Child>
-                      <Child padding="1rem">
-                        <Tooltip title="Add a new action to the end of the list of actions.">
-                          <IconButton icon={<IconPlus />} onClick={addAction} />
-                        </Tooltip>
-                      </Child>
-                    </Split>
-                  }
-                >
-                  <AnimatePresence>
-                    {pills.map(p => (
-                      <motion.div
-                        positionTransition={{
-                          type: 'spring',
-                          damping: 30,
-                          stiffness: 200
-                        }}
-                        initial={{ opacity: 0, translateX: -100 }}
-                        animate={{ opacity: 1, translateX: 0 }}
-                        exit={{ opacity: 0, translateX: 100 }}
-                        key={p.props.action.id}
-                      >
-                        {p}
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </PillList>
+                {activeTab === 0 && <ActionEditor
+                  header={header}
+                  actions={pressed}
+                  onChange={setPressed}
+                />}
+                {activeTab === 1 && <ActionEditor
+                  header={header}
+                  actions={released}
+                  onChange={setReleased}
+                />}
               </Child>
             </Split>
           </ScrollBox>

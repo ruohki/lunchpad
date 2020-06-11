@@ -39,7 +39,9 @@ class Sound extends EventEmitter {
     
     this.destination = this.audioContext.createMediaStreamDestination();
     this.bufferSource.connect(this.destination)
-    this.audioElement.srcObject = this.destination.stream;
+    try {
+      this.audioElement.srcObject = this.destination.stream;
+    } catch {}
 
   }
   
@@ -51,12 +53,13 @@ class Sound extends EventEmitter {
       this.bufferSource.addEventListener('ended', async () => {
         this.emit('onFinished');
         this.bufferSource.stop();
-        await this.audioContext.close();
+        this.audioElement.srcObject = null;
+        this.audioBuffer = null;
         return resolve();
       });
-      this.bufferSource.start(0, begin, duration);
       this.audioElement.play();
-      setTimeout(() => this.Stop(), this.audioBuffer.duration * 1000)
+      this.bufferSource.start(0, begin, duration);
+      //setTimeout(() => this.Stop(), this.audioBuffer.duration * 1000)
       //@ts-ignore //IT DOES EXIST
       this.audioElement.setSinkId(this.sinkId);
     })
@@ -67,9 +70,6 @@ class Sound extends EventEmitter {
       // crucial or else sound will stop after 48 playbacks
       this.audioElement.srcObject = null;
       this.bufferSource.stop();
-      this.bufferSource.disconnect();
-      this.audioElement.remove();
-      this.destination.disconnect();
       this.audioBuffer = null;
     } catch (ex) {}
   }

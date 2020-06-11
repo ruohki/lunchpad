@@ -23,6 +23,8 @@ export enum ActionType {
   TextToSpeech = "TEXT_TO_SPEECH",
   Delay = "DELAY",                     // done
   SwitchPage = "SWITCH_PAGE",          // done
+  StopThisMacro = "STOP_THIS_MACRO",
+  RestartThisMacro = "RESTART_THIS_MACRO",
 }
 
 export class Action {
@@ -87,6 +89,20 @@ export class PlaySound extends Action {
 export class StopAllMacros extends Action {
   constructor(id: string = uuid()) {
     super(ActionType.StopAllMacros);
+    this.id = id;
+  }
+}
+
+export class StopThisMacro extends Action {
+  constructor(id: string = uuid()) {
+    super(ActionType.StopThisMacro);
+    this.id = id;
+  }
+}
+
+export class RestartThisMacro extends Action {
+  constructor(id: string = uuid()) {
+    super(ActionType.RestartThisMacro);
     this.id = id;
   }
 }
@@ -224,7 +240,7 @@ export class Button {
   public pressed: Action[] = []
   public released: Action[] = []
 
-  public mode: ButtonMode = ButtonMode.Normal
+  public loop: boolean = false;
 
   constructor(title: string, x: number, y: number, color = {r:0, g: 0, b: 0}) {
     this.title = title;

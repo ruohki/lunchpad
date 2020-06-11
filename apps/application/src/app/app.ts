@@ -66,7 +66,13 @@ export default class App {
       webPreferences: {
         webSecurity: false,
         nodeIntegration: true,
-        backgroundThrottling: false
+        backgroundThrottling: false,
+        defaultFontFamily: {
+          monospace: "Exo 2",
+          serif: "Exo 2",
+          sansSerif: "Exo 2",
+          standard: "Exo 2",
+        }
       },
       minHeight: 756,
       minWidth: 756,
