@@ -51,19 +51,24 @@ Button.defaultProps = {
 }
 
 interface IIconButton {
-  hover?: string;
+  hover?: string
+  rotation?: number
   disabled?: boolean
+  icon?: JSX.Element
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void
 }
 
-export const IconButton = styled(({ icon, ...rest }) => (
-  <button {...rest}>{icon}</button>
-))<IIconButton>`
+const IconButtonSFC: React.SFC<IIconButton> = ({ icon, ...rest }) => <button {...rest}>{icon}</button>
+
+export const IconButton = styled(IconButtonSFC)<IIconButton>`
   background: none;
   border: none;
   color: ${(props) => props.disabled ? darken(0.3, COLOR_GRAY) : COLOR_GRAY};
   outline: none;
-  transition: color 0.2s ease;
+  transition: all 0.2s ease;
   cursor: ${(props) => props.disabled ? 'cursor' : 'pointer'};
+  
+  transform: rotate(${(props) => props.rotation}deg);
   
   &:hover {
     color: ${props => props.disabled ? darken(0.3, COLOR_GRAY) : props.hover};
@@ -72,8 +77,9 @@ export const IconButton = styled(({ icon, ...rest }) => (
 
 IconButton.defaultProps = {
   hover: COLOR_WHITE,
-  disabled: false
-
+  disabled: false,
+  rotation: 0,
+  onClick: () => {}
 }
 
 export const LinkButton = styled(({ href, ...rest}) => (

@@ -94,11 +94,13 @@ export class StopAllMacros extends Action {
 export class TextToSpeech extends Action {
   public text: string;
   public voice: string;
-  
-  constructor(text: string, id: string = uuid()) {
+  public volume: number;
+
+  constructor(text: string, volume = 1, id: string = uuid()) {
     super(ActionType.TextToSpeech);
     this.id = id;
     this.text = text;
+    this.volume = volume;
 
     const voices = speechSynthesis.getVoices();
     const voice = lodash.find(voices, v => v.default)

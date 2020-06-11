@@ -17,6 +17,7 @@ export class TextToSpeechAction extends MacroAction {
     const voices = speechSynthesis.getVoices();
     const voice = lodash.find(voices, v => v.voiceURI === this.action.voice);
     this.utterance.voice = voice;
+    this.utterance.volume = action.volume;
   }
 
   public async Run(): Promise<unknown> {

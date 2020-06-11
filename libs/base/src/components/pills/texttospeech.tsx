@@ -2,12 +2,11 @@ import * as React from 'react';
 import * as lodash from 'lodash';
 
 import { TextToSpeech } from '@lunchpad/types';
-import { IconEdit, IconTimes, IconCheck, IconTrash, IconUp, IconDown, IconComment, IconPlay, IconStop } from '@lunchpad/icons';
+import { IconComment, IconPlay, IconStop } from '@lunchpad/icons';
 
-import { PillHeader, PillBorder } from './pill'
-import { Split, Child, VerticalPipe, Row } from '../basic/layout';
-import { IconButton, Tooltip, Input, Select, Switch } from '../basic';
-import { COLOR_REDISH, COLOR_BLURPLE } from '../../theme';
+import { Pill } from './pill'
+import { Split, Child, Row } from '../basic/layout';
+import { IconButton, Input, Select, Switch, Slider } from '../basic';
 
 // TODO: Route to another output
 
@@ -22,29 +21,18 @@ interface ITextToSpeechPill {
 
 export const TextToSpeechPill: React.SFC<ITextToSpeechPill> = ({ action, expanded, onChange, onRemove, onMoveUp, onMoveDown }) => {
   const [ showBody, setExpanded ] = React.useState<boolean>(expanded);
-  const [ text, setText ] = React.useState<string>(action.text);
-  const [ voice, setVoice ] = React.useState<string>(action.voice)
-
   const [ playing, setPlaying ] = React.useState<boolean>(false);
   const [ utterance, setUtterance ] = React.useState<SpeechSynthesisUtterance>();
-  
-  const [ wait, setWait ] = React.useState<boolean>(action.wait);
 
-  const change = () => {
-    const actn = new TextToSpeech(
-      text,
-      action.id
-    )
-    actn.voice = voice;
-    actn.wait = wait;
-    onChange(actn)
-    setExpanded(false);
+  const setProp = (props) => {
+    onChange(Object.assign({}, action, props))
   }
 
   const Speak = () => {
     if (!utterance) return;
     Stop();
     setPlaying(true);
+    utterance.volume = action.volume;
     speechSynthesis.speak(utterance);
   }
   
@@ -54,11 +42,11 @@ export const TextToSpeechPill: React.SFC<ITextToSpeechPill> = ({ action, expande
   }
 
   React.useEffect(() => {
-    const utt = new SpeechSynthesisUtterance(text);
-    const vc = lodash.find(voices, v => v.voiceURI === voice)
-    if (!lodash.isEmpty(voice)) utt.voice = vc;
+    const utt = new SpeechSynthesisUtterance(action.text);
+    const vc = lodash.find(voices, v => v.voiceURI === action.voice)
+    if (!lodash.isEmpty(action.voice)) utt.voice = vc;
     setUtterance(utt);
-  }, [ text, voice ])
+  }, [ action.text, action.voice ])
 
   React.useEffect(() => {
     if (!utterance) return;
@@ -66,74 +54,93 @@ export const TextToSpeechPill: React.SFC<ITextToSpeechPill> = ({ action, expande
   }, [ utterance ])
   const voices = speechSynthesis.getVoices();
 
+  const Collapsed = (
+    <Split direction="row">
+      <Child grow basis="75%" whiteSpace="nowrap" padding="0 1rem 0 0">
+        <div style={{textOverflow: "ellipsis", overflow: "hidden"}}>
+          TTS: ({lodash.find(voices, v => v.voiceURI === action.voice)?.lang}) {lodash.truncate(action.text, {length: 100})}
+        </div>
+      </Child>
+      <Child grow basis="25%">
+        <Slider
+          value={action.volume * 100}
+          onChange={(e) => setProp({ volume: (parseInt(e.target.value) / 100)})}
+        />
+      </Child>
+      <Child padding="0 0 0 1rem">{Math.round(action.volume * 100)}%</Child>
+      {!playing && <Child padding="0 0 0 1rem"><IconButton icon={<IconPlay />} onClick={(e) => Speak()} /></Child>}
+      {playing && <Child padding="0 0 0 1rem"><IconButton icon={<IconStop />} onClick={() => Stop()} /></Child>}
+    </Split>
+  )
+
+  const Expanded = (
+    <Split direction="row">
+      <Child grow whiteSpace="nowrap" padding="0 1rem 0 0">
+        <div style={{textOverflow: "ellipsis", overflow: "hidden"}}>
+        TTS: ({lodash.find(voices, v => v.voiceURI === action.voice)?.lang}) {lodash.truncate(action.text, {length: 100})}
+        </div>
+      </Child>
+    </Split>
+  )
+
   return (
-    <PillBorder show={showBody}>
-      <PillHeader expanded={showBody}>
-        <Split direction="row">
-          <Child padding={"0 1rem 0 0"}><IconComment /></Child>
-          {showBody ? <>
-            <Child grow width="40%" whiteSpace="nowrap"><div style={{textOverflow: "ellipsis", overflow: "hidden"}}>Edit: TTS</div></Child>
-            {!playing && <Child padding="0 0 0 1rem"><IconButton icon={<IconPlay />} onClick={() => Speak()} /></Child>}
-            {playing && <Child padding="0 0 0 1rem"><IconButton icon={<IconStop />} onClick={() => Stop()} /></Child>}
-            <Child padding="0 1rem 0 1rem"><VerticalPipe /></Child>
-            <Child padding="0">
-              <Tooltip title="Removes the action from the list! ITS GONE!" >
-                <IconButton hover={COLOR_REDISH} onClick={() => onRemove(action.id)} icon={<IconTrash />} />
-              </Tooltip>
+    <Pill
+      isExpanded={showBody}
+      icon={<IconComment />}
+      expanded={Expanded}
+      collapsed={Collapsed}
+      onRemove={() => onRemove(action.id)}
+      onMoveUp={onMoveUp ? () => onMoveUp(action.id) : null}
+      onMoveDown={onMoveDown ? () => onMoveDown(action.id) : null}
+      onExpand={() => setExpanded(true)}
+      onCollapse={() => setExpanded(false)}
+    >
+      <Split padding="0 0 1rem 0">
+        <Row title="">
+          <Split direction="row">
+            <Child padding="0 1rem 0 0">
+              <Switch
+                value={action.wait}
+                onChange={wait => setProp({ wait })}
+              />
             </Child>
-            <Child padding="0 0 0 2rem">
-              <Tooltip title="Update this action with the current settings" >
-                <IconButton hover={COLOR_BLURPLE} onClick={change} icon={<IconCheck />} />
-              </Tooltip>
+            <Child grow>
+              <span>Await execution of this action</span>
             </Child>
-            <Child padding="0 0 0 2rem">
-              <Tooltip title="Discard changes made to this action" >
-                <IconButton hover={COLOR_REDISH} onClick={() => setExpanded(false)} icon={<IconTimes />} />
-              </Tooltip>
-            </Child>
-          </> : <>
-            <Child grow width="50%" whiteSpace="nowrap" padding="0 1rem 0 0"><div style={{textOverflow: "ellipsis", overflow: "hidden"}}>TTS: ({lodash.find(voices, v => v.voiceURI === voice)?.lang}) {lodash.truncate(text, {length: 100})}</div></Child>
-            {!playing && <Child padding="0 0 0 1rem"><IconButton icon={<IconPlay />} onClick={() => Speak()} /></Child>}
-            {playing && <Child padding="0 0 0 1rem"><IconButton icon={<IconStop />} onClick={() => Stop()} /></Child>}
-            <Child padding="0 1rem 0 1rem"><VerticalPipe /></Child>
-            <Child padding="0"><IconButton disabled={!onMoveUp} icon={<IconUp />} onClick={() => onMoveUp(action.id)} /></Child>
-            <Child padding="0 0 0 1rem"><IconButton disabled={!onMoveDown} icon={<IconDown />} onClick={() => onMoveDown(action.id)} /></Child>
-            <Child padding="0 1rem 0 1rem"><VerticalPipe /></Child>
-            <Child padding="0"><IconButton onClick={() => setExpanded(true)} icon={<IconEdit />} /></Child>
-          </>}
-        </Split>
-      </PillHeader>
-      {showBody && <Split direction="column" padding="1rem">
-        <Child>
-          <Split>
-            <Row title="">
-              <Split direction="row">
-                <Child padding="0 1rem 0 0">
-                  <Switch
-                    value={wait}
-                    onChange={setWait}
-                  />
-                </Child>
-                <Child grow>
-                  <span>Await execution of this action</span>
-                </Child>
-              </Split>
-            </Row>
-            <Row title="Voice:">
-              <Select
-                value={voice}
-                onChange={(e) => setVoice(voices.find(v => v.voiceURI === e.target.value)?.voiceURI)}
-              >
-               {voices.map(v => <option key={v.voiceURI} value={v.voiceURI}>{v.name} ({v.localService ? v.lang : `${v.lang} *`})</option>)}
-              </Select>
-            </Row>
-            <Row title="Text:">
-              <Input value={text} onChange={e => setText(e.target.value)} />
-            </Row>
           </Split>
-        </Child>
-      </Split>}
-    </PillBorder>
+        </Row>
+        <Row title="Voice:">
+          <Select
+            value={action.voice}
+            onChange={(e) => setProp({ voice: voices.find(v => v.voiceURI === e.target.value)?.voiceURI })}
+          >
+            {voices.map(v => <option key={v.voiceURI} value={v.voiceURI}>{v.name} ({v.localService ? v.lang : `${v.lang} *`})</option>)}
+          </Select>
+        </Row>
+        <Row title="Volume:">
+          <Split direction="row">
+            <Child grow>
+              <Slider
+                value={action.volume * 100}
+                onChange={(e) => setProp({ volume: (parseInt(e.target.value) / 100)})}
+              />
+            </Child>
+            <Child padding="0 0 0 1rem">
+              {Math.round(action.volume * 100)}%
+            </Child>
+            {!playing && <Child padding="0 0 0 1rem">
+              <IconButton icon={<IconPlay />} onClick={() => Speak()} />
+            </Child>}
+            {playing && <Child padding="0 0 0 1rem">
+              <IconButton icon={<IconStop />} onClick={() => Stop()}/>
+            </Child>}
+          </Split>
+        </Row>
+        <Row title="Text:">
+          <Input value={action.text} onChange={e => setProp({ text: e.target.value })} />
+        </Row>
+      </Split>
+    </Pill>
   )
 }
 

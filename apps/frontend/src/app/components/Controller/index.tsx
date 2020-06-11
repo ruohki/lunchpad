@@ -65,7 +65,8 @@ export default () => {
 
   const editButton = (x: number, y: number, limitedColor = false) => {
     const pageId = activePage.id
-    const button = lodash.get(activePage, `buttons.${x}.${y}`, new Button("",x,y));
+    
+    const button = lodash.get(activePage, `buttons.${x}.${y}`, new Button("",x,y, { r: Math.floor((Math.random() * 256)), g: Math.floor((Math.random() * 256)), b: Math.floor((Math.random() * 256)) }));
     showConfigDialog(
       <ConfigDialog
         limitedColor={limitedColor}

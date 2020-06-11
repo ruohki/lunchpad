@@ -3,9 +3,6 @@ import * as lodash from 'lodash';
 
 import { Hotkey, HotkeyKeystrokeType, HotkeyKeystroke, HotkeyKeystrokeSimple, HotkeyKeystrokeDelay, HotkeyKeystrokeEvent, HotkeyKeystrokeString } from '@lunchpad/types';
 import {
-  IconEdit,
-  IconTimes,
-  IconCheck,
   IconTrash,
   IconUp,
   IconDown,
@@ -17,11 +14,11 @@ import {
   IconLongArrowAltUp
 } from '@lunchpad/icons';
 
-import { PillHeader, PillBorder } from '../pill';
+import { Pill } from '../pill';
 import { Split, Child, VerticalPipe, Row } from '../../basic/layout';
 import { IconButton, Tooltip, Switch } from '../../basic';
 import List, { ListItem } from '../../basic/list';
-import { COLOR_REDISH, COLOR_BLURPLE } from '../../../theme';
+import { COLOR_REDISH } from '../../../theme';
 
 import { useMouseHovered } from 'react-use';
 
@@ -203,198 +200,129 @@ export const HotkeyPill: React.SFC<IHotkeyPill> = ({
 }) => {
   const [showBody, setExpanded] = React.useState<boolean>(expanded);
 
-  const [wait, setWait] = React.useState<boolean>(action.wait);
-  const [releaseEnd, setReleaseEnd] = React.useState<boolean>(action.restoreAllAtEnd);
-
   const [ keystrokes, setKeystrokes ] = React.useState<HotkeyKeystroke[]>(action.keystrokes);
   
-  const change = () => {
-    const actn = new Hotkey(keystrokes, releaseEnd, action.id);
-    actn.wait = wait;
-    onChange(actn);
-    setExpanded(false);
-  };
+  const setProp = (props) => {
+    onChange(Object.assign({}, action, props))
+  }
 
   const moveKeystrokeUp = (id: string) => {
-    const idx = lodash.findIndex(keystrokes, a => a.id === id);
-    const temp = keystrokes[idx];
-    keystrokes[idx] = keystrokes[idx - 1];
-    keystrokes[idx - 1] = temp;
-    setKeystrokes([...keystrokes]);
+    const idx = lodash.findIndex(action.keystrokes, a => a.id === id);
+    const temp = action.keystrokes[idx];
+    action.keystrokes[idx] = action.keystrokes[idx - 1];
+    action.keystrokes[idx - 1] = temp;
+    setProp({ keystrokes: [...action.keystrokes] })
   };
 
   const moveKeystrokeDown = (id: string) => {
-    const idx = lodash.findIndex(keystrokes, a => a.id === id);
-    const temp = keystrokes[idx];
-    keystrokes[idx] = keystrokes[idx + 1];
-    keystrokes[idx + 1] = temp;
-    setKeystrokes([...keystrokes]);
+    const idx = lodash.findIndex(action.keystrokes, a => a.id === id);
+    const temp = action.keystrokes[idx];
+    action.keystrokes[idx] = action.keystrokes[idx + 1];
+    action.keystrokes[idx + 1] = temp;
+    setProp({ keystrokes: [...action.keystrokes] })
   };
 
-  const removeKeystroke = (id: string) => setKeystrokes(keystrokes.filter(k => k.id !== id))
+  const removeKeystroke = (id: string) => setProp({ keystrokes: [...keystrokes.filter(k => k.id !== id)] })
 
   const addKeystroke = (id: string) => {
     const type = id as HotkeyKeystrokeType
-    if (type === HotkeyKeystrokeType.Delay) setKeystrokes([...keystrokes, new HotkeyKeystrokeDelay(100) ])
-    if (type === HotkeyKeystrokeType.String) setKeystrokes([...keystrokes, new HotkeyKeystrokeString(":)", 10) ])
-    if (type === HotkeyKeystrokeType.SimpleDown) setKeystrokes([...keystrokes, new HotkeyKeystrokeSimple("enter", [], HotkeyKeystrokeEvent.KeyDown) ])
-    if (type === HotkeyKeystrokeType.SimpleUp) setKeystrokes([...keystrokes, new HotkeyKeystrokeSimple("enter", [], HotkeyKeystrokeEvent.KeyUp) ])
-    if (type === HotkeyKeystrokeType.SimpleDownUp) setKeystrokes([...keystrokes, new HotkeyKeystrokeSimple("enter", [], HotkeyKeystrokeEvent.KeyDownUp) ])
+    
+    if (type === HotkeyKeystrokeType.Delay) setProp({ keystrokes: [...action.keystrokes, new HotkeyKeystrokeDelay(100) ]})
+    if (type === HotkeyKeystrokeType.String) setProp({ keystrokes: [...action.keystrokes, new HotkeyKeystrokeString(":)", 10) ]})
+    if (type === HotkeyKeystrokeType.SimpleDown) setProp({ keystrokes: [...action.keystrokes, new HotkeyKeystrokeSimple("enter", [], HotkeyKeystrokeEvent.KeyDown) ]})
+    if (type === HotkeyKeystrokeType.SimpleUp) setProp({ keystrokes: [...action.keystrokes, new HotkeyKeystrokeSimple("enter", [], HotkeyKeystrokeEvent.KeyUp) ]})
+    if (type === HotkeyKeystrokeType.SimpleDownUp) setProp({ keystrokes: [...action.keystrokes, new HotkeyKeystrokeSimple("enter", [], HotkeyKeystrokeEvent.KeyDownUp) ]})
   }
 
   const updateKeystroke = (stroke: HotkeyKeystroke) => {
-    setKeystrokes(keystrokes.map(s => (s.id === stroke.id ? stroke : s)));
+    setProp({ keystrokes: keystrokes.map(s => (s.id === stroke.id ? stroke : s))})
   }
 
+  const Expanded = (
+    <Split direction="row">
+      <Child grow whiteSpace="nowrap" padding="0 1rem 0 0"><div style={{textOverflow: "ellipsis", overflow: "hidden"}}>Hotkey sequence: {action.keystrokes.length} Keystroke(s)</div></Child>
+    </Split>
+  )
+
   return (
-    <PillBorder show={showBody}>
-      <PillHeader expanded={showBody}>
-        <Split direction="row">
-          <Child padding={'0 1rem 0 0'}>
-            <IconKeyboard />
-          </Child>
-          {showBody ? (
-            <>
-              <Child grow width="40%" whiteSpace="nowrap">
-                <div style={{ textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                  Edit: Hotkey sequence
-                </div>
-              </Child>
-              <Child padding="0">
-                <Tooltip title="Removes the action from the list! ITS GONE!">
-                  <IconButton
-                    hover={COLOR_REDISH}
-                    onClick={() => onRemove(action.id)}
-                    icon={<IconTrash />}
-                  />
-                </Tooltip>
-              </Child>
-              <Child padding="0 0 0 2rem">
-                <Tooltip title="Update this action with the current settings">
-                  <IconButton
-                    hover={COLOR_BLURPLE}
-                    onClick={change}
-                    icon={<IconCheck />}
-                  />
-                </Tooltip>
-              </Child>
-              <Child padding="0 0 0 2rem">
-                <Tooltip title="Discard changes made to this action">
-                  <IconButton
-                    hover={COLOR_REDISH}
-                    onClick={() => setExpanded(false)}
-                    icon={<IconTimes />}
-                  />
-                </Tooltip>
-              </Child>
-            </>
-          ) : (
-            <>
-              <Child grow width="50%" whiteSpace="nowrap">
-                <div style={{ textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                  Hotkey:
-                </div>
-              </Child>
-              <Child padding="0">
-                <IconButton
-                  disabled={!onMoveUp}
-                  icon={<IconUp />}
-                  onClick={() => onMoveUp(action.id)}
-                />
-              </Child>
-              <Child padding="0 0 0 1rem">
-                <IconButton
-                  disabled={!onMoveDown}
-                  icon={<IconDown />}
-                  onClick={() => onMoveDown(action.id)}
-                />
-              </Child>
-              <Child padding="0 1rem 0 1rem">
-                <VerticalPipe />
-              </Child>
-              <Child padding="0">
-                <IconButton
-                  onClick={() => setExpanded(true)}
-                  icon={<IconEdit />}
-                />
-              </Child>
-            </>
-          )}
-        </Split>
-      </PillHeader>
-      {showBody && (
-        <Split direction="column" padding="1rem 1rem 0 1rem">
-          <Child>
-            <Split>
-              <Row title="">
-                <Split direction="row">
-                  <Child padding="0 1rem 0 0">
-                    <Switch value={wait} onChange={setWait} />
-                  </Child>
-                  <Child grow>
-                    <span>Await execution of this action</span>
-                  </Child>
-                </Split>
-              </Row>
-              <Row title="">
-                <Split direction="row">
-                  <Child padding="0 1rem 0 0">
-                    <Tooltip
-                      title="Releases all keys that might still be in pressed state after this action ends"
-                    >
-                      <Switch value={releaseEnd} onChange={setReleaseEnd} />
-                    </Tooltip>
-                  </Child>
-                  <Child grow>
-                    <span>Restore key states when action ends</span>
-                  </Child>
-                </Split>
-              </Row>
-              <Child>
-                <List
-                  menu={
-                    <KeystrokeHeaderMenu
-                      closeMenu={closeMenu}
-                      showMenu={showMenu}
-                      keystrokes={action.keystrokes.length}
-                      onAdd={addKeystroke}
-                    />
-                  }
+    <Pill
+      isExpanded={showBody}
+      icon={<IconKeyboard />}
+      expanded={Expanded}
+      collapsed={Expanded}
+      onRemove={() => onRemove(action.id)}
+      onMoveUp={onMoveUp ? () => onMoveUp(action.id) : null}
+      onMoveDown={onMoveDown ? () => onMoveDown(action.id) : null}
+      onExpand={() => setExpanded(true)}
+      onCollapse={() => setExpanded(false)}
+    >
+      <Split>
+        <Row title="">
+          <Split direction="row">
+            <Child padding="0 1rem 0 0">
+              <Switch value={action.wait} onChange={wait => setProp({ wait })} />
+            </Child>
+            <Child grow>
+              <span>Await execution of this action</span>
+            </Child>
+          </Split>
+        </Row>
+        <Row title="">
+          <Split direction="row">
+            <Child padding="0 1rem 0 0">
+              <Tooltip
+                title="Releases all keys that might still be in pressed state after this action ends"
+              >
+                <Switch value={action.restoreAllAtEnd} onChange={restoreAllAtEnd => setProp({ restoreAllAtEnd })} />
+              </Tooltip>
+            </Child>
+            <Child grow>
+              <span>Restore key states when action ends</span>
+            </Child>
+          </Split>
+        </Row>
+        <Child>
+          <List
+            menu={
+              <KeystrokeHeaderMenu
+                closeMenu={closeMenu}
+                showMenu={showMenu}
+                keystrokes={action.keystrokes.length}
+                onAdd={addKeystroke}
+              />
+            }
+          >
+            <AnimatePresence>
+              {action.keystrokes.map((s,i) => (
+                <motion.div
+                  positionTransition={{
+                    type: 'spring',
+                    damping: 30,
+                    stiffness: 200
+                  }}
+                  initial={{ opacity: 0, translateX: -100 }}
+                  animate={{ opacity: 1, translateX: 0 }}
+                  exit={{ opacity: 0, translateX: 100 }}
+                  key={s.id}
                 >
-                  <AnimatePresence>
-                    {keystrokes.map((s,i) => (
-                      <motion.div
-                        positionTransition={{
-                          type: 'spring',
-                          damping: 30,
-                          stiffness: 200
-                        }}
-                        initial={{ opacity: 0, translateX: -100 }}
-                        animate={{ opacity: 1, translateX: 0 }}
-                        exit={{ opacity: 0, translateX: 100 }}
-                        key={s.id}
-                      >
-                        <HotkeyKeystrokePill
-                          key={s.id}
-                          showMenu={showMenu}
-                          closeMenu={closeMenu}
-                          keystroke={s}
-                          onMoveUp={i !== 0 ? () => moveKeystrokeUp(s.id) : null}
-                          onMoveDown={i < keystrokes.length - 1 ? () => moveKeystrokeDown(s.id) : null}
-                          onRemove={removeKeystroke}
-                          onChange={updateKeystroke}
-                        />
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </List>
-              </Child>
-            </Split>
-          </Child>
-        </Split>
-      )}
-    </PillBorder>
-  );
+                  <HotkeyKeystrokePill
+                    key={s.id}
+                    showMenu={showMenu}
+                    closeMenu={closeMenu}
+                    keystroke={s}
+                    onMoveUp={i !== 0 ? () => moveKeystrokeUp(s.id) : null}
+                    onMoveDown={i < action.keystrokes.length - 1 ? () => moveKeystrokeDown(s.id) : null}
+                    onRemove={removeKeystroke}
+                    onChange={updateKeystroke}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </List>
+        </Child>
+      </Split>
+    </Pill>
+  )
 };
 
 HotkeyPill.defaultProps = {

@@ -2,12 +2,11 @@ import * as React from 'react';
 import * as lodash from 'lodash';
 
 import { LaunchApp } from '@lunchpad/types';
-import { IconEdit, IconTimes, IconCheck, IconTrash, IconUp, IconDown, IconTerminal } from '@lunchpad/icons';
+import { IconTerminal } from '@lunchpad/icons';
 
-import { PillHeader, PillBorder } from './pill'
-import { Split, Child, VerticalPipe, Row } from '../basic/layout';
-import { IconButton, Tooltip, Input, Switch, File } from '../basic';
-import { COLOR_REDISH, COLOR_BLURPLE } from '../../theme';
+import { Pill } from './pill'
+import { Split, Child, Row } from '../basic/layout';
+import { Switch, File, Input } from '../basic';
 
 interface ILaunchAppPill {
   action: LaunchApp
@@ -21,102 +20,76 @@ interface ILaunchAppPill {
 export const LaunchAppPill: React.SFC<ILaunchAppPill> = ({ action, expanded, onChange, onRemove, onMoveUp, onMoveDown }) => {
   const [ showBody, setExpanded ] = React.useState<boolean>(expanded);
 
-  const [ executable, setExecutable ] = React.useState<string>(action.executable);
-  const [ args, setArguments ] = React.useState<string>(action.arguments);
-  const [ hidden, setHidden ] = React.useState<boolean>(action.hidden)
-  
-  const [ wait, setWait ] = React.useState<boolean>(action.wait)
-  const [ kill, setKill ] = React.useState<boolean>(action.killOnStop)
-
-  const change = () => {
-    const actn = new LaunchApp(executable, args, hidden, kill, action.id)
-    onChange(actn)
-    setExpanded(false);
+  const setProp = (props) => {
+    onChange(Object.assign({}, action, props))
   }
 
+  const Expanded = (
+    <Split direction="row">
+      <Child grow whiteSpace="nowrap" padding="0 1rem 0 0"><div style={{textOverflow: "ellipsis", overflow: "hidden"}}>Launch: {action.executable}</div></Child>
+    </Split>
+  )
+  
   return (
-    <PillBorder show={showBody}>
-      <PillHeader expanded={showBody}>
-        <Split direction="row">
-          <Child padding={"0 1rem 0 0"}><IconTerminal /></Child>
-          {showBody ? <>
-            <Child grow width="40%" whiteSpace="nowrap"><div style={{textOverflow: "ellipsis", overflow: "hidden"}}>Edit: Launch application</div></Child>
-            <Child padding="0">
-              <Tooltip title="Removes the action from the list! ITS GONE!" >
-                <IconButton hover={COLOR_REDISH} onClick={() => onRemove(action.id)} icon={<IconTrash />} />
-              </Tooltip>
+    <Pill
+      isExpanded={showBody}
+      icon={<IconTerminal />}
+      expanded={Expanded}
+      collapsed={Expanded}
+      onRemove={() => onRemove(action.id)}
+      onMoveUp={onMoveUp ? () => onMoveUp(action.id) : null}
+      onMoveDown={onMoveDown ? () => onMoveDown(action.id) : null}
+      onExpand={() => setExpanded(true)}
+      onCollapse={() => setExpanded(false)}
+    >
+      <Split>
+        <Row title="">
+          <Split direction="row">
+            <Child padding="0 1rem 0 0">
+              <Switch
+                value={action.wait}
+                onChange={wait => setProp({ wait })}
+              />
             </Child>
-            <Child padding="0 0 0 2rem">
-              <Tooltip title="Update this action with the current settings" >
-                <IconButton hover={COLOR_BLURPLE} onClick={change} icon={<IconCheck />} />
-              </Tooltip>
+            <Child grow>
+              <span>Wait until application is closed / finished</span>
             </Child>
-            <Child padding="0 0 0 2rem">
-              <Tooltip title="Discard changes made to this action" >
-                <IconButton hover={COLOR_REDISH} onClick={() => setExpanded(false)} icon={<IconTimes />} />
-              </Tooltip>
-            </Child>
-          </> : <>
-          <Child grow width="50%" whiteSpace="nowrap"><div style={{textOverflow: "ellipsis", overflow: "hidden"}}>Launch: {executable}</div></Child>
-            <Child padding="0"><IconButton disabled={!onMoveUp} icon={<IconUp />} onClick={() => onMoveUp(action.id)} /></Child>
-            <Child padding="0 0 0 1rem"><IconButton disabled={!onMoveDown} icon={<IconDown />} onClick={() => onMoveDown(action.id)} /></Child>
-            <Child padding="0 1rem 0 1rem"><VerticalPipe /></Child>
-            <Child padding="0"><IconButton onClick={() => setExpanded(true)} icon={<IconEdit />} /></Child>
-          </>}
-        </Split>
-      </PillHeader>
-      {showBody && <Split direction="column" padding="1rem">
-        <Child>
-          <Split>
-            <Row title="">
-              <Split direction="row">
-                <Child padding="0 1rem 0 0">
-                  <Switch
-                    value={wait}
-                    onChange={setWait}
-                  />
-                </Child>
-                <Child grow>
-                  <span>Wait until application is closed / finished</span>
-                </Child>
-              </Split>
-            </Row>
-            <Row title="">
-              <Split direction="row">
-                <Child padding="0 1rem 0 0">
-                  <Switch
-                    value={hidden}
-                    onChange={setHidden}
-                  />
-                </Child>
-                <Child grow>
-                  <span>Windowless if possible</span>
-                </Child>
-              </Split>
-            </Row>
-            <Row title="">
-              <Split direction="row">
-                <Child padding="0 1rem 0 0">
-                  <Switch
-                    value={kill}
-                    onChange={setKill}
-                  />
-                </Child>
-                <Child grow>
-                  <span>Kill when macro gets stopped</span>
-                </Child>
-              </Split>
-            </Row>
-            <Row title="App:">
-              <File editable value={executable} accept="application/*" onChange={setExecutable} />
-            </Row>
-            <Row title="Arguments:">
-              <Input value={args} onChange={e => setArguments(e.target.value)} />
-            </Row>
           </Split>
-        </Child>
-      </Split>}
-    </PillBorder>
+        </Row>
+        <Row title="">
+          <Split direction="row">
+            <Child padding="0 1rem 0 0">
+              <Switch
+                value={action.hidden}
+                onChange={hidden => setProp({ hidden })}
+              />
+            </Child>
+            <Child grow>
+              <span>Windowless if possible</span>
+            </Child>
+          </Split>
+        </Row>
+        <Row title="">
+          <Split direction="row">
+            <Child padding="0 1rem 0 0">
+              <Switch
+                value={action.killOnStop}
+                onChange={killOnStop => setProp({ killOnStop })}
+              />
+            </Child>
+            <Child grow>
+              <span>Kill when macro gets stopped</span>
+            </Child>
+          </Split>
+        </Row>
+        <Row title="App:">
+          <File editable value={action.executable} accept="application/*" onChange={executable => setProp({ executable })} />
+        </Row>
+        <Row title="Arguments:">
+          <Input value={action.arguments} onChange={e => setProp({ arguments: e.target.value })} />
+        </Row>
+      </Split>
+    </Pill>
   )
 }
 

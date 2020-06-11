@@ -9,6 +9,8 @@ import {
   faCut,
   faCircle,
   faChevronRight,
+  faChevronUp,
+  faChevronDown,
   faTrash,
   faPen,
   faFileExport,
@@ -60,6 +62,9 @@ export const IconGloba = () => <Icon icon={faGlobe} />
 
 export const IconPlus = () => <Icon icon={faPlus} />
 export const IconMinus = () => <Icon icon={faMinus} />
+
+export const IconChevronDown = () => <Icon icon={faChevronDown} />
+export const IconChevronUp = () => <Icon icon={faChevronUp} />
 
 export const IconPlay = () => <Icon icon={faPlay} />
 export const IconStop = () => <Icon icon={faStop} />

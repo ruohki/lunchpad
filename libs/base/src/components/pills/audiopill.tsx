@@ -3,14 +3,13 @@ import * as _ from 'lodash';
 
 import { PlaySound, IMediaDevice } from '@lunchpad/types';
 import { useAnimationFrame } from '@lunchpad/hooks';
-import { IconPlay, IconStop, IconEdit, IconTimes, IconCheck, IconTrash, IconUp, IconDown, IconVolumeUp } from '@lunchpad/icons';
+import { IconPlay, IconStop, IconVolumeUp } from '@lunchpad/icons';
 import { FileURI } from '@lunchpad/types';
 
 import { AudioRange } from '../audiorange';
-import { PillHeader, PillBorder } from './pill'
-import { Split, Child, VerticalPipe, Row } from '../basic/layout';
-import { IconButton, Slider, File, Tooltip, Select, Switch } from '../basic';
-import { COLOR_REDISH, COLOR_BLURPLE } from '../../theme';
+import { Pill } from './pill'
+import { Split, Child, Row } from '../basic/layout';
+import { IconButton, Slider, File, Select, Switch } from '../basic';
 
 const path = window.require('path')
 
@@ -35,40 +34,16 @@ const audio = new AudioContext();
 
 export const PlaySoundPill: React.SFC<IPlaySoundPill> = ({ action, expanded, outputDevices, onChange, onRemove, onMoveUp, onMoveDown }) => {
   const [ showBody, setExpanded ] = React.useState<boolean>(expanded);
-  const [ file, setFile ] = React.useState<string>(action.soundfile || "");
-  
-  const [ audioBuffer, setAudioBuffer ] = React.useState<AudioBuffer>();
-  
-  const [ player, setPlayer ] = React.useState<AudioBufferSourceNodeExtra>();
 
-  const [ playbackRange, setPlaybackRange ] = React.useState<[number, number]>([action.start, action.end]);
+  const [ audioBuffer, setAudioBuffer ] = React.useState<AudioBuffer>();
+  const [ player, setPlayer ] = React.useState<AudioBufferSourceNodeExtra>();
   const [ playbackPos, setPlaybackPos ] = React.useState<number>(0);
   const [ playing, setPlaying ] = React.useState<boolean>(false);
+  
+  const filename = path.basename(action.soundfile) || "none";
 
-  const [ volume, setVolume ] = React.useState<number>(action.volume);
-  const [ outputDevice, setOutputDevice ] = React.useState(action.outputDevice);
-
-  const filename = path.basename(file) || "none";
-  const [ inMark, outMark ] = playbackRange;
-
-  const [ wait, setWait ] = React.useState<boolean>(action.wait);
-
-  const change = () => {
-    const actn = new PlaySound(file)
-    actn.id = action.id;
-    actn.volume = volume;
-    actn.start = inMark;
-    actn.end = outMark;
-    actn.outputDevice = outputDevice;
-    actn.wait = wait;
-
-    onChange(actn)
-    setExpanded(false);
-  }
-
-  const onAudioRangeChange = (start: number, end: number) => {
-    setPlaybackPos(start);
-    setPlaybackRange([start, end]);
+  const setProp = (props) => {
+    onChange(Object.assign({}, action, props))
   }
   
   const StopBuffer = () => {
@@ -84,15 +59,15 @@ export const PlaySoundPill: React.SFC<IPlaySoundPill> = ({ action, expanded, out
     StopBuffer();
 
     const gainNode = audio.createGain();
-    gainNode.gain.value = volume;
+    gainNode.gain.value = action.volume;
     gainNode.connect(audio.destination);
 
     const bufferSource = audio.createBufferSource() as AudioBufferSourceNodeExtra;
     bufferSource.buffer = audioBuffer;
     bufferSource.connect(gainNode);
 
-    const start = audioBuffer.duration * inMark
-    const duration = audioBuffer.duration * outMark - start
+    const start = audioBuffer.duration * action.start
+    const duration = audioBuffer.duration * action.end - start
     
     setPlaying(true);
 
@@ -109,121 +84,112 @@ export const PlaySoundPill: React.SFC<IPlaySoundPill> = ({ action, expanded, out
     if (player.context.currentTime === 0) return;
     const offset = player.offset / audioBuffer.duration
     const pos = _.clamp(((player.context.currentTime - player.startTime) / audioBuffer.duration ) + offset, 0, 1);
-    setPlaybackPos(pos)
+    setPlaybackPos(_.clamp(pos, action.start, action.end))
   });
 
   React.useEffect(() => {
-    fetch(FileURI(file))
+    fetch(FileURI(action.soundfile))
       .then(response => response.arrayBuffer())
       .then(arrayBuffer => audio.decodeAudioData(arrayBuffer))
       .then(setAudioBuffer);
-  }, [ file ])
+  }, [ action.soundfile ])
+
+  const Collapsed = (
+    <Split direction="row">
+      <Child grow basis="75%" whiteSpace="nowrap" padding="0 1rem 0 0"><div style={{textOverflow: "ellipsis", overflow: "hidden"}}>Play: {filename}</div></Child>
+      <Child grow basis="25%">
+        <Slider
+          value={action.volume * 100}
+          onChange={(e) => setProp({ volume: (parseInt(e.target.value) / 100)})}
+        />
+      </Child>
+      <Child padding="0 0 0 1rem">{Math.round(action.volume * 100)}%</Child>
+      {!playing && <Child padding="0 0 0 1rem"><IconButton icon={<IconPlay />} onClick={(e) => PlayBuffer()} /></Child>}
+      {playing && <Child padding="0 0 0 1rem"><IconButton icon={<IconStop />} onClick={() => StopBuffer()} /></Child>}
+    </Split>
+  )
+
+  const Expanded = (
+    <Split direction="row">
+      <Child grow whiteSpace="nowrap" padding="0 1rem 0 0"><div style={{textOverflow: "ellipsis", overflow: "hidden"}}>Play: {filename}</div></Child>
+    </Split>
+  )
 
   return (
-    <PillBorder show={showBody}>
-      <PillHeader expanded={showBody}>
-        <Split direction="row">
-         <Child padding={"0 1rem 0 0"}><IconVolumeUp /></Child>
-          {showBody ? <>
-            <Child grow width="40%" whiteSpace="nowrap"><div style={{textOverflow: "ellipsis", overflow: "hidden"}}>Edit: Play sound file</div></Child>
-            <Child padding="0">
-              <Tooltip title="Removes the action from the list! ITS GONE!" >
-                <IconButton hover={COLOR_REDISH} onClick={() => onRemove(action.id)} icon={<IconTrash />} />
-              </Tooltip>
+    <Pill
+      isExpanded={showBody}
+      icon={<IconVolumeUp />}
+      expanded={Expanded}
+      collapsed={Collapsed}
+      onRemove={() => onRemove(action.id)}
+      onMoveUp={onMoveUp ? () => onMoveUp(action.id) : null}
+      onMoveDown={onMoveDown ? () => onMoveDown(action.id) : null}
+      onExpand={() => setExpanded(true)}
+      onCollapse={() => setExpanded(false)}
+    >
+      <Split padding="0 0 1rem 0">
+        <Row title="">
+          <Split direction="row">
+            <Child padding="0 1rem 0 0">
+              <Switch
+                value={action.wait}
+                onChange={(wait) => setProp({ wait })}
+              />
             </Child>
-            <Child padding="0 0 0 2rem">
-              <Tooltip title="Update this action with the current settings" >
-                <IconButton hover={COLOR_BLURPLE} onClick={change} icon={<IconCheck />} />
-              </Tooltip>
+            <Child grow>
+              <span>Await execution of this action</span>
             </Child>
-            <Child padding="0 0 0 2rem">
-              <Tooltip title="Discard changes made to this action" >
-                <IconButton hover={COLOR_REDISH} onClick={() => setExpanded(false)} icon={<IconTimes />} />
-              </Tooltip>
-            </Child>
-          </> : <>
-            <Child grow width="50%" whiteSpace="nowrap"><div style={{textOverflow: "ellipsis", overflow: "hidden"}}>Play: {filename}</div></Child>
-            <Child grow padding="0">
-              <Split direction="row">
-                <Child grow>
-                  <Slider
-                    value={volume * 100}
-                    onChange={(e) => setVolume(parseInt(e.target.value) / 100)}
-                    onMouseUp={change
-                    }
-                  />
-                </Child>
-                <Child padding="0 0 0 1rem">{Math.round(volume * 100)}%</Child>
-                {!playing && <Child padding="0 0 0 1rem"><IconButton icon={<IconPlay />} onClick={() => PlayBuffer()} /></Child>}
-                {playing && <Child padding="0 0 0 1rem"><IconButton icon={<IconStop />} onClick={() => StopBuffer()} /></Child>}
-                <Child padding="0 1rem 0 1rem"><VerticalPipe /></Child>
-                <Child padding="0"><IconButton disabled={!onMoveUp} icon={<IconUp />} onClick={() => onMoveUp(action.id)} /></Child>
-                <Child padding="0 0 0 1rem"><IconButton disabled={!onMoveDown} icon={<IconDown />} onClick={() => onMoveDown(action.id)} /></Child>
-                <Child padding="0 1rem 0 1rem"><VerticalPipe /></Child>
-                <Child padding="0"><IconButton onClick={() => setExpanded(true)} icon={<IconEdit />} /></Child>
-              </Split>
-            </Child>
-          </>}
-        </Split>
-      </PillHeader>
-      {showBody && <Split direction="column" padding="1rem">
-        <Child>
-          <Split>
-            <Row title="">
-              <Split direction="row">
-                <Child padding="0 1rem 0 0">
-                  <Switch
-                    value={wait}
-                    onChange={setWait}
-                  />
-                </Child>
-                <Child grow>
-                  <span>Await execution of this action</span>
-                </Child>
-              </Split>
-            </Row>
-            <Row title="Sound:">
-              <File value={file} accept="audio/*" onChange={f => {
-                setPlaybackRange([0, 1]);
-                setPlaybackPos(0);
-                setFile(f)
-              }} />
-            </Row>
-            <Row title="Sound Output">
-              <Select
-                value={outputDevice}
-                onChange={e => setOutputDevice(e.target.value)}
-              >
-                {outputDevices.map(e => <option key={e.deviceId} value={e.deviceId}>{e.label}</option>)}
-              </Select>
-            </Row>
-            <Row title="Volume:">
-              <Split direction="row">
-                <Child grow>
-                  <Slider value={volume * 100} onChange={(e) => setVolume(parseInt(e.target.value) / 100)} />
-                </Child>
-                <Child padding="0 0 0 1rem">
-                  {Math.round(volume * 100)}%
-                </Child>
-                {!playing && <Child padding="0 0 0 1rem">
-                  <IconButton icon={<IconPlay />} onClick={() => PlayBuffer()} />
-                </Child>}
-                {playing && <Child padding="0 0 0 1rem">
-                  <IconButton icon={<IconStop />} onClick={() => StopBuffer()}/>
-                </Child>}
-              </Split>
-            </Row>
-            <Row title="In/Out:">
-              <AudioRange onChange={onAudioRangeChange} file={FileURI(file)} playbackPos={playbackPos} start={inMark} end={outMark} />
-            </Row>
-            <Row title="">
-              <span style={{float:'left'}}><IconPlay /> {((audioBuffer?.duration ?? 0) * inMark).toFixed(2)}s ({Math.round(inMark * 100)}%)</span>
-              <span style={{float:'right'}}><IconStop /> {((audioBuffer?.duration ?? 0) * outMark).toFixed(2)}s ({Math.round(outMark * 100)}%)</span>
-            </Row>
           </Split>
-        </Child>
-      </Split>}
-    </PillBorder>
+        </Row>
+        <Row title="Sound:">
+          <File value={action.soundfile} accept="audio/*" onChange={f => {
+            setProp({ start: 0, end: 1, soundfile: f})
+            console.log("Change")
+            setPlaybackPos(0);
+          }} />
+        </Row>
+        <Row title="Sound Output">
+          <Select
+            value={action.outputDevice}
+            onChange={e => setProp({ outputDevice: e.target.value })}
+          >
+            {outputDevices.map(e => <option key={e.deviceId} value={e.deviceId}>{e.label}</option>)}
+          </Select>
+        </Row>
+        <Row title="Volume:">
+          <Split direction="row">
+            <Child grow>
+              <Slider value={action.volume * 100} onChange={(e) => setProp({ volume: parseInt(e.target.value) / 100})} />
+            </Child>
+            <Child padding="0 0 0 1rem">
+              {Math.round(action.volume * 100)}%
+            </Child>
+            {!playing && <Child padding="0 0 0 1rem">
+              <IconButton icon={<IconPlay />} onClick={() => PlayBuffer()} />
+            </Child>}
+            {playing && <Child padding="0 0 0 1rem">
+              <IconButton icon={<IconStop />} onClick={() => StopBuffer()}/>
+            </Child>}
+          </Split>
+        </Row>
+        <Row title="In/Out:">
+          <AudioRange
+            onChange={(start, end) => {
+              setProp({ start, end })
+              setPlaybackPos(start)
+            }}
+            file={FileURI(action.soundfile)}
+            playbackPos={playbackPos}
+            start={action.start}
+            end={action.end}
+          />
+        </Row>
+        <Row title="">
+          <span style={{float:'left'}}><IconPlay /> {((audioBuffer?.duration ?? 0) * action.start).toFixed(2)}s ({Math.round(action.start * 100)}%)</span>
+          <span style={{float:'right'}}><IconStop /> {((audioBuffer?.duration ?? 0) * action.end).toFixed(2)}s ({Math.round(action.end * 100)}%)</span>
+        </Row>
+      </Split>
+    </Pill>
   )
 }
 

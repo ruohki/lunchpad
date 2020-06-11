@@ -1,6 +1,6 @@
 {
   "name": "lunchpad",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "license": "ISC",
   "author": "Tillmann Hübner <ruohki@gmail.com>",
   "repository": "https://gitlab.com/ruohki/lunchpad",
@@ -45,6 +45,7 @@
     "lodash": "^4.17.15",
     "logrocket": "^1.0.7",
     "polished": "^3.6.4",
+    "rc-tooltip": "^4.2.1",
     "react": "16.12.0",
     "react-color": "^2.18.1",
     "react-dnd": "^10.0.2",

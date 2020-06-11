@@ -142,10 +142,8 @@ export const AudioRange: React.SFC<IAudioRange> = ({ file, start, end, playbackP
     const onMouseUp = () => {
       setDraggingLeft(false);
       setDraggingRight(false);
-      onChange(inMark, 1 - outMark);
     };
     window.addEventListener("mouseup", onMouseUp);
-
     return () => window.removeEventListener("mouseup", onMouseUp);
   }, [inMark, outMark, setDraggingLeft, setDraggingRight]);
 
@@ -154,13 +152,13 @@ export const AudioRange: React.SFC<IAudioRange> = ({ file, start, end, playbackP
       <Container  onMouseMove={mouseMove}>
         <RangeContainer>
           <RangeLeft style={{ width: `${inMark*100}%` }}>
-            <GrabberLeft onMouseDown={() => setDraggingLeft(true)} />
+            <GrabberLeft onMouseDown={() => setDraggingLeft(true)} onMouseUp={() => onChange(inMark, 1 - outMark)} />
           </RangeLeft>
           <RangeMiddle
             style={{ width: `${100 - ((inMark + outMark)*100)}%` }}
           />
           <RangeRight style={{ width: `${outMark*100}%` }}>
-            <GrabberRight onMouseDown={() => setDraggingRight(true)} />
+            <GrabberRight onMouseDown={() => setDraggingRight(true)} onMouseUp={() => onChange(inMark, 1 - outMark)} />
           </RangeRight>
         </RangeContainer>
         <PlaybackPosition style={{ marginLeft: `${playbackPos*100}%` }} />

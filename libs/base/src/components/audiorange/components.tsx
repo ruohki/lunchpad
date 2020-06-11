@@ -64,5 +64,5 @@ export const GrabberRight = styled.div`
   user-select: none;
   cursor: ew-resize;
   border-radius: 8px;
-  margin-left: -4px;
+  margin-left: -2px;
 `;
