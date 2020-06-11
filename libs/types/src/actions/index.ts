@@ -66,7 +66,7 @@ export class PlaySound extends Action {
 
   public outputDevice?: string
 
-  constructor(soundfile: string, id: string = uuid()) {
+  constructor(soundfile: string, outputDevice = "default", id: string = uuid()) {
     super(ActionType.PlaySound, id);
     const audio = new AudioContext();
 
@@ -80,7 +80,7 @@ export class PlaySound extends Action {
       .then(arrayBuffer => audio.decodeAudioData(arrayBuffer))
       .then(buffer => this.duration = buffer.duration);
 
-    this.outputDevice = "default"; //outputDevice;
+    this.outputDevice = outputDevice;
   }
 }
 

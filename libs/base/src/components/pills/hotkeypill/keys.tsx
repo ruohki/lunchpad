@@ -26,12 +26,17 @@ const SpecialKeys = [
   'f12',
   'command',
   'alt',
+  'right_alt',
   'control',
+  'left_control',
+  'right_control',
   'shift',
   'right_shift',
   'space',
   'printscreen',
   'insert',
+  'menu',
+  'capslock',
   'audio_mute',
   'audio_vol_down',
   'audio_vol_up',
@@ -53,7 +58,13 @@ const SpecialKeys = [
   'numpad_6',
   'numpad_7',
   'numpad_8',
-  'numpad_9'
+  'numpad_9',
+  'numpad_lock',
+  'numpad_+',
+  'numpad_-',
+	'numpad_*',
+	'numpad_/',
+	'numpad_.'
 ];
 
 const Numbers = [

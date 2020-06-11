@@ -8,6 +8,7 @@ export const Container = styled.div`
 `;
 
 export const PlaybackPosition = styled.div`
+  pointer-events: none;
   position: absolute;
   float: left;
   margin-left: 33%;
@@ -38,7 +39,7 @@ export const GrabberLeft = styled.div`
   user-select: none;
   cursor: ew-resize;
   border-radius: 8px;
-  margin-right: -2px;
+  margin-right: -4px;
 `;
 
 export const RangeMiddle = styled.div`
@@ -63,5 +64,5 @@ export const GrabberRight = styled.div`
   user-select: none;
   cursor: ew-resize;
   border-radius: 8px;
-  margin-left: -2px;
+  margin-left: -4px;
 `;
