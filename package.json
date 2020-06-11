@@ -9,7 +9,7 @@
     "nx": "nx",
     "start": "npm run href:dev && nx serve",
     "build": "nx build",
-    "make:win": "npm run href:prod && nx build frontend --prod && nx build application --prod && nx run application:make --asar --publish always",
+    "make:win": "npm run href:prod && nx build frontend --prod && nx build application --prod && nx run application:make --asar --publishPolicy=always",
     "test": "nx test",
     "lint": "nx workspace-lint && nx lint",
     "e2e": "nx e2e",
