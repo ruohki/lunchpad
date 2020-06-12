@@ -78,7 +78,6 @@ const HotkeyKeystrokePill: React.SFC<IHotkeyKeystrokePill> = ({ keystroke, showM
     ))
   }
 
- 
   const change = (stroke: HotkeyKeystroke) => {
     onChange(stroke);
   }
@@ -185,7 +184,6 @@ const KeystrokeHeaderMenu = ({ showMenu, closeMenu, keystrokes, onAdd }) => {
       </Child>
     </Split>
   )
-
 }
 
 export const HotkeyPill: React.SFC<IHotkeyPill> = ({
@@ -199,8 +197,6 @@ export const HotkeyPill: React.SFC<IHotkeyPill> = ({
   closeMenu,
 }) => {
   const [showBody, setExpanded] = React.useState<boolean>(expanded);
-
-  const [ keystrokes, setKeystrokes ] = React.useState<HotkeyKeystroke[]>(action.keystrokes);
   
   const setProp = (props) => {
     onChange(Object.assign({}, action, props))
@@ -222,7 +218,7 @@ export const HotkeyPill: React.SFC<IHotkeyPill> = ({
     setProp({ keystrokes: [...action.keystrokes] })
   };
 
-  const removeKeystroke = (id: string) => setProp({ keystrokes: [...keystrokes.filter(k => k.id !== id)] })
+  const removeKeystroke = (id: string) => setProp({ keystrokes: [...action.keystrokes.filter(k => k.id !== id)] })
 
   const addKeystroke = (id: string) => {
     const type = id as HotkeyKeystrokeType
@@ -235,7 +231,7 @@ export const HotkeyPill: React.SFC<IHotkeyPill> = ({
   }
 
   const updateKeystroke = (stroke: HotkeyKeystroke) => {
-    setProp({ keystrokes: keystrokes.map(s => (s.id === stroke.id ? stroke : s))})
+    setProp({ keystrokes: action.keystrokes.map(s => (s.id === stroke.id ? stroke : s))})
   }
 
   const Expanded = (

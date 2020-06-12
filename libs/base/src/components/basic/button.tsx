@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { COLOR_WHITE, COLOR_BLURPLE, COLOR_GRAY } from '../../theme/colors';
 import { lighten, darken } from 'polished';
 
-const { shell } = window.require('electron');
+const { shell } = window.require ? window.require('electron') : { shell: {openExternal: () => {} }};
 
 interface IButtonProps {
   color?: string;
