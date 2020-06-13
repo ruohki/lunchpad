@@ -54,7 +54,7 @@ interface IIconButton {
   hover?: string
   rotation?: number
   disabled?: boolean
-  active?: boolean | number
+  active?: number
   icon?: JSX.Element
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void
 }
