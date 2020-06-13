@@ -2,11 +2,6 @@ import React from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 
-import { FontAwesomeIcon as Icon } from '@fortawesome/react-fontawesome';
-
-import { faExclamationTriangle, faBan } from '@fortawesome/pro-light-svg-icons';
-
-
 export const NotificationContainer = styled.div`
   position: fixed;
   display: flex;
@@ -27,9 +22,10 @@ const SeverityColors = {
   info: "#2C2F33"
 }
 
+// TODO: Add new icons
 const SeverityIcons = {
-  error: faBan,
-  warning: faExclamationTriangle,
+  error: null,
+  warning: null,
   info: null
 }
 
@@ -40,7 +36,7 @@ export enum Severity {
 }
 
 export const Notification = styled(({ id, children, severity, ...rest }) => (
-  <motion.div key={id} {...rest}>{SeverityIcons[severity] && <Icon icon={SeverityIcons[severity]} />}{children}</motion.div>
+  <motion.div key={id} {...rest}>{SeverityIcons[severity] /* && <Icon icon={SeverityIcons[severity]} /> */}{children}</motion.div>
 ))<{ severity: Severity }>`
   padding: 2rem 5rem;
   border-radius: 8px;
