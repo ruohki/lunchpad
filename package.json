@@ -11,6 +11,7 @@
     "build": "nx build",
     "make:win": "npm run href:prod && nx build frontend --prod && nx build application --prod && nx run application:make --asar",
     "make:win:publish": "npm run href:prod && nx build frontend --prod && nx build application --prod && nx run application:make --asar --publishPolicy=always",
+    "generate:icons": "node tools/generateIcons/index.js libs/icons/src/SVG",
     "test": "nx test",
     "lint": "nx workspace-lint && nx lint",
     "e2e": "nx e2e",
@@ -59,6 +60,7 @@
     "react-use": "^14.3.0",
     "robotjs": "^0.6.0",
     "styled-components": "5.0.1",
+    "svgson": "^4.1.0",
     "typeface-exo-2": "^1.1.4",
     "uuid": "^7.0.3",
     "webmidi": "^2.5.1"
