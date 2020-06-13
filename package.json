@@ -3,7 +3,7 @@
   "version": "0.1.6",
   "license": "ISC",
   "author": "Tillmann Hübner <ruohki@gmail.com>",
-  "repository": "https://gitlab.com/ruohki/lunchpad",
+  "repository": "https://github.com/ruohki/lunchpad",
   "description": "Macro application that can handle launchpads",
   "scripts": {
     "nx": "nx",
