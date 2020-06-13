@@ -1,11 +1,10 @@
 import * as React from 'react';
 
 import {
-  IconKeyboard,
-  IconStopwatch,
-  IconSortAlt,
-  IconLongArrowAltDown,
-  IconLongArrowAltUp
+  Icon,
+  ButtonDown,
+  ButtonUp,
+  ButtonDownUp
 } from '@lunchpad/icons';
 
 import { HotkeyKeystrokeEvent } from '@lunchpad/types';
@@ -26,9 +25,9 @@ export const ChangeTypeMenu: React.SFC<IChangeTypeMenu> = ({ onSelect, onClose }
         onClose(e)
       }}
     >
-      <MenuItem id={HotkeyKeystrokeEvent.KeyDown}><IconLongArrowAltDown />Press and hold key</MenuItem>
-      <MenuItem id={HotkeyKeystrokeEvent.KeyUp}><IconLongArrowAltUp />Release key</MenuItem>
-      <MenuItem id={HotkeyKeystrokeEvent.KeyDownUp}><IconSortAlt />Tap key</MenuItem>
+      <MenuItem id={HotkeyKeystrokeEvent.KeyDown}><Icon icon={ButtonDown} />Press and hold key</MenuItem>
+      <MenuItem id={HotkeyKeystrokeEvent.KeyUp}><Icon icon={ButtonUp} />Release key</MenuItem>
+      <MenuItem id={HotkeyKeystrokeEvent.KeyDownUp}><Icon icon={ButtonDownUp} />Tap key</MenuItem>
     </MenuParent>
   )
 }

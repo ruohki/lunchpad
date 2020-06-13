@@ -64,15 +64,21 @@ const IconButtonSFC: React.SFC<IIconButton> = ({ icon, children, ...rest }) => <
 export const IconButton = styled(IconButtonSFC)`
   background: none;
   border: none;
-  color: ${(props) => props.disabled ? darken(0.3, COLOR_GRAY) : props.active ? props.hover : COLOR_GRAY};
+  
   outline: none;
   transition: all 0.2s ease;
   cursor: ${(props) => props.disabled ? 'cursor' : 'pointer'};
   
   transform: rotate(${(props) => props.rotation}deg);
   
+  & > * {
+    color: ${(props) => props.disabled ? darken(0.3, COLOR_GRAY) : props.active ? props.hover : COLOR_GRAY};
+  }
+
   &:hover {
-    color: ${props => props.disabled ? darken(0.3, COLOR_GRAY) : props.hover};
+    & > * {
+      color: ${props => props.disabled ? darken(0.3, COLOR_GRAY) : props.hover};
+    }
   }
 `
 

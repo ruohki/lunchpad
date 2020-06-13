@@ -2,12 +2,11 @@ import * as React from 'react';
 import * as lodash from 'lodash';
 
 import { SwitchPage } from '@lunchpad/types';
-import { IconEdit, IconTimes, IconCheck, IconTrash, IconUp, IconDown, IconMap } from '@lunchpad/icons';
+import { Icon, PageOpen } from '@lunchpad/icons';
 
 import { Pill } from './pill'
-import { Split, Child, VerticalPipe, Row } from '../basic/layout';
-import { IconButton, Tooltip, Select } from '../basic';
-import { COLOR_REDISH, COLOR_BLURPLE } from '../../theme';
+import { Split, Child, Row } from '../basic/layout';
+import { Select } from '../basic';
 
 interface IPage {
   id: string
@@ -43,7 +42,7 @@ export const SwitchPagePill: React.SFC<ISwitchPagePill> = ({ action, pages, expa
   return (
     <Pill
       isExpanded={showBody}
-      icon={<IconMap />}
+      icon={<Icon icon={PageOpen} />}
       expanded={Expanded}
       collapsed={Expanded}
       onRemove={() => onRemove(action.id)}

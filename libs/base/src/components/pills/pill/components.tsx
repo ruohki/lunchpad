@@ -2,11 +2,10 @@ import * as React from 'react';
 import styled from 'styled-components';
 import { COLOR_MENU, COLOR_REDISH } from '../../../theme/colors';
 import { darken, lighten } from 'polished';
-import { Child, Split, IconButton, VerticalPipe, Tooltip } from '../../basic';
+import { Child, Split, IconButton, VerticalPipe } from '../../basic';
 
 import { Action } from '@lunchpad/types';
-import { IconUp, IconDown, IconTrash, IconChevronDown, IconChevronUp } from '@lunchpad/icons';
-import { AnimatePresence, motion } from 'framer-motion';
+import { Icon, ArrowUp, ArrowDown, Trash, ChevronDown } from '@lunchpad/icons';
 
 export interface IPill {
   expanded?: boolean
@@ -40,14 +39,14 @@ const PillHeaderSFC: React.SFC<IPillHeader> = ({ children, expanded, expandable,
           {rest.isExpanded ? expanded : collapsed}
         </Child>
         {(onMoveUp || onMoveDown) && <Child padding="0 1rem 0 1rem"><VerticalPipe /></Child>}
-        {onMoveUp && <Child padding="0"><IconButton icon={<IconUp />} onClick={onMoveUp} /></Child>}
+        {onMoveUp && <Child padding="0"><IconButton icon={<Icon icon={ArrowUp} />} onClick={onMoveUp} /></Child>}
         {(onMoveUp && onMoveDown) && <Child padding="0 1rem 0 0" />}
-        {onMoveDown && <Child padding="0"><IconButton icon={<IconDown />} onClick={onMoveDown} /></Child>}
+        {onMoveDown && <Child padding="0"><IconButton icon={<Icon icon={ArrowDown} />} onClick={onMoveDown} /></Child>}
         <Child padding="0 1rem 0 1rem"><VerticalPipe /></Child>
-        <Child padding="0"><IconButton hover={COLOR_REDISH} onClick={onRemove} icon={<IconTrash />} /></Child>
+        <Child padding="0"><IconButton hover={COLOR_REDISH} onClick={onRemove} icon={<Icon icon={Trash} />} /></Child>
         {expandable && <Child padding="0 1rem 0 1rem"><VerticalPipe /></Child>}
         {expandable && <Child padding="0">
-          <IconButton onClick={rest.isExpanded ? onCollapse : onExpand} icon={<IconChevronDown />} rotation={rest.isExpanded ? 0 : 180} />
+          <IconButton onClick={rest.isExpanded ? onCollapse : onExpand} icon={<Icon icon={ChevronDown} />} rotation={rest.isExpanded ? 0 : 180} />
         </Child>}
       </Split>
     </Child>

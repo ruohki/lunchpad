@@ -7,7 +7,7 @@ import get from 'lodash/get';
 import flatten from 'lodash/flattenDeep';
 
 import { LaunchpadButton, Tooltip } from '@lunchpad/base'
-import { IconCaretRight, IconCaretUpSolid, IconCaretDownSolid, IconCaretLeftSolid, IconCaretRightSolid } from '@lunchpad/icons';
+import { Icon, TriangleRight, TriangleUpSolid, TriangleDownSolid, TriangleLeftSolid, TriangleRightSolid } from '@lunchpad/icons';
 import { LayoutContext, MidiContext } from '@lunchpad/contexts'
 import { Page, ControllerType } from '@lunchpad/types'
 
@@ -23,10 +23,10 @@ const EmptyButton = (x, y) => ({
 })
 
 const UpRow = [
-  <IconCaretUpSolid />,
-  <IconCaretDownSolid />,
-  <IconCaretLeftSolid />,
-  <IconCaretRightSolid />,
+  <Icon icon={TriangleUpSolid} />,
+  <Icon icon={TriangleDownSolid} />,
+  <Icon icon={TriangleLeftSolid} />,
+  <Icon icon={TriangleRightSolid} />,
   <span>Session</span>,
   <span>User 1</span>,
   <span>User 2</span>,
@@ -34,14 +34,14 @@ const UpRow = [
 ]
 
 const RightRow = [
-  <IconCaretRight />,
-  <IconCaretRight />,
-  <IconCaretRight />,
-  <IconCaretRight />,
-  <IconCaretRight />,
-  <IconCaretRight />,
-  <IconCaretRight />,
-  <IconCaretRight />
+  <Icon icon={TriangleRight} />,
+  <Icon icon={TriangleRight} />,
+  <Icon icon={TriangleRight} />,
+  <Icon icon={TriangleRight} />,
+  <Icon icon={TriangleRight} />,
+  <Icon icon={TriangleRight} />,
+  <Icon icon={TriangleRight} />,
+  <Icon icon={TriangleRight} />,
 ]
 
 const Vendor = [0x0, 0x20, 0x29];

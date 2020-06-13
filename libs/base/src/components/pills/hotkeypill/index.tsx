@@ -3,15 +3,16 @@ import * as lodash from 'lodash';
 
 import { Hotkey, HotkeyKeystrokeType, HotkeyKeystroke, HotkeyKeystrokeSimple, HotkeyKeystrokeDelay, HotkeyKeystrokeEvent, HotkeyKeystrokeString } from '@lunchpad/types';
 import {
-  IconTrash,
-  IconUp,
-  IconDown,
-  IconKeyboard,
-  IconPlus,
-  IconStopwatch,
-  IconSortAlt,
-  IconLongArrowAltDown,
-  IconLongArrowAltUp
+  Icon,
+  Trash,
+  ArrowUp,
+  ArrowDown,
+  Keyboard,
+  Plus,
+  Stopwatch,
+  ButtonDown,
+  ButtonUp,
+  ButtonDownUp,
 } from '@lunchpad/icons';
 
 import { Pill } from '../pill';
@@ -53,11 +54,11 @@ interface IHotkeyKeystrokePill {
 
 
 const TypeIcons = {
-  [HotkeyKeystrokeType.SimpleDown]: <IconLongArrowAltDown />,
-  [HotkeyKeystrokeType.SimpleUp]: <IconLongArrowAltUp />,
-  [HotkeyKeystrokeType.SimpleDownUp]: <IconSortAlt />,
-  [HotkeyKeystrokeType.Delay]: <IconStopwatch />,
-  [HotkeyKeystrokeType.String]: <IconKeyboard />,
+  [HotkeyKeystrokeType.SimpleDown]: <Icon icon={ButtonDown} />,
+  [HotkeyKeystrokeType.SimpleUp]: <Icon icon={ButtonUp} />,
+  [HotkeyKeystrokeType.SimpleDownUp]: <Icon icon={ButtonDownUp} />,
+  [HotkeyKeystrokeType.Delay]: <Icon icon={Stopwatch} />,
+  [HotkeyKeystrokeType.String]: <Icon icon={Keyboard} />,
 }
 
 const HotkeyKeystrokePill: React.SFC<IHotkeyKeystrokePill> = ({ keystroke, showMenu, closeMenu, onMoveUp, onMoveDown, onRemove, onChange }) => {
@@ -132,14 +133,14 @@ const HotkeyKeystrokePill: React.SFC<IHotkeyKeystrokePill> = ({ keystroke, showM
         <Child padding="0">
           <IconButton
             disabled={!onMoveUp}
-            icon={<IconUp />}
+            icon={<Icon icon={ArrowUp} />}
             onClick={() => onMoveUp(keystroke.id)}
           />
         </Child>
         <Child padding="0 0 0 1rem">
           <IconButton
             disabled={!onMoveDown}
-            icon={<IconDown />}
+            icon={<Icon icon={ArrowDown} />}
             onClick={() => onMoveDown(keystroke.id)}
           />
         </Child>
@@ -149,7 +150,7 @@ const HotkeyKeystrokePill: React.SFC<IHotkeyKeystrokePill> = ({ keystroke, showM
         <Child padding="0"></Child>
         <Child padding="0">
           <Tooltip title="Removes the keyboard event from the list! ITS GONE!" >
-            <IconButton hover={COLOR_REDISH} onClick={() => onRemove(keystroke.id)} icon={<IconTrash />} />
+            <IconButton hover={COLOR_REDISH} onClick={() => onRemove(keystroke.id)} icon={<Icon icon={Trash} />} />
           </Tooltip>
         </Child>
       </Split>
@@ -178,7 +179,7 @@ const KeystrokeHeaderMenu = ({ showMenu, closeMenu, keystrokes, onAdd }) => {
       <Child padding="1rem">
         <div ref={ref}>
           <Tooltip title="Add a keyboard event to the list.">
-            <IconButton icon={<IconPlus />} onClick={() => onAddClick()} />
+            <IconButton icon={<Icon icon={Plus} />} onClick={() => onAddClick()} />
           </Tooltip>
         </div>
       </Child>
@@ -243,7 +244,7 @@ export const HotkeyPill: React.SFC<IHotkeyPill> = ({
   return (
     <Pill
       isExpanded={showBody}
-      icon={<IconKeyboard />}
+      icon={<Icon icon={Keyboard} />}
       expanded={Expanded}
       collapsed={Expanded}
       onRemove={() => onRemove(action.id)}

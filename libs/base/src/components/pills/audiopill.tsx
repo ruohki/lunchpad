@@ -3,7 +3,7 @@ import * as _ from 'lodash';
 
 import { PlaySound, IMediaDevice } from '@lunchpad/types';
 import { useAnimationFrame } from '@lunchpad/hooks';
-import { IconPlay, IconStop, IconVolumeUp } from '@lunchpad/icons';
+import { Icon, TriangleRight, Rectangle, Sound } from '@lunchpad/icons';
 import { FileURI } from '@lunchpad/types';
 
 import { AudioRange } from '../audiorange';
@@ -104,8 +104,8 @@ export const PlaySoundPill: React.SFC<IPlaySoundPill> = ({ action, expanded, out
         />
       </Child>
       <Child padding="0 0 0 1rem">{Math.round(action.volume * 100)}%</Child>
-      {!playing && <Child padding="0 0 0 1rem"><IconButton icon={<IconPlay />} onClick={(e) => PlayBuffer()} /></Child>}
-      {playing && <Child padding="0 0 0 1rem"><IconButton icon={<IconStop />} onClick={() => StopBuffer()} /></Child>}
+      {!playing && <Child padding="0 0 0 1rem"><IconButton icon={<Icon icon={TriangleRight} />} onClick={(e) => PlayBuffer()} /></Child>}
+      {playing && <Child padding="0 0 0 1rem"><IconButton icon={<Icon icon={Rectangle} />} onClick={() => StopBuffer()} /></Child>}
     </Split>
   )
 
@@ -118,7 +118,7 @@ export const PlaySoundPill: React.SFC<IPlaySoundPill> = ({ action, expanded, out
   return (
     <Pill
       isExpanded={showBody}
-      icon={<IconVolumeUp />}
+      icon={<Icon icon={Sound} />}
       expanded={Expanded}
       collapsed={Collapsed}
       onRemove={() => onRemove(action.id)}
@@ -165,10 +165,10 @@ export const PlaySoundPill: React.SFC<IPlaySoundPill> = ({ action, expanded, out
               {Math.round(action.volume * 100)}%
             </Child>
             {!playing && <Child padding="0 0 0 1rem">
-              <IconButton icon={<IconPlay />} onClick={() => PlayBuffer()} />
+              <IconButton icon={<Icon icon={TriangleRight} />} onClick={() => PlayBuffer()} />
             </Child>}
             {playing && <Child padding="0 0 0 1rem">
-              <IconButton icon={<IconStop />} onClick={() => StopBuffer()}/>
+              <IconButton icon={<Icon icon={Rectangle} />} onClick={() => StopBuffer()}/>
             </Child>}
           </Split>
         </Row>
@@ -185,8 +185,8 @@ export const PlaySoundPill: React.SFC<IPlaySoundPill> = ({ action, expanded, out
           />
         </Row>
         <Row title="">
-          <span style={{float:'left'}}><IconPlay /> {((audioBuffer?.duration ?? 0) * action.start).toFixed(2)}s ({Math.round(action.start * 100)}%)</span>
-          <span style={{float:'right'}}><IconStop /> {((audioBuffer?.duration ?? 0) * action.end).toFixed(2)}s ({Math.round(action.end * 100)}%)</span>
+          <span style={{float:'left'}}><Icon icon={TriangleRight} /> {((audioBuffer?.duration ?? 0) * action.start).toFixed(2)}s ({Math.round(action.start * 100)}%)</span>
+          <span style={{float:'right'}}><Icon icon={Rectangle} /> {((audioBuffer?.duration ?? 0) * action.end).toFixed(2)}s ({Math.round(action.end * 100)}%)</span>
         </Row>
       </Split>
     </Pill>

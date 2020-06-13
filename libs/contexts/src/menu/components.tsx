@@ -20,7 +20,7 @@ export const ContextMenuContainer = styled(({ children, ...rest}) => (
   
   border-radius: 5px;
 
-  max-width: 400px;
-  min-width: 200px;
+  max-width: 600px;
+  min-width: 250px;
   box-shadow: 0 0 10px 1px #000;
 `

@@ -66,7 +66,9 @@ const ClipContainer = styled.div<StyledButtonProps>`
     mix-blend-mode: multiply;
 
     svg {
-      font-size: 3.5rem;
+      font-size: 2rem;
+      top: unset !important;
+      position: unset !important;
     }
   }
 

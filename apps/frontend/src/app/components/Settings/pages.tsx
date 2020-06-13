@@ -3,7 +3,7 @@ import React, { useContext, useState, useRef, useEffect } from 'react';
 import { darken } from 'polished';
 import { COLOR_REDISH, COLOR_BLACK, COLOR_MENU, Split, Child, Tooltip, Button, IconButton } from '@lunchpad/base';
 
-import { IconTrash, IconPen, IconFileExport, IconExternalLink } from '@lunchpad/icons'
+import { Icon, Trash, Pen, PageOpen } from '@lunchpad/icons'
 
 import PagesList, { ListItem } from '../List'
 import { LayoutContext, Severity, useNotification } from '@lunchpad/contexts';
@@ -44,7 +44,7 @@ const PageListItem = ({ page, onClick, onDelete, onRename, active }) => {
               active={!active}
               title={`Activate page ${page.name}`}
             >
-              <IconButton disabled={active} icon={<IconExternalLink />} onClick={(e) => onClick(page.id)}/>
+              <IconButton disabled={active} icon={<Icon icon={PageOpen} />} onClick={(e) => onClick(page.id)}/>
           </Tooltip>
         </Child>
         <Child grow>
@@ -76,7 +76,7 @@ const PageListItem = ({ page, onClick, onDelete, onRename, active }) => {
                 <IconButton onClick={() => {
                   setPageName(page.name);
                   setEditMode(true);
-                }} icon={<IconPen />} />
+                }} icon={<Icon icon={Pen} />} />
               </Tooltip>
             </Child>
             {/* <Child margin="0 3rem 0 0">
@@ -91,7 +91,7 @@ const PageListItem = ({ page, onClick, onDelete, onRename, active }) => {
                 type="error"
                 title="Delete this page. All data will be LOST!"
               >
-                <IconButton onClick={() => onDelete(page.id)} hover={COLOR_REDISH} icon={<IconTrash />} />
+                <IconButton onClick={() => onDelete(page.id)} hover={COLOR_REDISH} icon={<Icon icon={Trash} />} />
               </Tooltip>
             </Child>
           </>

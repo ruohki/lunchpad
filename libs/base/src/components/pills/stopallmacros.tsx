@@ -2,7 +2,7 @@ import * as React from 'react';
 import * as _ from 'lodash';
 
 import { StopAllMacros } from '@lunchpad/types';
-import { IconTrafficLightStop } from '@lunchpad/icons';
+import { Icon, Stop } from '@lunchpad/icons';
 
 import { Pill } from './pill'
 import { Split, Child } from '../basic/layout';
@@ -27,7 +27,7 @@ export const StopAllMacrosPill: React.SFC<IStopAllMacrosPill> = ({ action, expan
     <Pill
       isExpanded={false}
       expandable={false}
-      icon={<IconTrafficLightStop />}
+      icon={<Icon icon={Stop} />}
       expanded={Expanded}
       collapsed={Expanded}
       onRemove={() => onRemove(action.id)}

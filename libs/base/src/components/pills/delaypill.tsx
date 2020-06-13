@@ -2,7 +2,7 @@ import * as React from 'react';
 import * as _ from 'lodash';
 
 import { Delay } from '@lunchpad/types';
-import { IconStopwatch } from '@lunchpad/icons';
+import { Icon, Stopwatch } from '@lunchpad/icons';
 
 import { Pill } from './pill'
 import { Split, Child, VerticalPipe, Row } from '../basic/layout';
@@ -37,7 +37,7 @@ export const DelayPill: React.SFC<IDelayPill> = ({ action, expanded, onChange, o
   return (
     <Pill
       isExpanded={showBody}
-      icon={<IconStopwatch />}
+      icon={<Icon icon={Stopwatch} />}
       expanded={Expanded}
       collapsed={Expanded}
       onRemove={() => onRemove(action.id)}

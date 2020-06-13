@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { HotkeyKeystrokeSimple, HotkeyKeystrokeType, HotkeyKeystroke } from '@lunchpad/types';
+import { HotkeyKeystrokeSimple } from '@lunchpad/types';
 
 
 import { Split, Child } from '../../basic/layout';

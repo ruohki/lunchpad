@@ -1,0 +1,5 @@
+export const Minus = {
+  width: 24,
+  height: 2,
+  data: {"name":"svg","type":"element","value":"","attributes":{"width":"24","height":"2","viewBox":"0 0 24 2","fill":"none","xmlns":"http://www.w3.org/2000/svg"},"children":[{"name":"path","type":"element","value":"","attributes":{"d":"M0 1C0 0.447715 0.358172 0 0.8 0H23.2C23.6418 0 24 0.447715 24 1C24 1.55228 23.6418 2 23.2 2H0.800001C0.358173 2 0 1.55228 0 1Z","fill":"currentColor"},"children":[]}]}
+}

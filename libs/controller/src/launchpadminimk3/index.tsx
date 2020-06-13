@@ -5,7 +5,14 @@ import * as _ from 'lodash'
 
 
 import { LaunchpadButton } from '@lunchpad/base'
-import { IconChevronRight, IconCaretUpSolid, IconCaretDownSolid, IconCaretLeftSolid, IconCaretRightSolid } from '@lunchpad/icons';
+import { 
+  Icon, 
+  ChevronRight, 
+  TriangleUpSolid, 
+  TriangleDownSolid, 
+  TriangleLeftSolid, 
+  TriangleRightSolid
+} from '@lunchpad/icons';
 
 import { Page, ControllerType } from '@lunchpad/types'
 
@@ -21,10 +28,10 @@ const EmptyButton = (x, y) => ({
 })
 
 const UpRow = [
-  <IconCaretUpSolid />,
-  <IconCaretDownSolid />,
-  <IconCaretLeftSolid />,
-  <IconCaretRightSolid />,
+  <Icon icon={TriangleUpSolid} />,
+  <Icon icon={TriangleDownSolid} />,
+  <Icon icon={TriangleLeftSolid} />,
+  <Icon icon={TriangleRightSolid} />,
   <span>Session</span>,
   <span>Drums</span>,
   <span>Keys</span>,
@@ -32,13 +39,13 @@ const UpRow = [
 ]
 
 const RightRow = [
-  <IconChevronRight />,
-  <IconChevronRight />,
-  <IconChevronRight />,
-  <IconChevronRight />,
-  <IconChevronRight />,
-  <IconChevronRight />,
-  <IconChevronRight />,
+  <Icon icon={ChevronRight} />,
+  <Icon icon={ChevronRight} />,
+  <Icon icon={ChevronRight} />,
+  <Icon icon={ChevronRight} />,
+  <Icon icon={ChevronRight} />,
+  <Icon icon={ChevronRight} />,
+  <Icon icon={ChevronRight} />,
   <span>Stop Solo Mute</span>
 ]
 

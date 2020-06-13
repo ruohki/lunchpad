@@ -1,11 +1,12 @@
 import * as React from 'react';
 
 import {
-  IconKeyboard,
-  IconStopwatch,
-  IconSortAlt,
-  IconLongArrowAltDown,
-  IconLongArrowAltUp
+  Icon,
+  Keyboard,
+  Stopwatch,
+  ButtonUp,
+  ButtonDown,
+  ButtonDownUp,
 } from '@lunchpad/icons';
 
 import { HotkeyKeystrokeEvent, HotkeyKeystrokeType } from '@lunchpad/types';
@@ -26,12 +27,12 @@ export const AddKeystrokeMenu: React.SFC<IAddKeystrokeMenu> = ({ onSelect, onClo
         onClose(e)
       }}
     >
-      <MenuItem id={HotkeyKeystrokeType.Delay}><IconStopwatch />Add a delay</MenuItem>
-      <MenuItem id={HotkeyKeystrokeType.String}><IconKeyboard />Type a text</MenuItem>
+      <MenuItem id={HotkeyKeystrokeType.Delay}><Icon icon={Stopwatch} />Add a delay</MenuItem>
+      <MenuItem id={HotkeyKeystrokeType.String}><Icon icon={Keyboard} />Type a text</MenuItem>
       <MenuDivider />
-      <MenuItem id={HotkeyKeystrokeType.SimpleDown}><IconLongArrowAltDown />Press and hold key</MenuItem>
-      <MenuItem id={HotkeyKeystrokeType.SimpleUp}><IconLongArrowAltUp />Release key</MenuItem>
-      <MenuItem id={HotkeyKeystrokeType.SimpleDownUp}><IconSortAlt />Tap key</MenuItem>
+      <MenuItem id={HotkeyKeystrokeType.SimpleDown}><Icon icon={ButtonDown} />Press and hold key</MenuItem>
+      <MenuItem id={HotkeyKeystrokeType.SimpleUp}><Icon icon={ButtonUp} />Release key</MenuItem>
+      <MenuItem id={HotkeyKeystrokeType.SimpleDownUp}><Icon icon={ButtonDownUp} />Tap key</MenuItem>
     </MenuParent>
   )
 }

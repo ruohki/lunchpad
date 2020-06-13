@@ -5,7 +5,7 @@ import * as _ from 'lodash'
 
 
 import { LaunchpadButton } from '@lunchpad/base'
-import { IconChevronRight, IconCaretUpSolid, IconCaretDownSolid, IconCaretLeftSolid, IconCaretRightSolid, IconCircle } from '@lunchpad/icons';
+import { Icon, TriangleUpSolid, TriangleDownSolid, TriangleLeftSolid, TriangleRightSolid, ChevronRight, Circle } from '@lunchpad/icons';
 
 import { Page, ControllerType } from '@lunchpad/types'
 
@@ -21,25 +21,25 @@ const EmptyButton = (x, y) => ({
 })
 
 const UpRow = [
-  <IconCaretUpSolid />,
-  <IconCaretDownSolid />,
-  <IconCaretLeftSolid />,
-  <IconCaretRightSolid />,
+  <Icon icon={TriangleUpSolid} />,
+  <Icon icon={TriangleDownSolid} />,
+  <Icon icon={TriangleLeftSolid} />,
+  <Icon icon={TriangleRightSolid} />,
   <span>Session<br />Mixer</span>,
   <span>Note</span>,
   <span>Custom</span>,
-  <span style={{ fontSize: "1rem"}}><IconCircle /><br />Capture MIDI</span>,
+  <span style={{ fontSize: "1rem"}}><Icon icon={Circle} /><br />Capture MIDI</span>,
 ]
 
 const RightRow = [
-  <span style={{ fontSize: "1rem"}}><IconChevronRight /><br />Volume</span>,
-  <span style={{ fontSize: "1rem"}}><IconChevronRight /><br />Pan</span>,
-  <span style={{ fontSize: "1rem"}}><IconChevronRight /><br />Send A</span>,
-  <span style={{ fontSize: "1rem"}}><IconChevronRight /><br />Send B</span>,
-  <span style={{ fontSize: "1rem"}}><IconChevronRight /><br />Stop Clip</span>,
-  <span style={{ fontSize: "1rem"}}><IconChevronRight /><br />Mute</span>,
-  <span style={{ fontSize: "1rem"}}><IconChevronRight /><br />Solo</span>,
-  <span style={{ fontSize: "1rem"}}><IconChevronRight /><br />Record Arm</span>,
+  <span style={{ fontSize: "1rem"}}><Icon icon={ChevronRight} /><br />Volume</span>,
+  <span style={{ fontSize: "1rem"}}><Icon icon={ChevronRight} /><br />Pan</span>,
+  <span style={{ fontSize: "1rem"}}><Icon icon={ChevronRight} /><br />Send A</span>,
+  <span style={{ fontSize: "1rem"}}><Icon icon={ChevronRight} /><br />Send B</span>,
+  <span style={{ fontSize: "1rem"}}><Icon icon={ChevronRight} /><br />Stop Clip</span>,
+  <span style={{ fontSize: "1rem"}}><Icon icon={ChevronRight} /><br />Mute</span>,
+  <span style={{ fontSize: "1rem"}}><Icon icon={ChevronRight} /><br />Solo</span>,
+  <span style={{ fontSize: "1rem"}}><Icon icon={ChevronRight} /><br />Record Arm</span>,
 ]
 
 const Vendor = [0x0, 0x20, 0x29];

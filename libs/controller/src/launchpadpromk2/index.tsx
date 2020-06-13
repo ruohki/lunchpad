@@ -4,7 +4,7 @@ import { Output } from 'webmidi'
 import * as lodash from 'lodash';
 
 import { LaunchpadButton } from '@lunchpad/base'
-import { IconCaretRight, IconCaretUpSolid, IconCaretDownSolid, IconCaretLeftSolid, IconCaretRightSolid, IconCircle } from '@lunchpad/icons';
+import { TriangleRight, TriangleUpSolid, Circle, TriangleDownSolid, TriangleLeftSolid, TriangleRightSolid, Icon } from '@lunchpad/icons';
 import { Page, ControllerType } from '@lunchpad/types'
 
 import { PadContainer } from '../components';
@@ -17,28 +17,6 @@ const EmptyButton = (x, y) => ({
   y,
   color: {r: 0, g: 0, b: 0}
 })
-
-const UpRow = [
-  <IconCaretUpSolid />,
-  <IconCaretDownSolid />,
-  <IconCaretLeftSolid />,
-  <IconCaretRightSolid />,
-  <span>Session</span>,
-  <span>User 1</span>,
-  <span>User 2</span>,
-  <span>Mixer</span>,
-]
-
-const RightRow = [
-  <IconCaretRight />,
-  <IconCaretRight />,
-  <IconCaretRight />,
-  <IconCaretRight />,
-  <IconCaretRight />,
-  <IconCaretRight />,
-  <IconCaretRight />,
-  <IconCaretRight />
-]
 
 const Vendor = [0x0, 0x20, 0x29];
 const Mode = [0x2, 0x18, 0x22, 0x0];
@@ -70,25 +48,25 @@ const sideButtons = {
   40: <span style={{ fontSize: '1.3rem'}}>Quantise</span>,
   30: <span style={{ fontSize: '1.2rem'}}>Duplicate</span>,
   20: <span>Double</span>,
-  10: <span><IconCircle /></span>,
+  10: <span><Icon  icon={Circle} /></span>,
   
-  91: <IconCaretUpSolid />,
-  92: <IconCaretDownSolid />,
-  93: <IconCaretLeftSolid />,
-  94: <IconCaretRightSolid />,
+  91: <Icon icon={TriangleUpSolid} />,
+  92: <Icon icon={TriangleDownSolid} />,
+  93: <Icon icon={TriangleLeftSolid} />,
+  94: <Icon icon={TriangleRightSolid} />,
   95: <span>Session</span>,
   96: <span>Note</span>,
   97: <span>Device</span>,
   98: <span>User</span>,
   
-  19: <IconCaretRight />,
-  29: <IconCaretRight />,
-  39: <IconCaretRight />,
-  49: <IconCaretRight />,
-  59: <IconCaretRight />,
-  69: <IconCaretRight />,
-  79: <IconCaretRight />,
-  89: <IconCaretRight />,
+  19: <Icon icon={TriangleRight} />,
+  29: <Icon icon={TriangleRight} />,
+  39: <Icon icon={TriangleRight} />,
+  49: <Icon icon={TriangleRight} />,
+  59: <Icon icon={TriangleRight} />,
+  69: <Icon icon={TriangleRight} />,
+  79: <Icon icon={TriangleRight} />,
+  89: <Icon icon={TriangleRight} />,
 }
 
 const Component: React.SFC<IPadProps> = ({

@@ -4,7 +4,6 @@ import { Output } from 'webmidi'
 import range from 'lodash/range';
 import reverse from 'lodash/reverse';
 import get from 'lodash/get';
-import flatten from 'lodash/flattenDeep';
 
 import { LaunchpadButton } from '@lunchpad/base'
 import { Page, ControllerType } from '@lunchpad/types'

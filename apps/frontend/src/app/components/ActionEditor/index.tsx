@@ -4,7 +4,7 @@ import * as lodash from 'lodash';
 import { Action, ActionType, PlaySound, Delay, SwitchPage, StopAllMacros, RestartThisMacro, TextToSpeech, LaunchApp, Hotkey, StopThisMacro, settingsLabels } from '@lunchpad/types';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Split, Child, Tooltip, IconButton, PillList, DelayPill, PlaySoundPill, SwitchPagePill, StopAllMacrosPill, StopThisMacroPill, RestartThisMacroPill, TextToSpeechPill, HotkeyPill, LaunchAppPill} from '@lunchpad/base'
-import { IconPlus } from '@lunchpad/icons';
+import { Icon, Plus } from '@lunchpad/icons';
 import { AudioContext, MenuContext, LayoutContext } from '@lunchpad/contexts';
 
 import AddActionMenu from '../ContextMenu/addAction';
@@ -175,7 +175,7 @@ export const ActionEditor: React.SFC<IActionEditor> = (props) => {
           </Child>
           <Child padding="1rem">
             <Tooltip title="Add a new action to the end of the list of actions.">
-              <IconButton icon={<IconPlus />} onClick={addAction}>Add action...</IconButton>
+              <IconButton icon={<Icon icon={Plus} />} onClick={addAction}>Add action...</IconButton>
             </Tooltip>
           </Child>
         </Split>

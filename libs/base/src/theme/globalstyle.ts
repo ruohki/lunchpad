@@ -41,6 +41,10 @@ export const GlobalStyle = createGlobalStyle`
     font-size: 1.6rem;
   }
 
+  svg {
+    fill: currentColor !important;
+  }
+
   button {
     font-family: "Exo 2";
     font-size: 1.6rem;

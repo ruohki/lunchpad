@@ -2,7 +2,7 @@ import * as React from 'react';
 import * as lodash from 'lodash';
 
 import { TextToSpeech } from '@lunchpad/types';
-import { IconComment, IconPlay, IconStop } from '@lunchpad/icons';
+import { Icon, TriangleRight, Rectangle, TTS } from '@lunchpad/icons';
 
 import { Pill } from './pill'
 import { Split, Child, Row } from '../basic/layout';
@@ -68,8 +68,8 @@ export const TextToSpeechPill: React.SFC<ITextToSpeechPill> = ({ action, expande
         />
       </Child>
       <Child padding="0 0 0 1rem">{Math.round(action.volume * 100)}%</Child>
-      {!playing && <Child padding="0 0 0 1rem"><IconButton icon={<IconPlay />} onClick={(e) => Speak()} /></Child>}
-      {playing && <Child padding="0 0 0 1rem"><IconButton icon={<IconStop />} onClick={() => Stop()} /></Child>}
+      {!playing && <Child padding="0 0 0 1rem"><IconButton icon={<Icon icon={TriangleRight} />} onClick={(e) => Speak()} /></Child>}
+      {playing && <Child padding="0 0 0 1rem"><IconButton icon={<Icon icon={Rectangle} />} onClick={() => Stop()} /></Child>}
     </Split>
   )
 
@@ -86,7 +86,7 @@ export const TextToSpeechPill: React.SFC<ITextToSpeechPill> = ({ action, expande
   return (
     <Pill
       isExpanded={showBody}
-      icon={<IconComment />}
+      icon={<Icon icon={TTS} />}
       expanded={Expanded}
       collapsed={Collapsed}
       onRemove={() => onRemove(action.id)}
@@ -129,10 +129,10 @@ export const TextToSpeechPill: React.SFC<ITextToSpeechPill> = ({ action, expande
               {Math.round(action.volume * 100)}%
             </Child>
             {!playing && <Child padding="0 0 0 1rem">
-              <IconButton icon={<IconPlay />} onClick={() => Speak()} />
+              <IconButton icon={<Icon icon={TriangleRight} />} onClick={() => Speak()} />
             </Child>}
             {playing && <Child padding="0 0 0 1rem">
-              <IconButton icon={<IconStop />} onClick={() => Stop()}/>
+              <IconButton icon={<Icon icon={Rectangle} />} onClick={() => Stop()}/>
             </Child>}
           </Split>
         </Row>

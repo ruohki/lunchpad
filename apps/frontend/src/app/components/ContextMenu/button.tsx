@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { IconEdit, IconCopy, IconPaste, IconCut, IconTrash } from '@lunchpad/icons';
+import { Icon, Pen, PageCopy, PagePaste, Cut, Trash } from '@lunchpad/icons';
 
 import { MenuParent, MenuItem, MenuDivider } from '@lunchpad/base'
 
@@ -20,13 +20,13 @@ export default ({ x, y, onSelect, onClose }) => {
         onClose(e)
       }}
     >
-      <MenuItem id="editButton"><IconEdit />Edit button...</MenuItem>
+      <MenuItem id="editButton"><Icon icon={Pen} />Edit button...</MenuItem>
       <MenuDivider />
-      <MenuItem id="copyButton"><IconCopy />Copy button</MenuItem>
-      <MenuItem id="pasteButton"><IconPaste />Paste button</MenuItem>
-      <MenuItem id="cutButton"><IconCut />Cut button</MenuItem>
+      <MenuItem id="copyButton"><Icon icon={PageCopy} />Copy button</MenuItem>
+      <MenuItem id="pasteButton"><Icon icon={PagePaste} />Paste button</MenuItem>
+      <MenuItem id="cutButton"><Icon icon={Cut} />Cut button</MenuItem>
       <MenuDivider />
-      <MenuItem id="clearButton"><IconTrash />Clear button...</MenuItem>
+      <MenuItem id="clearButton"><Icon icon={Trash} />Clear button</MenuItem>
     </MenuParent>
   )
 }

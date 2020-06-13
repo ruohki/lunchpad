@@ -2,7 +2,7 @@ import * as React from 'react';
 import * as lodash from 'lodash';
 
 import { LaunchApp } from '@lunchpad/types';
-import { IconTerminal } from '@lunchpad/icons';
+import { Icon, Shell } from '@lunchpad/icons';
 
 import { Pill } from './pill'
 import { Split, Child, Row } from '../basic/layout';
@@ -33,7 +33,7 @@ export const LaunchAppPill: React.SFC<ILaunchAppPill> = ({ action, expanded, onC
   return (
     <Pill
       isExpanded={showBody}
-      icon={<IconTerminal />}
+      icon={<Icon icon={Shell} />}
       expanded={Expanded}
       collapsed={Expanded}
       onRemove={() => onRemove(action.id)}

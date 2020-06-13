@@ -25,7 +25,7 @@ import { StyledCircle } from '../Colorpicker/components';
 import { Small, Limited } from '../Colorpicker/palettes';
 import { FullPillPicker } from '../Colorpicker/full';
 import { ActionEditor } from '../ActionEditor';
-import { IconLongArrowAltDown, IconLongArrowAltUp } from '@lunchpad/icons';
+import { Icon, ButtonDown, ButtonUp } from '@lunchpad/icons';
 
 interface IButtonConfigDialog {
   button: ControllerButton
@@ -66,9 +66,9 @@ const ButtonConfigDialog: React.SFC<IButtonConfigDialog> = props => {
 
   const header = (
     <>
-      <IconButton active={activeTab === 0} icon={<IconLongArrowAltDown />} onClick={() => setTab(0)}>Pressed ({pressed.length} action(s))</IconButton>
+      <IconButton active={activeTab === 0} icon={<Icon icon={ButtonDown} />} onClick={() => setTab(0)}>Pressed ({pressed.length} action(s))</IconButton>
       <span style={{ marginLeft: '1rem', marginRight: '1rem', color: "hsla(0,0%,5%,1)"}}> </span>
-      <IconButton active={activeTab === 1} icon={<IconLongArrowAltUp />} onClick={() => setTab(1)}>Released ({released.length} action(s))</IconButton>
+      <IconButton active={activeTab === 1} icon={<Icon icon={ButtonUp} />} onClick={() => setTab(1)}>Released ({released.length} action(s))</IconButton>
     </>
   )
 

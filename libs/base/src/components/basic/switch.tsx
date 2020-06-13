@@ -1,9 +1,9 @@
 import * as React from 'react';
 import styled from "styled-components";
 
-import { IconCheck, IconTimes } from '@lunchpad/icons';
+import { Icon, Check, Cross } from '@lunchpad/icons';
 import { darken, lighten } from 'polished';
-import { COLOR_NOTBLACK, COLOR_BLURPLE, COLOR_YETNOTBLACK, COLOR_MENU, COLOR_REDISH, COLOR_BLACK } from '../../theme';
+import { COLOR_NOTBLACK, COLOR_BLURPLE, COLOR_REDISH } from '../../theme';
 
 
 import ButtonMask from '../../../assets/buttonMask';
@@ -73,11 +73,11 @@ export const Switch: React.SFC<ISwitchProps> = ({ color, value, onChange }) => {
       <Pusher enabled={value} />
       <Knob enabled={value}>
         <IconContainer enabled={value}>
-          <IconCheck />
+          <Icon icon={Check} />
         </IconContainer>
         <IconContainer enabled={!value}>
           <div style={{ transform: "translate(-5%,-2%)" }} >
-            <IconTimes />
+            <Icon icon={Cross} />
           </div>
         </IconContainer>
       </Knob>

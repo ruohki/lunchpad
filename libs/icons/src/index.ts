@@ -1,1 +1,2 @@
-export * from './lib/icons';
+export * from './SVG';
+export * from './lib/icon';
