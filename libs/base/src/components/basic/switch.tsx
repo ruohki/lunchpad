@@ -52,11 +52,13 @@ position: relative;
 const IconContainer = styled.div<IPusher>`
   position: absolute;
   opacity: ${props => props.enabled ? 1 : 0};
+  font-size: 1.2rem;
   
   transition: all 0.25s ease;
   
   transform: rotate(${props => props.enabled ? 0 : 180}deg);
   &:nth-child(1) {
+    font-size: 1.6rem;
     transform: rotate(${props => props.enabled ? 0 : -180}deg);
   }
 `
