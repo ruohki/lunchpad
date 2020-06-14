@@ -17,18 +17,19 @@
     },
     "win": {
       "icon": "build/logo.ico",
-      "target": [{
-        "target": "msi",
-        "arch":"x64"
-        }, {
-          "target": "appx",
-          "arch":"x64"
-        }],
+      "target": [
+        "msi",
+        "appx",
+        "zip"
+      ],
       "publisherName": "Tillmann Hübner",
       "asar": true
     },
     "mac": {
-        "target":"dmg",
+        "target":[
+          "dmg",
+          "zip"
+        ],
         "icon": "build/icon.png"
     },
     "dmg": {
