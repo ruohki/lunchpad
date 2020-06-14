@@ -4,37 +4,22 @@
 import 'typeface-exo-2';
 
 import * as React from 'react';
-import { v4 as uuid } from 'uuid';
 
 import Backend from 'react-dnd-html5-backend';
 import { DndProvider } from 'react-dnd';
+import { useLocalStorage  } from '@rehooks/local-storage';
 
 import { GlobalStyle, AppContainer, ScaleBox } from '@lunchpad/base';
 import { AudioContext, MidiContext, ModalContext, LayoutContext, MenuContext, NotificationContext } from '@lunchpad/contexts';
-import { useSettings, useEssentialCSSVariable } from '@lunchpad/hooks';
+import { useEssentialCSSVariable } from '@lunchpad/hooks';
 import { settingsLabels as settings } from '@lunchpad/types';
 
 import Controller from './components/Controller';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { MacroEngine } from './macro/index';
 
-import LogRocket from 'logrocket';
-
 const ProviderGarden = ({ children }) => {
-  const [ output ] = useSettings(settings.soundOutput, 'default');
-  const [ useLogRocket ] = useSettings(settings.debug.lockRocket, false);
-  const [ userId ] = useSettings(settings.debug.userId, uuid());
-
-  React.useEffect(() => {
-    if (useLogRocket) {
-      LogRocket.init('lunchpad/lunchpad');
-      LogRocket.identify(userId);
-    } else {
-      LogRocket.init('lunchpad/lunchpad', {
-        shouldSendData: () => false
-      });
-    }
-  }, [useLogRocket] )
+  const [ output ] = useLocalStorage(settings.soundOutput, 'default');
 
   return (
     <NotificationContext.Provider>
@@ -60,7 +45,6 @@ const ProviderGarden = ({ children }) => {
 
 export const App = () => {
   const ref = useEssentialCSSVariable();
-  const [ state, setState ] = React.useState<boolean>(true);
 
   return (
     <AppContainer ref={ref}>

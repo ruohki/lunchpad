@@ -9,9 +9,9 @@ export const settingsLabels = {
     lockRocket: "debug.logrocket"
   },
   ptt: {
-    label: 'general.pushtotalk',
-    mouse: 'pushtotalk.mouse',
-    keyboard: 'pushtotalk.keyboard',
+    enabled: 'pushtotalk.enabled',
+    key: 'pushtotalk.keyboard',
+    modifier: 'pushtotalk.modifier'
   },
   software: {
     layout: 'software.layout'

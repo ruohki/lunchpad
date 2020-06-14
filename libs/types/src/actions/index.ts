@@ -25,6 +25,11 @@ export enum ActionType {
   SwitchPage = "SWITCH_PAGE",          // done
   StopThisMacro = "STOP_THIS_MACRO",
   RestartThisMacro = "RESTART_THIS_MACRO",
+  
+  PushToTalkStart = "START_PTT",
+  PushToTalkEnd = "END_PTT",
+
+  VoiceMeeter = "VOICE_MEETER",
 }
 
 export class Action {
@@ -39,12 +44,45 @@ export class Action {
   }
 }
 
+export class PairedAction extends Action {
+  public startId?: string;
+  public endId?: string;
+
+  public isOther(action: Action): boolean {
+    return action.id === this.endId || action.id === this.startId;
+  }
+}
+
+export class PushToTalkStart extends PairedAction {
+  public endId: string;
+
+  constructor(id: string = uuid()) {
+    super(ActionType.PushToTalkStart, id);
+  }
+}
+
+export class PushToTalkEnd extends PairedAction {
+  public startId: string;
+
+  constructor(startId: string, id: string = uuid()) {
+    super(ActionType.PushToTalkEnd, id);
+    this.startId = startId;
+  }
+}
+
+
 export class SwitchPage extends Action {
   public pageId: string;
 
   constructor(pageId: string, id: string = uuid()) {
     super(ActionType.SwitchPage, id);
     this.pageId = pageId;
+  }
+}
+
+export class VoiceMeeter extends Action {
+  constructor(id: string = uuid()) {
+    super(ActionType.SwitchPage, id);
   }
 }
 
@@ -247,6 +285,7 @@ export class Button {
     this.x = x;
     this.y = y;
     this.color = color;
-    this.pressed = []
+    this.pressed = [];
+    this.released = [];
   }
 }

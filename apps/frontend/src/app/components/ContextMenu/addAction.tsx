@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Icon, Stopwatch, Sound, PageOpen, TTS, Shell, Stop, Keyboard } from '@lunchpad/icons';
+import { Icon, Stopwatch, Sound, PageOpen, TTS, Shell, Stop, Keyboard, ButtonDownUp } from '@lunchpad/icons';
 
 import { MenuParent, MenuItem, MenuDivider } from '@lunchpad/base'
 import { ActionType } from '@lunchpad/types';
@@ -16,6 +16,7 @@ export default ({ onSelect, onClose }) => {
     >
       <MenuItem id={ActionType.Delay}><Icon icon={Stopwatch} />Delay</MenuItem>
       <MenuItem id={ActionType.PlaySound}><Icon icon={Sound} />Play a sound</MenuItem>
+      <MenuItem id={ActionType.PushToTalkStart}><Icon icon={ButtonDownUp} />Push-to-talk</MenuItem>
       <MenuItem id={ActionType.SwitchPage}><Icon icon={PageOpen} />Switch active page</MenuItem>
       <MenuItem id={ActionType.TextToSpeech}><Icon icon={TTS} />Text-to-speech</MenuItem>
       <MenuItem id={ActionType.LaunchApplication}><Icon icon={Shell} />Launch application</MenuItem>

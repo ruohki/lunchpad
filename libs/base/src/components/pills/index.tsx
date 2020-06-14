@@ -32,4 +32,5 @@ export * from './launchapppill'
 export * from './hotkeypill'
 export * from './stopthismacro'
 export * from './restartthismacro'
+export * from './pushtotalk'
 

@@ -2,20 +2,22 @@ import React from 'react';
 import * as lodash from 'lodash';
 
 import * as Devices from '@lunchpad/controller';
-
+  
 import { MidiContext, LayoutContext, AudioContext } from '@lunchpad/contexts';
 import { IPad } from '@lunchpad/controller';
-import { useSettings } from '@lunchpad/hooks';
+import { useLocalStorage  } from '@rehooks/local-storage';
 import { settingsLabels, Button, StopThisMacro, Action } from '@lunchpad/types';
 
 import { MacroRunner } from '@lunchpad/macroengine'
 import { uniqueId } from 'lodash';
-import { MacroAction } from 'libs/macro/src/actions';
+import { Counter } from './counter';
+import { PushToTalk } from './pushtotalk';
+
 
 export const MacroEngine = () => {
   const { activePage } = React.useContext(LayoutContext.Context);
   const { emitter } = React.useContext(MidiContext.Context);
-  const [ controller ] = useSettings(settingsLabels.controller, "Software6x6");
+  const [ controller ] = useLocalStorage(settingsLabels.controller, "Software6x6");
   const [ pad, setPad ] = React.useState<IPad>();
 
   React.useEffect(() => {
@@ -28,7 +30,9 @@ export const MacroEngine = () => {
   React.useEffect(() => {
     if (!pad) return;
     const mm: Map<string, MacroRunner> = new Map();
-
+    const PTTCounter = new Counter(0);
+    const pushToTalk = new PushToTalk();
+    
     const pressed = (note, cc, sw) => {
 
       const [ x, y ] = pad.ButtonToXY(note, cc);
@@ -69,9 +73,18 @@ export const MacroEngine = () => {
   
         macro.on('onStopAll', () => {
           cancel = true;
+          PTTCounter.Zero();
+          pushToTalk.Release();
+
           mm.forEach(v => v.Stop());
           mm.clear();
         })
+
+        macro.on('onPushToTalkStart', () => {
+          pushToTalk.Push();
+          PTTCounter.Inc()
+        });
+        macro.on('onPushToTalkEnd', PTTCounter.Dec);
   
         macro.Run().then(() => {
           mm.delete(id)
@@ -81,6 +94,15 @@ export const MacroEngine = () => {
         }).catch(() => {
           mm.delete(id);
         });
+
+        macro.on('onFinished', () => {
+          console.log("PTT Actions Left:", PTTCounter.Value())
+          if (PTTCounter.Value() <= 0) {
+            pushToTalk.Release();
+          }
+          macro.removeListener('onPushToTalkStart', PTTCounter.Inc)
+          macro.removeListener('onPushToTalkEnd', PTTCounter.Dec)
+        })
       }
       PlayMacro(button.pressed, button.loop, x, y);
     }
@@ -119,12 +141,20 @@ export const MacroEngine = () => {
         ids.forEach(id => mm.delete(id));
       })
 
+      macro.on('onPushToTalkStart', PTTCounter.Inc);
+      macro.on('onPushToTalkEnd', PTTCounter.Dec);
+
       macro.on('onStopAll', () => {
         mm.forEach(v => v.Stop());
         mm.clear();
       })
 
       macro.Run().then(() => mm.delete(id)).catch(() => mm.delete(id));
+
+      macro.on('onFinished', () => {
+        macro.removeListener('onPushToTalkStart', PTTCounter.Inc)
+        macro.removeListener('onPushToTalkEnd', PTTCounter.Dec)
+      })
     }
     
     emitter.on('ButtonPressed', pressed)

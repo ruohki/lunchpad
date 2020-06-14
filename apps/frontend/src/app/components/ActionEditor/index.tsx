@@ -1,14 +1,14 @@
 import * as React from 'react';
 import * as lodash from 'lodash';
 
-import { Action, ActionType, PlaySound, Delay, SwitchPage, StopAllMacros, RestartThisMacro, TextToSpeech, LaunchApp, Hotkey, StopThisMacro, settingsLabels } from '@lunchpad/types';
+import { Action, PairedAction, ActionType, PlaySound, Delay, SwitchPage, StopAllMacros, RestartThisMacro, TextToSpeech, LaunchApp, Hotkey, StopThisMacro, settingsLabels, PushToTalkEnd, PushToTalkStart } from '@lunchpad/types';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Split, Child, Tooltip, IconButton, PillList, DelayPill, PlaySoundPill, SwitchPagePill, StopAllMacrosPill, StopThisMacroPill, RestartThisMacroPill, TextToSpeechPill, HotkeyPill, LaunchAppPill} from '@lunchpad/base'
+import { Split, Child, Tooltip, IconButton, PillList, DelayPill, PlaySoundPill, SwitchPagePill, StopAllMacrosPill, StopThisMacroPill, RestartThisMacroPill, TextToSpeechPill, HotkeyPill, LaunchAppPill, PushToTalkStartPill, PushToTalkEndPill} from '@lunchpad/base'
 import { Icon, Plus } from '@lunchpad/icons';
 import { AudioContext, MenuContext, LayoutContext } from '@lunchpad/contexts';
 
 import AddActionMenu from '../ContextMenu/addAction';
-import { useSettings } from '@lunchpad/hooks';
+import { useLocalStorage  } from '@rehooks/local-storage';
 
 interface IActionEditor {
   header: JSX.Element
@@ -21,7 +21,7 @@ export const ActionEditor: React.SFC<IActionEditor> = (props) => {
   const { outputDevices } = React.useContext(AudioContext.Context);
   const { pages } = React.useContext(LayoutContext.Context);
   
-  const [ outputDevice ] = useSettings(settingsLabels.soundOutput, "default");
+  const [ outputDevice ] = useLocalStorage(settingsLabels.soundOutput, "default");
 
   const addAction = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     showContextMenu(
@@ -47,6 +47,11 @@ export const ActionEditor: React.SFC<IActionEditor> = (props) => {
             props.onChange([...props.actions, new Hotkey() ]);
           } else if (key === ActionType.StopThisMacro) {
             props.onChange([...props.actions, new StopThisMacro() ]);
+          } else if (key === ActionType.PushToTalkStart) {
+            const start = new PushToTalkStart();
+            const end = new PushToTalkEnd(start.id);
+            start.endId = end.id;
+            props.onChange([start, ...props.actions, end ]);
           }
         }}
         onClose={closeMenu}
@@ -74,17 +79,36 @@ export const ActionEditor: React.SFC<IActionEditor> = (props) => {
     props.onChange([...props.actions.filter(a => a.id !== id)]);
   };
 
+  const multiRemoveAction = (ids: string[]) => {
+    props.onChange([...props.actions.filter(a => !lodash.includes(ids, a.id))]);
+  }
+
   const updateAction = (action: Action) => {
     props.onChange([...props.actions.map(a => (a.id === action.id ? action : a))]);
   };
+
+  const canMoveUp = (id: string): boolean => {
+    const idx = lodash.findIndex(props.actions, a => a.id === id);
+    if (idx <= 0) return false;
+    if (!(props.actions[idx] instanceof PairedAction)) return true;
+    const el1 = props.actions[idx] as PairedAction;
+    return !el1.isOther(props.actions[idx - 1])
+  }
+
+  const canMoveDown = (id: string): boolean => {
+    const idx = lodash.findIndex(props.actions, a => a.id === id);
+    if (idx >= props.actions.length - 1) return false;
+    if (!(props.actions[idx] instanceof PairedAction)) return true;
+    const el1 = props.actions[idx] as PairedAction;
+    return !el1.isOther(props.actions[idx + 1])
+  }
 
   const pills = props.actions.map((action, i) => {
     const pillDefaults = {
       onChange: action => updateAction(action),
       onRemove: removeAction,
-      onMoveUp: i !== 0 ? () => moveActionUp(action.id) : null,
-      onMoveDown:
-        i < props.actions.length - 1 ? () => moveActionDown(action.id) : null
+      onMoveUp: canMoveUp(action.id) ? () => moveActionUp(action.id) : null,
+      onMoveDown: canMoveDown(action.id) ? () => moveActionDown(action.id) : null,
     };
 
     if (action.type === ActionType.Delay)
@@ -95,7 +119,7 @@ export const ActionEditor: React.SFC<IActionEditor> = (props) => {
           {...pillDefaults}
         />
       );
-    else if (action.type == ActionType.PlaySound)
+    else if (action.type === ActionType.PlaySound)
       return (
         <PlaySoundPill
           key={action.id}
@@ -104,7 +128,27 @@ export const ActionEditor: React.SFC<IActionEditor> = (props) => {
           {...pillDefaults}
         />
       );
-    else if (action.type === ActionType.SwitchPage)
+    else if (action.type === ActionType.PushToTalkStart) {
+      const { onRemove, ...rest } = pillDefaults;
+      return (
+        <PushToTalkStartPill
+          key={action.id}
+          action={action as PushToTalkStart}
+          onRemove={() => multiRemoveAction([action.id, (action as PushToTalkStart).endId])}
+          {...rest}
+        />
+      );
+    } else if (action.type === ActionType.PushToTalkEnd) {
+      const { onRemove, ...rest } = pillDefaults;
+      return (
+        <PushToTalkEndPill
+          key={action.id}
+          action={action as PushToTalkEnd}
+          onRemove={() => multiRemoveAction([action.id, (action as PushToTalkEnd).startId])}
+          {...rest}
+        />
+      );
+    } else if (action.type === ActionType.SwitchPage)
       return (
         <SwitchPagePill
           key={action.id}

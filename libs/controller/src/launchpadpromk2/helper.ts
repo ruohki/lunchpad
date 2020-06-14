@@ -1,11 +1,11 @@
-import range from 'lodash/range';
-
 import { lighten } from 'polished';
 import { clamp } from 'lodash';
 
 export const XYToButton = (x, y) => y * 10 + x
 
-export const ButtonToXY = (note) => note < 104 ? [(note % 10) - 1, Math.floor(note / 10) - 1] : [note - 104, 8 ]
+export const ButtonToXY = (note) =>{
+  return [(note % 10), Math.floor(note / 10)]
+} 
 
 export const MakeButtonColor = ({ r, g, b}) => {
   let color = "#f1f1f1";

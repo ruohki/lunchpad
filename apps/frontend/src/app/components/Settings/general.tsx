@@ -1,10 +1,11 @@
 import React, { useContext } from 'react'
-import isEmpty from 'lodash/isEmpty';
 
-import { useSettings, useMidiDevices } from '@lunchpad/hooks';
+import { useLocalStorage  } from '@rehooks/local-storage';
+
+import { useMidiDevices } from '@lunchpad/hooks';
 import { AudioContext } from '@lunchpad/contexts'
 import { settingsLabels as settings, ControllerType } from '@lunchpad/types'
-import { Split, Child, Select, Switch, Tooltip } from '@lunchpad/base';
+import { Split, Child, Select, Switch, KeyboardKeys, Modifiers } from '@lunchpad/base';
 import { Divider, Row } from './components';
 
 import * as Devices from '@lunchpad/controller';
@@ -16,19 +17,17 @@ export default () => {
   
   const { outputDevices } = useContext(AudioContext.Context)
 
-  const [ mode, _saveMode ] = useSettings(settings.mode, ControllerType.Software);
+  const [ mode, _saveMode ] = useLocalStorage(settings.mode, ControllerType.Software);
   
-  const [ controller, setController ] = useSettings(settings.controller, "Software6x6");
-  const [ midiInput, setMidiInput ] = useSettings(settings.midiInput, "");
-  const [ midiOutput, setMidiOutput ] = useSettings(settings.midiOutput, "");
+  const [ controller, setController ] = useLocalStorage(settings.controller, "Software6x6");
+  const [ midiInput, setMidiInput ] = useLocalStorage(settings.midiInput, "");
+  const [ midiOutput, setMidiOutput ] = useLocalStorage(settings.midiOutput, "");
   
-  const [ output, saveOutput ] = useSettings(settings.soundOutput, "default");
+  const [ output, saveOutput ] = useLocalStorage(settings.soundOutput, "default");
   
-  const [ ptt, savePtt ] = useSettings(settings.ptt.label, "off");
-  const [ pttMouse, savePttMouse ] = useSettings(settings.ptt.mouse, "mouse4");
-  //const [ pttKeyboard, savePttKeyboard ] = useSettings(settings.ptt.keyboard, "[]");
-  
-  const [ logRocket, setLogRocket ] = useSettings(settings.debug.lockRocket, false);
+  const [ enablePtt, setEnablePtt ] = useLocalStorage<boolean>(settings.ptt.enabled, false);
+  const [ pttKey, savePttKey ] = useLocalStorage(settings.ptt.key, "enter");
+  const [ pttModifier, savePttModifier ] = useLocalStorage<string[]>(settings.ptt.modifier, []);
 
   const saveMode = mode => {
     if (mode === ControllerType.Software) setController("Software6x6")
@@ -118,56 +117,33 @@ export default () => {
           <Divider />
         </Child>
       </Split>
-      {/* <Row title="Push-to-talk">
-        <Select
-          value={ptt}
-          onChange={e => savePtt(e.target.value)}
-        >
-          <option value="off">Dont use Push-to-talk</option>
-          <option value="mouse">Use mouse button</option>
-          <option value="keyboard">Use keyboard</option>
-        </Select>
-      </Row> */}
-      {/* {ptt === "mouse" && (
-        <Row title="Mouse Button">
-          <Select
-            value={pttMouse}
-            onChange={e => savePttMouse(e.target.value)}
-          >
-            <option value="mouse1">Mouse 1 (Left Button)</option>
-            <option value="mouse2">Mouse 2 (Right Button)</option>
-            <option value="mouse3">Mouse 3 (Middle or Wheel Button)</option>
-            <option value="mouse4">Mouse 4 (ex: Thumb Button 1)</option>
-            <option value="mouse5">Mouse 5 (ex: Thumb Button 2)</option>
-          </Select>
-        </Row>
-      )} */}
-      {/* {ptt === "keyboard" && (
-        <Row title="Keyboard">
-          <KeyCapture
-            value={JSON.parse(pttKeyboard)}
-            onChange={(e) => savePttKeyboard((JSON.stringify(e) as string))}
-          />
-        </Row>
-      )} */}
-      <Row title="">
+      <Row title="Push-to-talk">
         <Split direction="row">
           <Child padding="0 1rem 0 0">
-            <Tooltip
-              title="Please restart the application when you switched this off."
-            >
-              <Switch
-                value={JSON.parse(logRocket)}
-                onChange={setLogRocket}
-              />
-            </Tooltip>
+            <Switch
+              value={enablePtt}
+              onChange={setEnablePtt}
+            />
           </Child>
           <Child grow>
-            <span>Send anonymous metrics</span>
+            <span>Enable or disable Push-To-Talk</span>
           </Child>
         </Split>
-        
       </Row>
+      {enablePtt && (
+        <Row title="Keyboard">
+          <Split direction="row">
+            <Child grow padding="0 1rem 0 0">
+              <Select value={pttKey} onChange={(e) => savePttKey(e.target.value)}>
+                {KeyboardKeys.map(k => <option key={k} value={k}>{k}</option>)}
+              </Select>
+            </Child>
+            <Child grow>
+              <Modifiers modifiers={pttModifier} onChange={savePttModifier} />
+            </Child>
+          </Split>
+        </Row>
+      )}
     </Child>
   )
 };

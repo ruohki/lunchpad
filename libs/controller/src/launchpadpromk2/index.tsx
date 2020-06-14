@@ -19,9 +19,10 @@ const EmptyButton = (x, y) => ({
 })
 
 const Vendor = [0x0, 0x20, 0x29];
-const Mode = [0x2, 0x18, 0x22, 0x0];
-const Programmer = []
-const Color = [0x2, 0x18, 0x0B];
+const Mode = [0x2, 0x10, 0x21, 0x0];
+const Programmer = [0x2, 0x10, 0x22, 0x0];
+
+const Color = [0x2, 0x10, 0x0B];
 
 const isRound = (x: number, y: number) => {
   return (x === 0 || x === 9) || (y === 0 || y === 9) 
@@ -97,14 +98,14 @@ const Component: React.SFC<IPadProps> = ({
             }}
             onDrop={onDrop}
           >
-            {isRound(x,y) ? sideButtons[XYToButton(x,y)] : button.title}
+            {isRound(x,y) ? sideButtons[XYToButton(x,y)] : button.title }
           </LaunchpadButton>
         ) : (
           <LaunchpadButton
             x={9}
             y={9}
             key="settings"
-            keyId={112}
+            keyId={99}
             color={"#6a45ff"}
             round
             onContextMenu={() => true}
@@ -120,19 +121,26 @@ const Component: React.SFC<IPadProps> = ({
   )
 }
 
-const ColorFromRGB = (color: {[key: string]: number}): [number, number, number] => [color.r / 4, color.g / 4, color.b / 4]
-
 const buildColors = (output: Output, page: Page) => {
   if (!output) return;
+
   output.sendSysex(Vendor, Mode);
-  const colors = lodash.flattenDeep(Object.keys(page.buttons).map(x => {
+  output.sendSysex(Vendor, Programmer);
+  output.sendSysex(Vendor, [0x2, 0x10, 0x0E, 0x0]);
+
+  const colorsRaw = lodash.flattenDeep(Object.keys(page.buttons).map(x => {
     return Object.keys(page.buttons[x]).map(y => {
       const { r, g, b } = page.buttons[parseInt(x)][parseInt(y)].color;
-      // RGB / 4 for MK2
+      // RGB / 4 for MK2 / Pro 2
       return [XYToButton(parseInt(x),parseInt(y)), Math.floor(r / 4), Math.floor(g / 4), Math.floor(b / 4)]
     })
   }))
-  output.sendSysex(Vendor, [...Color, ...colors]);
+
+  const colors = lodash.chunk(colorsRaw, 77);
+  const [ part1 = [], part2 = [] ] = colors;
+
+  if (part1.length > 0) output.sendSysex(Vendor, [...Color, ...part1]);
+  if (part2.length > 0) output.sendSysex(Vendor, [...Color, ...part2]);
 }
 
 export const LaunchpadProMK2 = {

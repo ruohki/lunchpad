@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events'
 import { v4 as uuid } from 'uuid';
-import { Action, ActionType, PlaySound, Delay, SwitchPage, StopAllMacros, TextToSpeech, LaunchApp, Hotkey, StopThisMacro, RestartThisMacro } from '@lunchpad/types'
+import { Action, ActionType, PlaySound, Delay, SwitchPage, StopAllMacros, TextToSpeech, LaunchApp, Hotkey, StopThisMacro, RestartThisMacro, PushToTalkStart, PushToTalkEnd, settingsLabels } from '@lunchpad/types'
 
 import { MacroAction } from '../actions';
 import { SoundAction } from '../actions/sound';
@@ -12,6 +12,7 @@ import { LaunchAppAction } from '../actions/launchapp';
 import { HotkeyAction } from '../actions/hotkey';
 import { StopThisMacroAction } from '../actions/stopthis';
 import { RestartThisMacroAction } from '../actions/restartmacro';
+import { PushToTalkStartAction, PushToTalkEndAction } from '../actions/pushtotalk';
 
 export declare interface MacroRunner {
   on(event: 'onStart', listener: (id: string) => void): this;
@@ -19,6 +20,9 @@ export declare interface MacroRunner {
   on(event: 'onStopAll', listener: () => void): this;
   on(event: 'onStopButton', listener: (x: number, y: number) => void): this;
   on(event: 'onRestartButton', listener: (id: string, x: number, y: number) => void): this;
+  
+  on(event: 'onPushToTalkStart', listener: () => void): this;
+  on(event: 'onPushToTalkEnd', listener: () => void): this;
 }
 
 export class MacroRunner extends EventEmitter {
@@ -41,6 +45,8 @@ export class MacroRunner extends EventEmitter {
     for(const raw of actions) {
       if (raw.type === ActionType.Delay) this.actions.push(new DelayAction(raw as Delay));
       else if (raw.type === ActionType.PlaySound) this.actions.push(new SoundAction(raw as PlaySound));
+      else if (raw.type === ActionType.PushToTalkStart) this.actions.push(new PushToTalkStartAction(raw as PushToTalkStart));
+      else if (raw.type === ActionType.PushToTalkEnd) this.actions.push(new PushToTalkEndAction(raw as PushToTalkEnd));
       else if (raw.type === ActionType.SwitchPage) this.actions.push(new SwitchPageAction(raw as SwitchPage));
       else if (raw.type === ActionType.StopAllMacros) this.actions.push(new StopAllMacrosAction(raw as StopAllMacros));
       else if (raw.type === ActionType.StopThisMacro) this.actions.push(new StopThisMacroAction(raw as StopThisMacro));
@@ -67,6 +73,13 @@ export class MacroRunner extends EventEmitter {
     return new Promise(async (resolve, reject) => {
       
       for(const action of this.actions) {
+        // dont execute push to talk stuff when its turned off
+        if (action.constructor['name'] === PushToTalkStart.name || action.constructor['name'] === PushToTalkEnd.name) {
+          if (!localStorage.hasItem(settingsLabels.ptt.enabled) || (localStorage.getItem(settingsLabels.ptt.enabled) !== "true")) {
+            continue;
+          }
+        }
+
         if (!this.cancel) {
           this.startedActions.push(action);
           this.currentAction = action;
@@ -77,7 +90,7 @@ export class MacroRunner extends EventEmitter {
           if (action.constructor['name'] === RestartThisMacroAction.name) this.emit('onRestartButton', this.id, this.x, this.y)
           
           // if the action should be awaited or just go next
-          const promise = action.Run();
+          const promise = action.Run(this);
           actionPromises.push(promise);
 
           promise.then(() => this.removeRunningAction(action));

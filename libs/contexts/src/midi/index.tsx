@@ -3,7 +3,8 @@ import React, { useEffect, useState, useContext } from 'react';
 import WebMidi, { Input, Output } from 'webmidi';
 
 import { settingsLabels } from '@lunchpad/types';
-import { useSettings } from '@lunchpad/hooks';
+import { useLocalStorage } from 'react-use';
+
 
 export interface IMidiContext {
   input: false | Input
@@ -13,8 +14,9 @@ export interface IMidiContext {
 }
 
 const CONTROL_CHANGE = 0xB0;
-/* const NOTE_OFF = 0x80; */
+const NOTE_OFF = 0x80;
 const NOTE_ON = 0x90;
+
 const POLY_AFTERTOUCH = 0xA0;
 
 const midiContext = React.createContext<Partial<IMidiContext>>({})
@@ -27,8 +29,8 @@ declare interface MidiEvents {
 class MidiEvents extends EventEmitter {}
 
 const MidiProvider = ({ children }) => {
-  const [ midiInput ] = useSettings(settingsLabels.midiInput, "");
-  const [ midiOutput ] = useSettings(settingsLabels.midiOutput, "");
+  const [ midiInput ] = useLocalStorage(settingsLabels.midiInput, "");
+  const [ midiOutput ] = useLocalStorage(settingsLabels.midiOutput, "");
 
   const [ emitter, setEmitter ] = React.useState(new MidiEvents());
   const [ input, setInput ] = useState<false | Input>();
@@ -58,6 +60,8 @@ const MidiProvider = ({ children }) => {
         } else if ( value >= 25) {
           emitter.emit('ButtonPressed', note, false, false)
         }
+      } else if (msg === NOTE_OFF) {
+        emitter.emit('ButtonReleased', note, false, false)
       } else if (msg === CONTROL_CHANGE) {
         if (value) {
           emitter.emit('ButtonPressed', note, true, false)

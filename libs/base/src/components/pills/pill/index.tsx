@@ -8,7 +8,7 @@ interface IPill {
   icon: JSX.Element,
   expanded: JSX.Element,
   collapsed: JSX.Element,
-  expandable?: boolean
+  expandable?: boolean,
   onMoveUp: (e: React.MouseEvent<HTMLButtonElement>) => void,
   onMoveDown: (e: React.MouseEvent<HTMLButtonElement>) => void,
   onRemove: (e: React.MouseEvent<HTMLButtonElement>) => void,

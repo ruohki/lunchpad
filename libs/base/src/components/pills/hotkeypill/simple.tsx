@@ -31,7 +31,7 @@ export const HotkeyKeystrokeSimpleElement: React.SFC<IHotkeyKeystrokeSimple> = (
         </Select>
       </Child>
       <Child grow>
-        <Modifiers keystroke={keystroke} onChange={changeModifiers} />
+        <Modifiers modifiers={keystroke.modifier} onChange={changeModifiers} />
       </Child>
     </Split>
   )

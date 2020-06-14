@@ -1,4 +1,3 @@
-export * from './useSettings';
 export * from './useCSSVariable';
 export * from './useFocus';
 export * from './useKeyboard';
