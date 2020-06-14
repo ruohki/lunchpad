@@ -1,8 +1,42 @@
-# Lunchpad
+![Lunchpad Logo](https://github.com/ruohki/lunchpad/raw/master/.github/ISSUE_TEMPLATE/logo.png)
 
+## What is this?
+Lunchpad is a Macro application that makes use of Novation(tm) Launchpads.
+However you dont need one to use this application.
+
+You can create a variety of macros, from simple playback of sounds (hello soundboard ppl) on a target audio device, hotkey sequences, launching applications (or python, autohotkey, nodejs scripts) or Text-To-Speech alot of stuff is possible.
+
+### Supported Launchpads
+- Launchpad Mini (MK1, MK2 and MK3)
+- Launchpad S
+- Launchpad MK2
+- Launchpad X
+
+### Not yet supported Launchpads
+- Launchpad Pro (MK2 and MK3)
+
+(if you own such a device and want to contribute but cant code contact ruohki on discord)
+
+
+### OBS & SL:OBS
+There are native macro actions in the making that will allow you to switch scenes with the press of a button .... ha!
+Right now you can use simple keybindings to do so
+
+
+---
+## Development
 This project was generated using [Nx](https://nx.dev).
 
-TODO: 🚀  get the readme.md ready
+To get up and running this is all you need:
+```
+npm instal -g @nrwl/nx
+npm install
+```
+
+Then start the development environment
+```
+npm start frontend  & npm start application
+```
 
 ---
 If you need any assist feel free to join the discord [https://discord.gg/4Ys9TRR](https://discord.gg/4Ys9TRR)
