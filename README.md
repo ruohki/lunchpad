@@ -11,9 +11,10 @@ You can create a variety of macros, from simple playback of sounds (hello soundb
 - Launchpad S
 - Launchpad MK2
 - Launchpad X
+- Launchpad Pro MK2 (as of v0.2.1)
 
 ### Not yet supported Launchpads
-- Launchpad Pro (MK2 and MK3)
+- Launchpad Pro MK3
 
 (if you own such a device and want to contribute but cant code contact ruohki on discord)
 
@@ -29,7 +30,7 @@ This project was generated using [Nx](https://nx.dev).
 
 To get up and running this is all you need:
 ```
-npm instal -g @nrwl/nx
+npm install -g @nrwl/nx
 npm install
 ```
 
