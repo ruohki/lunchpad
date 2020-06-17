@@ -8,7 +8,7 @@ import { Split, Child } from '../../basic/layout';
 import { Tooltip, Switch } from '../../basic';
 
 interface IModifiers {
-  modifiers: string;
+  modifiers: string[];
   onChange: (modifiers: string[]) => void
 }
 
@@ -34,17 +34,12 @@ const tryPrase = (val: any) => {
 }
 export const Modifiers: React.SFC<IModifiers> = ({ modifiers, onChange }) => {
   const change = (modifier: string, value: boolean) => {
-    
     let mods = modifiers || [];
-
     if (value) {
-      //@ts-ignore
       mods = [modifier, ...mods.filter(m => m !== modifier)]
     } else {
-      //@ts-ignore
       mods = [...mods.filter(m => m !== modifier)]
     }
-    console.log(Array.from(mods.values()))
     onChange(Array.from(mods.values()));
   }
 
