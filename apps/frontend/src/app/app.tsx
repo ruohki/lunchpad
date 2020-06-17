@@ -7,7 +7,7 @@ import * as React from 'react';
 
 import Backend from 'react-dnd-html5-backend';
 import { DndProvider } from 'react-dnd';
-import { useLocalStorage  } from '@rehooks/local-storage';
+import { useSettings } from '@lunchpad/hooks';
 
 import { GlobalStyle, AppContainer, ScaleBox } from '@lunchpad/base';
 import { AudioContext, MidiContext, ModalContext, LayoutContext, MenuContext, NotificationContext } from '@lunchpad/contexts';
@@ -19,7 +19,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { MacroEngine } from './macro/index';
 
 const ProviderGarden = ({ children }) => {
-  const [ output ] = useLocalStorage(settings.soundOutput, 'default');
+  const [ output ] = useSettings(settings.soundOutput, 'default');
 
   return (
     <NotificationContext.Provider>

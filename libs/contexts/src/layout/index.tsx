@@ -5,7 +5,7 @@ import { v4 as uuid } from 'uuid';
 
 
 import { Page, Button, settingsLabels } from '@lunchpad/types';
-import { useLocalStorage  } from '@rehooks/local-storage';
+import { useSettings } from '@lunchpad/hooks';
 
 
 export interface ILayoutContext {
@@ -35,7 +35,7 @@ const defaultPage = {
 const LayoutProvider = ({ children }) => {
   const configLayout = new Map<string, Page>(localStorage.getItem(settingsLabels.layout.config) ? JSON.parse(localStorage.getItem(settingsLabels.layout.config)): [[ "default", defaultPage ]]);
   const [ layout, _setLayout ] = React.useState<Map<string, Page>>(new Map<string, Page>(configLayout))
-  const [ activePageID, setActivePageID ] = useLocalStorage(settingsLabels.layout.active, "default")
+  const [ activePageID, setActivePageID ] = useSettings(settingsLabels.layout.active, "default")
   const [ activePage, _setActivePage ] = React.useState<Page>(layout.get(activePageID));
 
   const updateLayout = (l) => {

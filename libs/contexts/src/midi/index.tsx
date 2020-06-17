@@ -3,7 +3,7 @@ import React, { useEffect, useState, useContext } from 'react';
 import WebMidi, { Input, Output } from 'webmidi';
 
 import { settingsLabels } from '@lunchpad/types';
-import { useLocalStorage } from 'react-use';
+import { useSettings } from '@lunchpad/hooks';
 
 
 export interface IMidiContext {
@@ -29,8 +29,8 @@ declare interface MidiEvents {
 class MidiEvents extends EventEmitter {}
 
 const MidiProvider = ({ children }) => {
-  const [ midiInput ] = useLocalStorage(settingsLabels.midiInput, "");
-  const [ midiOutput ] = useLocalStorage(settingsLabels.midiOutput, "");
+  const [ midiInput ] = useSettings(settingsLabels.midiInput, "");
+  const [ midiOutput ] = useSettings(settingsLabels.midiOutput, "");
 
   const [ emitter, setEmitter ] = React.useState(new MidiEvents());
   const [ input, setInput ] = useState<false | Input>();

@@ -5,7 +5,7 @@ import * as Devices from '@lunchpad/controller';
   
 import { MidiContext, LayoutContext, AudioContext } from '@lunchpad/contexts';
 import { IPad } from '@lunchpad/controller';
-import { useLocalStorage  } from '@rehooks/local-storage';
+import { useSettings } from '@lunchpad/hooks';
 import { settingsLabels, Button, StopThisMacro, Action } from '@lunchpad/types';
 
 import { MacroRunner } from '@lunchpad/macroengine'
@@ -17,7 +17,7 @@ import { PushToTalk } from './pushtotalk';
 export const MacroEngine = () => {
   const { activePage } = React.useContext(LayoutContext.Context);
   const { emitter } = React.useContext(MidiContext.Context);
-  const [ controller ] = useLocalStorage(settingsLabels.controller, "Software6x6");
+  const [ controller ] = useSettings(settingsLabels.controller, "Software6x6");
   const [ pad, setPad ] = React.useState<IPad>();
 
   React.useEffect(() => {

@@ -3,7 +3,7 @@ import * as lodash from 'lodash';
 
 import { v4 as uuid } from 'uuid';
 
-import { useLocalStorage  } from '@rehooks/local-storage';
+import { useSettings } from '@lunchpad/hooks';
 import ButtonContextMenu from '../ContextMenu/button';
 import {MenuContext, MidiContext,LayoutContext, NotificationContext, AudioContext, useModal } from '@lunchpad/contexts';
 import { Button, PlaySound, FileURI, ActionType } from '@lunchpad/types';
@@ -25,8 +25,8 @@ interface ILocation {
 }
 
 export default () => {
-  const [ mode ] = useLocalStorage(settingsLabels.mode, "Software");
-  const [ controller, setController ] = useLocalStorage(settingsLabels.controller, "Software6x6");
+  const [ mode ] = useSettings(settingsLabels.mode, "Software");
+  const [ controller, setController ] = useSettings(settingsLabels.controller, "Software6x6");
   const { addNotification } = React.useContext(NotificationContext.Context)
   const [ pad, setPad ] = React.useState<IPad>();
   const { onButtonPressed, output } = React.useContext(MidiContext.Context);

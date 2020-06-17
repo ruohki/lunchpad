@@ -8,7 +8,7 @@ import { Icon, Plus } from '@lunchpad/icons';
 import { AudioContext, MenuContext, LayoutContext } from '@lunchpad/contexts';
 
 import AddActionMenu from '../ContextMenu/addAction';
-import { useLocalStorage  } from '@rehooks/local-storage';
+import { useSettings  } from '@lunchpad/hooks';
 
 interface IActionEditor {
   header: JSX.Element
@@ -21,7 +21,7 @@ export const ActionEditor: React.SFC<IActionEditor> = (props) => {
   const { outputDevices } = React.useContext(AudioContext.Context);
   const { pages } = React.useContext(LayoutContext.Context);
   
-  const [ outputDevice ] = useLocalStorage(settingsLabels.soundOutput, "default");
+  const [ outputDevice ] = useSettings(settingsLabels.soundOutput, "default");
 
   const addAction = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     showContextMenu(

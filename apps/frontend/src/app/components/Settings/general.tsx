@@ -1,6 +1,6 @@
 import React, { useContext } from 'react'
 
-import { useLocalStorage  } from '@rehooks/local-storage';
+import { useSettings  } from '@lunchpad/hooks';
 
 import { useMidiDevices } from '@lunchpad/hooks';
 import { AudioContext } from '@lunchpad/contexts'
@@ -10,25 +10,23 @@ import { Divider, Row } from './components';
 
 import * as Devices from '@lunchpad/controller';
 
-import KeyCapture from '../KeyCapture';
-
 export default () => {
   const midiDevices = useMidiDevices();
   
   const { outputDevices } = useContext(AudioContext.Context)
 
-  const [ mode, _saveMode ] = useLocalStorage(settings.mode, ControllerType.Software);
+  const [ mode, _saveMode ] = useSettings(settings.mode, ControllerType.Software);
   
-  const [ controller, setController ] = useLocalStorage(settings.controller, "Software6x6");
-  const [ midiInput, setMidiInput ] = useLocalStorage(settings.midiInput, "");
-  const [ midiOutput, setMidiOutput ] = useLocalStorage(settings.midiOutput, "");
+  const [ controller, setController ] = useSettings(settings.controller, "Software6x6");
+  const [ midiInput, setMidiInput ] = useSettings(settings.midiInput, "");
+  const [ midiOutput, setMidiOutput ] = useSettings(settings.midiOutput, "");
   
-  const [ output, saveOutput ] = useLocalStorage(settings.soundOutput, "default");
+  const [ output, saveOutput ] = useSettings(settings.soundOutput, "default");
   
-  const [ enablePtt, setEnablePtt ] = useLocalStorage<boolean>(settings.ptt.enabled, false);
-  const [ pttKey, savePttKey ] = useLocalStorage(settings.ptt.key, "enter");
-  const [ pttModifier, savePttModifier ] = useLocalStorage<string[]>(settings.ptt.modifier, []);
-
+  const [ enablePtt, setEnablePtt ] = useSettings(settings.ptt.enabled, false);
+  const [ pttKey, savePttKey ] = useSettings(settings.ptt.key, "enter");
+  const [ pttModifier, savePttModifier ] = useSettings(settings.ptt.modifier, "[]");
+  
   const saveMode = mode => {
     if (mode === ControllerType.Software) setController("Software6x6")
     else if (mode === ControllerType.Launchpad) setController("LaunchpadMK2")
@@ -121,8 +119,8 @@ export default () => {
         <Split direction="row">
           <Child padding="0 1rem 0 0">
             <Switch
-              value={enablePtt}
-              onChange={setEnablePtt}
+              value={enablePtt === "true"}
+              onChange={val => setEnablePtt(`${val}`)}
             />
           </Child>
           <Child grow>
@@ -130,7 +128,7 @@ export default () => {
           </Child>
         </Split>
       </Row>
-      {enablePtt && (
+      {enablePtt === "true" && (
         <Row title="Keyboard">
           <Split direction="row">
             <Child grow padding="0 1rem 0 0">
@@ -139,7 +137,7 @@ export default () => {
               </Select>
             </Child>
             <Child grow>
-              <Modifiers modifiers={pttModifier} onChange={savePttModifier} />
+              <Modifiers modifiers={JSON.parse(pttModifier)} onChange={(mods) => savePttModifier(JSON.stringify(mods))} />
             </Child>
           </Split>
         </Row>
