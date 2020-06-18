@@ -6,7 +6,7 @@ import { v4 as uuid } from 'uuid';
 import { useSettings } from '@lunchpad/hooks';
 import ButtonContextMenu from '../ContextMenu/button';
 import {MenuContext, MidiContext,LayoutContext, NotificationContext, AudioContext, useModal } from '@lunchpad/contexts';
-import { Button, PlaySound, FileURI, ActionType } from '@lunchpad/types';
+import { Button, PlaySound, FileURI, ActionType, PushToTalkStart, PushToTalkEnd } from '@lunchpad/types';
 import { settingsLabels } from '@lunchpad/types'
 import Settings from '../Settings';
 import ConfigDialog from '../ButtonConfiguration';
@@ -118,6 +118,7 @@ export default () => {
 
   const onDrop = (a: ILocation, payload: Record<string, string>) => {
     const soundOutput = localStorage.getItem(settingsLabels.soundOutput) ?? "default"
+    const enablePtt = localStorage.getItem(settingsLabels.ptt.enabled) ?? "false"
     if ('files' in payload) {
       const ButtonTarget = Object.assign<Object, Button>({}, lodash.get(activePage, `buttons.${a.x}.${a.y}`));
       //D&D a file
@@ -127,7 +128,13 @@ export default () => {
         const name = payload.files[0].name.split('.').slice(0, -1).join('.')
         const button = new Button(name, a.x, a.y);
         //@ts-ignore
+        const pttStart = new PushToTalkStart();
+        const pttEnd = new PushToTalkEnd(pttStart.id);
+        pttStart.endId = pttEnd.id;
+
+        if (enablePtt === "true") button.pressed.push(pttStart);
         button.pressed.push(new PlaySound(FileURI(payload.files[0].path), soundOutput))
+        if (enablePtt === "true") button.pressed.push(pttEnd);
 
         setButton(button, a.x, a.y, activePage.id);
         editButton(a.x, a.y);
