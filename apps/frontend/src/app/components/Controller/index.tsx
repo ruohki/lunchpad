@@ -133,6 +133,7 @@ export default () => {
         pttStart.endId = pttEnd.id;
 
         if (enablePtt === "true") button.pressed.push(pttStart);
+        //@ts-ignore
         button.pressed.push(new PlaySound(FileURI(payload.files[0].path), soundOutput))
         if (enablePtt === "true") button.pressed.push(pttEnd);
 
