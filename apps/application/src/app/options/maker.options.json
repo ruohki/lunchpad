@@ -12,7 +12,9 @@
       }
     ],
     "linux": {
-      "target": "zip",
+      "target": [
+        "tar.gz"
+      ],
       "asar": true
     },
     "win": {
