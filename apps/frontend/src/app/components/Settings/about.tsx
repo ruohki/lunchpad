@@ -3,6 +3,8 @@ import React from 'react';
 import { logo, Split, Child, LinkButton, ScrollBox } from '@lunchpad/base'
 import { Divider } from './components';
 
+import * as versionInfo from '../../../../../../version.json';
+
 export default () => {
   return (
     <Child grow padding="1rem" >
@@ -17,8 +19,11 @@ export default () => {
         <Child grow align="flex-start" >
           <Split >
             <Child text="center">
-              <h1>Lunchpad</h1>
+              <h1>Lunchpad <span style={{ fontSize: '1rem'}}>{versionInfo.version}</span></h1>
               <h5>(c) 2020 by Tillmann Hübner (<LinkButton href="mailto:ruohki@gmail.com">ruohki@gmail.com</LinkButton>)</h5>
+            </Child>
+            <Child text="center" padding="1rem 0 0 0">
+              <LinkButton href={`https://github.com/ruohki/lunchpad/commit/${versionInfo.hash}`}><h5>sha:{versionInfo.hash}</h5></LinkButton>
             </Child>
             <Child padding="1rem">
               <Divider />
@@ -30,7 +35,7 @@ export default () => {
               <p>All specifications are subject to change without notice.</p>
               <p>Launchpad is a trademark of Focusrite-Novation</p>
               <br />
-              <p>You can grab a copy of this Software on Discord.</p>
+              <p>You can grab a copy of this software on Discord.</p>
               <LinkButton href="https://discord.gg/4Ys9TRR">https://discord.gg/4Ys9TRR</LinkButton>
             </Child>
           </Split>
