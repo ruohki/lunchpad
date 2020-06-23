@@ -1,11 +1,5 @@
 import * as lodash from 'lodash';
-
 import { v4 as uuid } from 'uuid';
-export type Color = {
-  r: number,
-  g: number,
-  b: number
-}
 
 export enum ButtonMode {
   Normal = "NORMAL",
@@ -264,28 +258,5 @@ export class Hotkey extends Action {
     this.id = id;
     this.keystrokes = keystrokes;
     this.restoreAllAtEnd = restore;
-  }
-}
-
-export class Button {
-  public title: string
-  public x: number
-  public y: number
-
-  public color: Color
-  public activeColor: Color
-
-  public pressed: Action[] = []
-  public released: Action[] = []
-
-  public loop: boolean = false;
-
-  constructor(title: string, x: number, y: number, color = {r:0, g: 0, b: 0}) {
-    this.title = title;
-    this.x = x;
-    this.y = y;
-    this.color = color;
-    this.pressed = [];
-    this.released = [];
   }
 }

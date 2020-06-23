@@ -10,7 +10,7 @@ export const Tab = styled(({ title, active, ...rest}) => (
   color: ${(props) => props.active ? COLOR_WHITE : COLOR_GRAY};
   padding:  1rem 3rem 1rem 3rem;
   cursor: pointer;
-
+  white-space: nowrap;
   transition: color 0.25s ease, background-color 0.25s ease;
   
   &:hover {

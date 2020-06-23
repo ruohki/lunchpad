@@ -3,7 +3,7 @@ import React, { useContext } from 'react'
 import { useSettings  } from '@lunchpad/hooks';
 
 import { useMidiDevices } from '@lunchpad/hooks';
-import { AudioContext } from '@lunchpad/contexts'
+import { AudioContext, MidiContext } from '@lunchpad/contexts'
 import { settingsLabels as settings, ControllerType } from '@lunchpad/types'
 import { Split, Child, Select, Switch, KeyboardKeys, Modifiers } from '@lunchpad/base';
 import { Divider, Row } from './components';
@@ -12,12 +12,15 @@ import * as Devices from '@lunchpad/controller';
 
 export default () => {
   const midiDevices = useMidiDevices();
-  
+  const { inputs, outputs } = React.useContext(MidiContext.Context);
+
   const { outputDevices } = useContext(AudioContext.Context)
 
   const [ mode, _saveMode ] = useSettings(settings.mode, ControllerType.Software);
   
   const [ controller, setController ] = useSettings(settings.controller, "Software6x6");
+  const [ showIcons, setShowIcons ] = useSettings(settings.icons, true);
+
   const [ midiInput, setMidiInput ] = useSettings(settings.midiInput, "");
   const [ midiOutput, setMidiOutput ] = useSettings(settings.midiOutput, "");
   
@@ -67,13 +70,31 @@ export default () => {
               {Object.keys(Devices).map(k => Devices[k].type === ControllerType.Launchpad ? <option key={Devices[k].name} value={k}>{Devices[k].name}</option> : '' )}
             </Select>
           </Row>
+          <Row title="">
+            <Split direction="row">
+              <Child padding="0 1rem 0 0">
+                <Switch
+                  value={showIcons === "true"}
+                  onChange={val => setShowIcons(`${val}`)}
+                />
+              </Child>
+              <Child grow>
+                <span>Show icons on buttons</span>
+              </Child>
+            </Split>
+          </Row>
+          <Split padding="1rem 1rem 0 1rem">
+            <Child basis="0">
+              <Divider />
+            </Child>
+          </Split>
           <Row title="MIDI Input">
             <Select
               value={midiInput}
               onChange={e => setMidiInput(e.target.value)}
             >
-              {!midiInput && <option>Please select the target midi Input</option>}
-              {midiDevices.inputs.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+              <option value="">Dont use MIDI input</option>
+              {inputs.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
             </Select>
           </Row>
           <Row title="MIDI Output">
@@ -81,8 +102,8 @@ export default () => {
               value={midiOutput}
               onChange={e => setMidiOutput(e.target.value)}
             >
-              {!midiOutput && <option>Please select the target midi Output</option>}
-              {midiDevices.outputs.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+              <option value="">Dont use MIDI output</option>
+              {outputs.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
             </Select>
           </Row>
         </>

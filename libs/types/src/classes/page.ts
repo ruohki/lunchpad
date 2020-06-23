@@ -1,8 +1,8 @@
-import { Button } from '../actions'
+import { LaunchpadButton } from './button'
 
 export class Page {
   public name: string;
-  public buttons: Record<number, Record<number, Button>>;
+  public buttons: Record<number, Record<number, LaunchpadButton>>;
   public id: string;
 
   constructor(name: string, id: string) {
@@ -10,10 +10,4 @@ export class Page {
     this.id = id;
     this.buttons = {}
   }
-}
-
-type Color = {
-  r: number,
-  g: number,
-  b: number
 }

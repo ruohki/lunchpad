@@ -26,7 +26,7 @@ export class PushToTalk {
 
       robotjs.keyToggle(key, "down", modifier);
       
-      console.log("Pressed PTT")
+      //console.log("Pressed PTT")
     }
   }
 
@@ -34,7 +34,7 @@ export class PushToTalk {
     if (this.isPushed) {
       this.isPushed = false;
       robotjs.keyToggle(this.keyPressed, "up", this.modifiers);
-      console.log("Released PTT")
+      //console.log("Released PTT")
     }
   }
 }

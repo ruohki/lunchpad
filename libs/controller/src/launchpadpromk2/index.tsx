@@ -1,28 +1,24 @@
 import React from 'react';
-import { Output } from 'webmidi'
+import lodash from 'lodash';
 
-import * as lodash from 'lodash';
-
-import { LaunchpadButton } from '@lunchpad/base'
+import { LaunchpadButton as Button } from '@lunchpad/base'
 import { TriangleRight, TriangleUpSolid, Circle, TriangleDownSolid, TriangleLeftSolid, TriangleRightSolid, Icon } from '@lunchpad/icons';
-import { Page, ControllerType } from '@lunchpad/types'
+import { Page, ControllerType, LaunchpadButton, LaunchpadRGBButtonColor, LaunchpadButtonLook, LaunchpadButtonLookType, LaunchpadButtonLookText, LaunchpadButtonLookImage, LaunchpadButtonColorMode, LaunchpadSolidButtonColor, LaunchpadFlashingButtonColor, LaunchpadPulsingButtonColor } from '@lunchpad/types'
 
-import { PadContainer } from '../components';
-import { XYToButton, ButtonToXY, MakeButtonColor } from './helper'
-import { IPadProps } from '..';
+import { PadContainer, ButtonLook } from '../components';
+import { XYToButton, ButtonToXY } from './helper'
+import { IPadProps, IPad } from '..';
 
-const EmptyButton = (x, y) => ({
-  title: "",
-  x,
-  y,
-  color: {r: 0, g: 0, b: 0}
-})
+import { MakeButtonColor } from '../helper';
 
 const Vendor = [0x0, 0x20, 0x29];
 const Mode = [0x2, 0x10, 0x21, 0x0];
 const Programmer = [0x2, 0x10, 0x22, 0x0];
 
-const Color = [0x2, 0x10, 0x0B];
+const Solid = [0x2, 0x10, 0x0A];
+const Flashing = [0x2, 0x10, 0x23];
+const Pulsing = [0x2, 0x10, 0x28];
+const RGB = [0x2, 0x10, 0x0B];
 
 const isRound = (x: number, y: number) => {
   return (x === 0 || x === 9) || (y === 0 || y === 9) 
@@ -71,20 +67,25 @@ const sideButtons = {
 }
 
 const Component: React.SFC<IPadProps> = ({
+  showIcons,
   onButtonPressed,
+  onButtonReleased,
   onContextMenu,
   onSettingsButtonClick,
   activePage,
   onDrop,
+  onDragStart,
+  onDragEnd,
 }) => {
   return (
     <PadContainer width={10} height={10}>
       {lodash.reverse(lodash.range(0, 10)).map((y) => lodash.range(0,10).map((x) => {
-        const button  = lodash.get(activePage?.buttons ?? {}, `[${x}][${y}]`, EmptyButton(x,y)) // as Button;
+        const isButton = lodash.get(activePage, `buttons.${x}.${y}`, false);
+        const button: LaunchpadButton  = lodash.get(activePage, `buttons.${x}.${y}`, new LaunchpadButton()) // as Button;
         const color = MakeButtonColor(button.color)
         
         return lodash.includes(placeholder, XYToButton(x,y)) ? <div key={XYToButton(x,y)} /> : XYToButton(x,y) !== 99 ? (
-          <LaunchpadButton
+          <Button
             x={x}
             y={y}
             color={color}
@@ -93,15 +94,17 @@ const Component: React.SFC<IPadProps> = ({
             clip={isRound(x,y)}
             key={`${x}${y}`}
             onContextMenu={onContextMenu}
-            onClick={(e) => {
-              onButtonPressed(e, x, y, XYToButton(x,y), false);
-            }}
+            onMouseDown={(e) => onButtonPressed(e, x, y, XYToButton(x,y), false)}
+            onMouseUp={(e) => onButtonReleased(e, x, y, XYToButton(x,y), false)}
             onDrop={onDrop}
+            canDrag={isButton}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
           >
-            {isRound(x,y) ? sideButtons[XYToButton(x,y)] : button.title }
-          </LaunchpadButton>
+            {isRound(x,y) ? showIcons ? sideButtons[XYToButton(x,y)] : <ButtonLook look={button.look} /> : <ButtonLook look={button.look} /> }
+          </Button>
         ) : (
-          <LaunchpadButton
+          <Button
             x={9}
             y={9}
             key="settings"
@@ -111,9 +114,10 @@ const Component: React.SFC<IPadProps> = ({
             onContextMenu={() => true}
             onClick={onSettingsButtonClick}
             onDrop={() => {}}
+            canDrag={false}
           >
             SET
-          </LaunchpadButton>
+          </Button>
         )
       }
       ))}
@@ -121,31 +125,93 @@ const Component: React.SFC<IPadProps> = ({
   )
 }
 
-const buildColors = (output: Output, page: Page) => {
-  if (!output) return;
-
-  output.sendSysex(Vendor, Mode);
-  output.sendSysex(Vendor, Programmer);
-  output.sendSysex(Vendor, [0x2, 0x10, 0x0E, 0x0]);
-
-  const colorsRaw = lodash.flattenDeep(Object.keys(page.buttons).map(x => {
-    return Object.keys(page.buttons[x]).map(y => {
-      const { r, g, b } = page.buttons[parseInt(x)][parseInt(y)].color;
-      // RGB / 4 for MK2 / Pro 2
-      return [XYToButton(parseInt(x),parseInt(y)), Math.floor(r / 4), Math.floor(g / 4), Math.floor(b / 4)]
-    })
-  }))
-
-  const colors = lodash.chunk(colorsRaw, 77);
-  const [ part1 = [], part2 = [] ] = colors;
-
-  if (part1.length > 0) output.sendSysex(Vendor, [...Color, ...part1]);
-  if (part2.length > 0) output.sendSysex(Vendor, [...Color, ...part2]);
+const initialize = (send: (code: number[], data: number[]) => void) => {
+  send(Vendor, Mode);
+  send(Vendor, Programmer);
+  send(Vendor, [0x2, 0x10, 0x0E, 0x0]);
 }
 
-export const LaunchpadProMK2 = {
+const unload = (send: (code: number[], data: number[]) => void) => {
+/*   send(Vendor, Clear);
+  send(Vendor, Unload); */
+}
+
+
+const buildColors = (send: (code: number[], data: number[]) => void, page: Page, activeButtons: Array<{x: number, y: number}>) => {
+  let solids = new Array<number>();
+  let flashing = new Array<number>();
+  let pulsing = new Array<number>();
+  let rgb = new Array<number>();
+
+  // Build color array
+  lodash.range(0, 10).map((y) => lodash.range(0,10).map((x) => {
+    const button: LaunchpadButton = lodash.get(page, `buttons.${x}.${y}`);
+    //console.log(activeButtons, x,y , lodash.some(activeButtons, { x, y }))
+    if (button) {
+      const isActive = lodash.some(activeButtons, { x, y });
+
+      let color = isActive ? lodash.get(button, 'activeColor', button.color) : button.color
+
+      const btnIdx = XYToButton(x, y);
+      switch (color.mode) {
+        case LaunchpadButtonColorMode.Static:
+          solids.push(btnIdx, (color as LaunchpadSolidButtonColor).color);
+          break;
+        case LaunchpadButtonColorMode.Flashing:
+          solids.push(btnIdx, (color as LaunchpadFlashingButtonColor).color)
+          flashing.push(0, btnIdx, (color as LaunchpadFlashingButtonColor).alt);
+          break;
+        case LaunchpadButtonColorMode.Pulsing:
+          pulsing.push(0, btnIdx, (color as LaunchpadPulsingButtonColor).color)
+          break;
+        case LaunchpadButtonColorMode.RGB:
+          const { r, g, b } = LaunchpadRGBButtonColor.getRGB(color as LaunchpadRGBButtonColor);
+          rgb.push(btnIdx, Math.floor(r / 4), Math.floor(g / 4), Math.floor(b / 4))
+          break;
+        default:
+          solids.push(btnIdx, 0)
+      }
+    } else {
+      // Clear the button or if its top right make it fade
+      solids.push(XYToButton(x,y), 0)
+    }
+  }))
+
+  if (solids.length > 0) {
+    const colors = lodash.chunk(solids, 77);
+    const [ part1 = [], part2 = [] ] = colors;
+
+    if (part1.length > 0) send(Vendor, [...Solid, ...part1]);
+    if (part2.length > 0) send(Vendor, [...Solid, ...part2]);
+  }
+  if (flashing.length > 0) {
+    const colors = lodash.chunk(flashing, 77);
+    const [ part1 = [], part2 = [] ] = colors;
+
+    if (part1.length > 0) send(Vendor, [...Flashing, ...part1]);
+    if (part2.length > 0) send(Vendor, [...Flashing, ...part2]);
+  }
+  if (pulsing.length > 0) {
+    const colors = lodash.chunk(pulsing, 77);
+    const [ part1 = [], part2 = [] ] = colors;
+
+    if (part1.length > 0) send(Vendor, [...Pulsing, ...part1]);
+    if (part2.length > 0) send(Vendor, [...Pulsing, ...part2]);
+  }
+  if (rgb.length > 0) {
+    const colors = lodash.chunk(rgb, 77);
+    const [ part1 = [], part2 = [] ] = colors;
+
+    if (part1.length > 0) send(Vendor, [...RGB, ...part1]);
+    if (part2.length > 0) send(Vendor, [...RGB, ...part2]);
+  }
+}
+
+export const LaunchpadProMK2: IPad = {
   name: "Launchpad Pro MK2",
   type: ControllerType.Launchpad,
+  initialize,
+  unload,
   buildColors,
   XYToButton,
   ButtonToXY,

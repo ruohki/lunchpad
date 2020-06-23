@@ -51,7 +51,6 @@ const NotificationProvider = ( { children } ) => {
       <NotificationContainer>
         <AnimatePresence
           custom
-          onExitComplete={() => console.log("Done")}
         >
           {notifications.map(({ id, text, delay, severity}) => (
             <Notification

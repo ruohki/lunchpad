@@ -13,8 +13,7 @@ interface StyledButtonProps {
 const StyledButtonContainer = styled.div<StyledButtonProps>`
   background-color: ${(props) => props.color};
   border-radius: ${({ round }) => round ? "999" : "8"}px;
-  padding: 2px;
-  margin: 4px;
+  margin: 3px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -85,9 +84,16 @@ interface ButtonProps {
   disabled?: boolean,
   x: number,
   y: number,
+  onMouseDown?: (event?: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void,
+  onMouseUp?: (event?: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void,
+
   onClick?: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number) => void,
   onContextMenu?: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number) => void,
+  onDragStart?: (x: number, y: number) => void
+  onDragEnd?: (x: number, y: number) => void
   onDrop: ( target: any, payload: any) => void;
+  canDrag: boolean
+
 }
 
 interface IDragPayload {
@@ -96,16 +102,24 @@ interface IDragPayload {
   files?: File[]
 }
 
-export const LaunchpadButton: React.SFC<ButtonProps> = ({ onDrop, children, onClick, onContextMenu, x, y, keyId, clip = false, color = "#b1b1b1", ...rest }) => {
+export const LaunchpadButton: React.SFC<ButtonProps> = ({ onDragStart, onDragEnd, canDrag, onMouseDown, onMouseUp, onDrop, children, onClick, onContextMenu, x, y, keyId, clip = false, color = "#b1b1b1", ...rest }) => {
+  
   const [ disabled, setDisabled ] = React.useState(false);
 
   const [, drag] = useDrag({
     item: { id: keyId, type: "BUTTON", x, y},
-    begin: () => setDisabled(true),
+    begin: () => {
+      setDisabled(true)
+      //@ts-ignore
+      onMouseUp({ button: 0 });
+      onDragStart(x, y);
+    },
     end: (result) => {
       //remove();
       setDisabled(false)
+      onDragEnd(x, y);
     },
+    canDrag: () => canDrag
   })
 
   const [, drop] = useDrop({
@@ -151,6 +165,8 @@ export const LaunchpadButton: React.SFC<ButtonProps> = ({ onDrop, children, onCl
       onContextMenu={(e) => {
         onContextMenu(e, x, y, parseInt(keyId.toString()))
       }}
+      onMouseDown={onMouseDown}
+      onMouseUp={onMouseUp}
       onClick={(e) => onClick(e, x, y, parseInt(keyId.toString()))}
     >
       {children}
@@ -169,5 +185,7 @@ LaunchpadButton.defaultProps = {
   onClick: () => true,
   onContextMenu: () => true,
   round: false,
-  disabled: false
+  disabled: false,
+  onDragStart: () => {},
+  onDragEnd: () => {}
 }

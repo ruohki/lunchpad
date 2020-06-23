@@ -2,6 +2,11 @@
 /// <reference path="../../../../types/window.require.d.ts" />
 
 import 'typeface-exo-2';
+import 'typeface-roboto';
+import 'typeface-source-sans-pro';
+import 'typeface-oswald';
+import 'typeface-noto-serif';
+import "@fortawesome/fontawesome-free/css/all.css";
 
 import * as React from 'react';
 
@@ -16,7 +21,7 @@ import { settingsLabels as settings } from '@lunchpad/types';
 
 import Controller from './components/Controller';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { MacroEngine } from './macro/index';
+import { MacroContext } from './contexts/macroengine';
 
 const ProviderGarden = ({ children }) => {
   const [ output ] = useSettings(settings.soundOutput, 'default');
@@ -30,8 +35,9 @@ const ProviderGarden = ({ children }) => {
               <MenuContext.Provider>
                 <ModalContext.Provider>
                   <DndProvider backend={Backend}>
-                    <MacroEngine />
-                    {children}
+                    <MacroContext.Provider>
+                      {children}
+                    </MacroContext.Provider>
                   </DndProvider>
                 </ModalContext.Provider>
               </MenuContext.Provider>

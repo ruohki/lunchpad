@@ -1,10 +1,11 @@
 import * as React from 'react';
 import set from 'lodash/setWith';
+import lodash from 'lodash';
 
 import { v4 as uuid } from 'uuid';
 
 
-import { Page, Button, settingsLabels } from '@lunchpad/types';
+import { Page, LaunchpadButton, settingsLabels, LaunchpadButtonColorMode, LaunchpadSolidButtonColor, LaunchpadFlashingButtonColor, LaunchpadPulsingButtonColor, LaunchpadRGBButtonColor } from '@lunchpad/types';
 import { useSettings } from '@lunchpad/hooks';
 
 
@@ -18,7 +19,7 @@ export interface ILayoutContext {
   removePage(id: string): void
   renamePage(id: string, name: string): boolean
 
-  setButton(button: Button, x: number, y: number, pageId: string): void
+  setButton(button: LaunchpadButton, x: number, y: number, pageId: string): void
   clearButton(x: number, y: number, pageId: string): void
   swapButtons(pageId: string, xA: number, yA: number, xB: number, yB: number): void
 }
@@ -32,132 +33,108 @@ const defaultPage = {
   buttons: {}
 }
 
+const canParse = (json: string): boolean => {
+  try {
+    JSON.parse(json)
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const LayoutProvider = ({ children }) => {
-  const configLayout = new Map<string, Page>(localStorage.getItem(settingsLabels.layout.config) ? JSON.parse(localStorage.getItem(settingsLabels.layout.config)): [[ "default", defaultPage ]]);
-  const [ layout, _setLayout ] = React.useState<Map<string, Page>>(new Map<string, Page>(configLayout))
+  const configLayout: Array<Page> = localStorage.getItem(settingsLabels.layout.config) ? JSON.parse(localStorage.getItem(settingsLabels.layout.config)): [ defaultPage ];
+  
+  const [ layout, _setLayout ] = React.useState<Array<Page>>(configLayout)
   const [ activePageID, setActivePageID ] = useSettings(settingsLabels.layout.active, "default")
-  const [ activePage, _setActivePage ] = React.useState<Page>(layout.get(activePageID));
+  
+  const idx = layout.findIndex(p => p.id === activePageID)
+  const [ activePage, _setActivePage ] = React.useState<Page>(layout[idx]);
 
   const updateLayout = (l) => {
     localStorage.setItem(settingsLabels.layout.old, localStorage.getItem(settingsLabels.layout.config))
-    localStorage.setItem(settingsLabels.layout.config, JSON.stringify(Array.from(layout.entries())))
-    _setLayout(new Map(l));
+    localStorage.setItem(settingsLabels.layout.config, JSON.stringify(l))
+    const idx = l.findIndex(p => p.id === activePageID)
+    const pages = [...l]
+    _setLayout(pages);
+    _setActivePage(pages[idx]);
   }
   
-  const setLayout = (key: string, page: Page) => {
-    layout.set(key, page);
-    updateLayout(new Map(layout));
+  const setLayout = (id: string, page: Page) => {
+    updateLayout([...layout.map(p => p.id === id ? page : p)]);
   }
 
   const setActivePage = (id: string) => {
-    if (!layout.has(id)) return;
+    const idx = layout.findIndex(p => p.id === id)
+    if (idx === -1) return;
     setActivePageID(id);
-    _setActivePage(layout.get(id));
+    _setActivePage(layout[idx]);
   }
   
   const addPage = (name: string) => {
     const id = uuid();
-    layout.set(id, new Page(name, id))
-    updateLayout(new Map(layout));
+    updateLayout([...layout, new Page(name, id)]);
   }
 
   const removePage = (id: string) => {
-    if (!layout.has(id)) return false;
-    if (id === "default") return;
+    const idx = layout.findIndex(p => p.id === id)
+    if (id === "default" || idx === -1 ) return;
     
-    if (layout.get(id).name === activePage.name) {
+    if (layout[idx].name === activePage.name) {
       setActivePage("default");
     }
-
-    layout.delete(id);
-    updateLayout(new Map(layout));
+    updateLayout(layout.filter(p => p.id !== id));
   }
   
   const renamePage = (id: string, name: string) => {
-    if (!layout.has(id)) return false;
-    if (name === "") return false;
-    const page = layout.get(id);
-    page.name = name;
-    layout.set(id, page)
-    updateLayout(new Map(layout));
+    const idx = layout.findIndex(p => p.id === id)
+    if (id === "default" || name === "" || idx === -1 ) return false;
+    layout[idx].name = name;
+    updateLayout([...layout]);
     return true
   }
 
-  const setButton = (button: Button, x: number, y: number, pageId: string) => {
-    if (!layout.has(pageId)) return;
-    const page = layout.get(pageId);
-    button.x = x;
-    button.y = y;
+  const setButton = (button: LaunchpadButton, x: number, y: number, pageId: string) => {
+    const idx = layout.findIndex(p => p.id === pageId)
+    if (idx === -1 ) return false;
+    
+    set(layout[idx], `buttons.${x}.${y}`, button, Object)
 
-    set(page.buttons, `[${x}][${y}]`, button, Object)
-
-    setLayout(pageId, page);
-    if (pageId === activePage.id) _setActivePage(page);
+    setLayout(pageId, layout[idx]);
+    if (pageId === activePage.id) _setActivePage(layout[idx]);
   }
   
 
   const clearButton = (x: number, y: number,  pageId: string) => {
-    if (!layout.get(pageId) || !(layout.get(pageId).buttons[x][y])) return;
-    const page = layout.get(pageId);
-    delete page.buttons[x][y]
-    setLayout(pageId, page);
-    if (pageId === activePage.id) _setActivePage(page);
+    const idx = layout.findIndex(p => p.id === pageId)
+    if (idx === -1 || !lodash.get(layout[idx], `buttons.${x}.${y}`, undefined)) return false;
+
+    delete(layout[idx].buttons[x][y])
+    setLayout(pageId, layout[idx]);
+    if (pageId === activePage.id) _setActivePage(layout[idx]);
   }
 
   React.useEffect(() => {
-    const oldPageID = activePage.id;
+    const idx = layout.findIndex(p => p.id === activePageID)
     if (activePageID !== activePage.id) setActivePage(activePageID)
-    else if (!layout.has(activePageID)) setActivePageID(activePage.id)
+    else if (idx === -1) setActivePageID(activePage.id)
   }, [ activePageID ])
- /*  const swapButtons = (xA: number, yA: number, pageIdA: string, xB: number, yB: number, pageIdB: string) => {
-    if (!layout.has(pageNameA) || !layout.has(pageNameB)) return;
-    if (!layout.get(pageNameA)[xA][yA] && !layout.get(pageNameB)[xB][yB]) return;
-    
-    const pageA = layout.get(pageNameA)
-    const pageB = layout.get(pageNameB)
-    const buttonA = layout.get(pageNameA)[xA][yA]
-    const buttonB = layout.get(pageNameA)[xB][yB]
-
-    if (!buttonA || !buttonB) {
-      if (!buttonA) {
-        set(pageA.buttons, `${xA}.${yA}`, buttonB)
-        pageA.buttons[xA][yA].x = xA;
-        pageA.buttons[xA][yA].y = yA;
-        delete pageB.buttons[xB][yB];
-      } else {
-        set(pageB.buttons, `${xB}.${yB}`, buttonA)
-        pageA.buttons[xB][yB].x = xB;
-        pageA.buttons[xB][yB].y = yB;
-        delete pageA.buttons[xA][yA];
-      }
-
-    } else {
-      set(pageA.buttons, `${xA}.${yA}`, buttonB)
-      set(pageB.buttons, `${xB}.${yB}`, buttonA)
-    }
-    layout.set(pageNameA, pageA)
-    layout.set(pageNameB, pageB)
-
-    return updateLayout(new Map(layout));
-  } */
+ 
   const swapButtons = (pageId: string, xA: number, yA: number, xB: number, yB: number) => {
-    if (!layout.has(pageId)) return;
-    if (!layout.get(pageId)[xA][yA] && !layout.get(pageId)[xB][yB]) return;
+    const idx = layout.findIndex(p => p.id === activePageID)
+    if (idx === -1) return;
+    if (!lodash.get(layout[idx], `buttons.${xA}.${yA}`, undefined) && !lodash.get(layout[idx], `buttons.${xB}.${yB}`, undefined)) return;
     
-    const page = layout.get(pageId);
+    const page = layout[idx];
     const buttonA = page[xA][yA];
     const buttonB = page[xB][yB];
 
     if (!buttonA || !buttonB) {
       if (!buttonA) {
         set(page.buttons, `${xA}.${yA}`, buttonB)
-        page.buttons[xA][yA].x = xA;
-        page.buttons[xA][yA].y = yA;
         delete page.buttons[xB][yB];
       } else {
         set(page.buttons, `${xB}.${yB}`, buttonA)
-        page.buttons[xB][yB].x = xB;
-        page.buttons[xB][yB].y = yB;
         delete page.buttons[xA][yA];
       }
 
@@ -165,9 +142,9 @@ const LayoutProvider = ({ children }) => {
       set(page.buttons, `${xA}.${yA}`, buttonB)
       set(page.buttons, `${xB}.${yB}`, buttonA)
     }
-    layout.set(pageId, page)
-
-    return updateLayout(new Map(layout));
+    
+    page.buttons = {...page.buttons}
+    return updateLayout([...layout.filter(p => p.id === page.id ? page : p)]);
   }
 
   return (
@@ -191,7 +168,6 @@ const LayoutProvider = ({ children }) => {
 };
 
 export const LayoutContext = {
-  Button,
   Page,
   Context: layoutContext,
   Provider: LayoutProvider

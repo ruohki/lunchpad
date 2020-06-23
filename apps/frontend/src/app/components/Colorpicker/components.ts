@@ -2,6 +2,7 @@ import styled from 'styled-components';
 import Circle from "react-color/lib/Circle";
 
 export const PickerContainer = styled.div`
+  display: block;
   position: absolute;
   left: 20px;
   top: 20px;

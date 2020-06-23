@@ -4,7 +4,7 @@ import { AnimatePresence } from "framer-motion";
 import { Backdrop, ContextMenuContainer  } from './components';
 
 export interface IContextMenuContext {
-  showContextMenu(x: number, y: number, component: JSX.Element): void
+  showContextMenu(x: number, y: number, component: JSX.Element, width?: number, height?: number): void
   closeMenu(event: React.MouseEvent<HTMLDivElement, MouseEvent>): void
 }
 const contextMenuContext = React.createContext<Partial<IContextMenuContext>>({});
@@ -14,6 +14,8 @@ const { Provider } = contextMenuContext;
 const ContextMenuProvider = ({ children }) => {
   const [ mouseLocation, setMouseLocation ] = useState<{x: number, y: number}>({ x: 0, y: 0});
   const [ contextMenuLocation, setContextMenuLocation ] = useState<{x: number, y: number}>({ x: 0, y: 0});
+  const [ overrideSize, setOverrideSize ] = useState<{width: number, height: number}>({ width: 0, height: 0});
+
   const [ menuComponent, setMenuComponent ] = useState(<div />)
   const [ isVisible, setIsVisible ] = useState(false)
   const hideContextMenu = () => setIsVisible(false);
@@ -25,17 +27,21 @@ const ContextMenuProvider = ({ children }) => {
   useEffect(() => {
     const cHeight = document.documentElement.clientHeight;
     const cWidth = document.documentElement.clientWidth;
+    
+    let w = overrideSize.width > 0 ? overrideSize.width : width
+    let h = overrideSize.height > 0 ? overrideSize.height : height
 
-    const x = mouseLocation.x + width > cWidth ? cWidth - width : mouseLocation.x
-    const y = mouseLocation.y + height > cHeight ? cHeight - height : mouseLocation.y
+    const x = mouseLocation.x + w > cWidth ? cWidth - w : mouseLocation.x
+    const y = mouseLocation.y + h > cHeight ? cHeight - h : mouseLocation.y
 
     setContextMenuLocation({ x, y })
 
-  }, [width, height, mouseLocation ])
+  }, [ overrideSize, width, height, mouseLocation ])
  
-  const showContextMenu = (x: number, y: number, component: JSX.Element) => {
+  const showContextMenu = (x: number, y: number, component: JSX.Element, width: number = 0, height: number = 0) => {
     setMenuComponent(component);
     setMouseLocation({ x, y});
+    setOverrideSize({ width, height })
     setIsVisible(true)
   };
 
@@ -52,6 +58,7 @@ const ContextMenuProvider = ({ children }) => {
             key="backdrop"
             onClick={closeMenu}
             onContextMenu={closeMenu}
+
           >
             <ContextMenuContainer
               key="menu"
@@ -61,8 +68,9 @@ const ContextMenuProvider = ({ children }) => {
               initial={{ opacity: 0, scale:  0 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0, transition: { duration: 0.1 } }}
+              
             >
-              <div ref={ref}>
+              <div style={{ display: 'block', boxSizing: 'content-box' }} ref={ref}>
                 {menuComponent}
               </div>
             </ContextMenuContainer>

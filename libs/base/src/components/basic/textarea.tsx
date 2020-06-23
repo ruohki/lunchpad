@@ -3,15 +3,15 @@ import styled from 'styled-components';
 import { COLOR_WHITE, COLOR_BLURPLE, COLOR_NOTBLACK } from '../../theme/colors';
 import { lighten, darken } from 'polished';
 
-interface IInputProps {
+interface ITextAreaProps {
   color?: string;
   padding?: string;
-  face?: string;
+  height?: string;
 }
 
-export const Input = styled.input<IInputProps>`
+export const Textarea = styled.textarea<ITextAreaProps>`
   width: 100%;
-  height: 35px;
+  height: ${props => props.height};
   appearance: none;
   display: block;
   padding: ${props => props.padding};
@@ -19,26 +19,24 @@ export const Input = styled.input<IInputProps>`
   color: ${COLOR_WHITE};
   background-color: ${({color}) => color};
   border: 2px solid ${({color}) => darken(0.05, color)};
-  
+  resize: none;
+
   border-radius: 7px;
   
   font-size: 1.6rem;
   font-weight: normal;
   font-style: normal;
-  font-family: "${(props) => props.face}" !important;
+
   outline: 0px;
 
   transition: background-color 0.2s ease;
   &:hover {
     background-color: ${({color}) => lighten(0.05, color)};
   }
-
 `
 
-Input.defaultProps = {
+Textarea.defaultProps = {
   color: COLOR_NOTBLACK,
   padding: "0.75rem",
-  face: "inherit"
+  height: "400px"
 }
-
-export default Input;

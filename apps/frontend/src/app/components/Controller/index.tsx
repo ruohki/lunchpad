@@ -6,14 +6,15 @@ import { v4 as uuid } from 'uuid';
 import { useSettings } from '@lunchpad/hooks';
 import ButtonContextMenu from '../ContextMenu/button';
 import {MenuContext, MidiContext,LayoutContext, NotificationContext, AudioContext, useModal } from '@lunchpad/contexts';
-import { Button, PlaySound, FileURI, ActionType, PushToTalkStart, PushToTalkEnd } from '@lunchpad/types';
+import { LaunchpadButton, PlaySound, FileURI, ActionType, PushToTalkStart, PushToTalkEnd, LaunchpadButtonLookText, LaunchpadButtonLookType } from '@lunchpad/types';
 import { settingsLabels } from '@lunchpad/types'
 import Settings from '../Settings';
 import ConfigDialog from '../ButtonConfiguration';
 
 import * as Devices from '@lunchpad/controller';
 import { IPad } from '@lunchpad/controller';
-import { SoundAction } from '@lunchpad/macroengine';
+
+import { MacroContext } from '../../contexts/macroengine';
 
 const { remote } = window.require('electron');
 
@@ -24,33 +25,45 @@ interface ILocation {
   y: number
 }
 
+
+
 export default () => {
   const [ mode ] = useSettings(settingsLabels.mode, "Software");
   const [ controller, setController ] = useSettings(settingsLabels.controller, "Software6x6");
+  const [ showIcons ] = useSettings(settingsLabels.icons, "true");
   const { addNotification } = React.useContext(NotificationContext.Context)
-  const [ pad, setPad ] = React.useState<IPad>();
-  const { onButtonPressed, output } = React.useContext(MidiContext.Context);
+  const { showContextMenu, closeMenu } = useContext(MenuContext.Context);
+  const { emitter: MidiEmitter, sendSysEx, pressed } = React.useContext(MidiContext.Context);
   const { setButton, clearButton, activePage } = React.useContext(LayoutContext.Context);
+  const { running, stopAll, stopSpecific } = React.useContext(MacroContext.Context);
 
   const [ openSettings, closeSettings ] = useModal();
-  const { showContextMenu, closeMenu } = useContext(MenuContext.Context);
   const [ showConfigDialog, closeConfigDialog ] = useModal();
   
-  const Component = pad?.Component
+  const [ pad, setPad ] = React.useState<IPad>();
+  
+  const Component = React.useMemo(() => pad?.Component, [ pad ]);
   // Repaint the Pad when the active layout changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(() => {
     const Launchpad = Devices[controller as string] as IPad
     if (Launchpad) {
+      if (pad) pad.unload(sendSysEx);
+      Launchpad.initialize(sendSysEx);
       setPad(Launchpad)
+    }
+
+    return () => {
+      if (Launchpad) Launchpad.unload(sendSysEx);
     }
   }, [ controller ])
 
+
   React.useEffect(() => {
     if (pad && pad.buildColors) {
-      if (output) pad.buildColors(output, activePage);
+      pad.buildColors(sendSysEx, activePage, Array.from( running ).map(([key, value]) => ({ x: value.x, y: value.y })));
     }
-  })
+  }, [ running, pad, activePage ]);
 
   const copyButton = (x: number, y: number) => {
     let btn = Object.assign({}, lodash.get(activePage, `buttons.${x}.${y}`, undefined))
@@ -65,15 +78,16 @@ export default () => {
 
   const editButton = (x: number, y: number, limitedColor = false) => {
     const pageId = activePage.id
-    
-    const button = lodash.get(activePage, `buttons.${x}.${y}`, new Button("",x,y, { r: Math.floor((Math.random() * 256)), g: Math.floor((Math.random() * 256)), b: Math.floor((Math.random() * 256)) }));
+
+    const button = lodash.get(activePage, `buttons.${x}.${y}`, new LaunchpadButton());
+    stopSpecific(x, y);
     showConfigDialog(
       <ConfigDialog
         limitedColor={limitedColor}
         button={button}
         onCancel={() => closeConfigDialog()}
         onAccept={(button) => {
-          setButton(button, button.x, button.y, pageId)
+          setButton(button, x, y, pageId)
           closeConfigDialog()
         }}
       />
@@ -92,12 +106,10 @@ export default () => {
             addNotification(`Button (${x},${y}) copied`, 1000)
           } else if (key === "pasteButton") {
             try {
-              let newBtn = JSON.parse(remote.clipboard.readText('clipboard'));
-              if (("title" in newBtn) && ("color" in newBtn) && ("pressed" in newBtn)) {
-                const btn = new Button(newBtn.title, x, y, newBtn.color);
-                btn.pressed = newBtn.pressed;
-                btn.released = newBtn.released;
-                setButton(btn, x,y, activePage.id);
+              let newBtn = JSON.parse(remote.clipboard.readText('clipboard')) as LaunchpadButton;
+              if (("look" in newBtn) && ("color" in newBtn) && ("down" in newBtn)) {
+                const button = Object.assign(new LaunchpadButton(), newBtn);
+                setButton(button, x,y, activePage.id);
                 addNotification(`Pasted button into (${x},${y})`, 1000)
               }
             } catch (ex) {}
@@ -120,45 +132,53 @@ export default () => {
     const soundOutput = localStorage.getItem(settingsLabels.soundOutput) ?? "default"
     const enablePtt = localStorage.getItem(settingsLabels.ptt.enabled) ?? "false"
     if ('files' in payload) {
-      const ButtonTarget = Object.assign<Object, Button>({}, lodash.get(activePage, `buttons.${a.x}.${a.y}`));
+      const ButtonTarget = Object.assign<Object, LaunchpadButton>({}, lodash.get(activePage, `buttons.${a.x}.${a.y}`));
       //D&D a file
-      console.log(ButtonTarget)
       if (lodash.isEmpty(ButtonTarget)) {
         //@ts-ignore
         const name = payload.files[0].name.split('.').slice(0, -1).join('.')
-        const button = new Button(name, a.x, a.y);
+        const button = new LaunchpadButton();
+        button.look = new LaunchpadButtonLookText(name);
         //@ts-ignore
         const pttStart = new PushToTalkStart();
         const pttEnd = new PushToTalkEnd(pttStart.id);
         pttStart.endId = pttEnd.id;
 
-        if (enablePtt === "true") button.pressed.push(pttStart);
+        if (enablePtt === "true") button.down.push(pttStart);
         //@ts-ignore
         button.pressed.push(new PlaySound(FileURI(payload.files[0].path), soundOutput))
-        if (enablePtt === "true") button.pressed.push(pttEnd);
+        if (enablePtt === "true") button.down.push(pttEnd);
 
         setButton(button, a.x, a.y, activePage.id);
         editButton(a.x, a.y);
       } else {
-        const playSoundIdx = ButtonTarget.pressed.findIndex(action => action.type === ActionType.PlaySound);
+        stopSpecific(a.x, a.y);
+        const playSoundIdx = ButtonTarget.down.findIndex(action => action.type === ActionType.PlaySound);
         if (playSoundIdx !== -1) {
           // TODO: Clean way
           //@ts-ignore
           const name = payload.files[0].name.split('.').slice(0, -1).join('.')
-          ButtonTarget.title = name;
+          if (ButtonTarget.look.type === LaunchpadButtonLookType.Text) {
+            const look = ButtonTarget.look as LaunchpadButtonLookText
+            look.caption = name;
+            ButtonTarget.look = look;
+          }
           //@ts-ignore
-          ButtonTarget.pressed[playSoundIdx].soundfile = FileURI(payload.files[0].path);
+          ButtonTarget.down[playSoundIdx].soundfile = FileURI(payload.files[0].path);
           //@ts-ignore
-          ButtonTarget.pressed[playSoundIdx].start = 0;
+          ButtonTarget.down[playSoundIdx].start = 0;
           //@ts-ignore
-          ButtonTarget.pressed[playSoundIdx].end = 1;
+          ButtonTarget.down[playSoundIdx].end = 1;
 
           setButton(ButtonTarget, a.x, a.y, activePage.id);
         }
       }
     } else if (payload.type === "BUTTON") {
-      const ButtonTarget = Object.assign<Object, Button>({}, lodash.get(activePage, `buttons.${a.x}.${a.y}`));
-      const ButtonSource = Object.assign<Object, Button>({}, lodash.get(activePage, `buttons.${payload.x}.${payload.y}`))
+      const ButtonTarget = Object.assign<Object, LaunchpadButton>({}, lodash.get(activePage, `buttons.${a.x}.${a.y}`));
+      const ButtonSource = Object.assign<Object, LaunchpadButton>({}, lodash.get(activePage, `buttons.${payload.x}.${payload.y}`))
+
+      stopSpecific(parseInt(payload.x), parseInt(payload.y));
+      stopSpecific(a.x, a.y);
 
       if (ButtonTarget && lodash.isEmpty(ButtonSource)) {
         setButton(ButtonTarget, parseInt(payload.x), parseInt(payload.y), activePage.id);
@@ -175,11 +195,19 @@ export default () => {
 
   return Component ? (
     <Component
+      showIcons={showIcons === "true"}
       activePage={activePage}
-      onButtonPressed={(e, x, y, note, cc) => onButtonPressed(e, pad.XYToButton(x,y), cc)}
+      onButtonPressed={(e, x, y, note, cc) => {
+        if (e.button === 0) MidiEmitter.emit('onButtonDown', note, cc)
+      }}
+      onButtonReleased={(e, x, y, note, cc) => {
+        if (e.button === 0) MidiEmitter.emit('onButtonUp', note, cc)
+      }}
       onSettingsButtonClick={() => openSettings(<Settings onClose={() => closeSettings()} />)}
       onContextMenu={handleContextMenu}
       onDrop={onDrop}
+      onDragStart={stopSpecific}
+      onDragEnd={stopSpecific}
     />
   ) : (
     <div />

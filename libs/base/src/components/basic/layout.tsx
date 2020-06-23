@@ -60,6 +60,7 @@ export const Split = styled(Outer)<ISplitProps>`
   align-items: stretch;
   align-content: ${props => props.content};
 `;
+
 Split.defaultProps = {
   width: "auto",
   height: "auto",

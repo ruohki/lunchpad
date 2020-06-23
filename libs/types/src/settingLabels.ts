@@ -1,6 +1,7 @@
 export const settingsLabels = {
   mode: 'general.mode',
   controller: 'general.controller',
+  icons: 'general.controller.icons',
   soundOutput: 'general.soundOutput',
   midiInput: 'general.midiInput',
   midiOutput: 'general.midiOutput',

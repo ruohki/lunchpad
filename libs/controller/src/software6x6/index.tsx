@@ -1,33 +1,24 @@
-import React from 'react';
+import * as React from 'react';
+import lodash from 'lodash';
 
-import range from 'lodash/range';
-import reverse from 'lodash/reverse';
-import get from 'lodash/get';
+import { LaunchpadButton as Button } from '@lunchpad/base'
 
-import { LaunchpadButton } from '@lunchpad/base'
-import { ControllerType } from '@lunchpad/types'
-
-import { PadContainer } from '../components';
-import { XYToButton, ButtonToXY, MakeButtonColor } from './helper'
+import { PadContainer, ButtonLook } from '../components';
+import { XYToButton, ButtonToXY } from './helper'
 import { IPadProps } from '..';
-
-const EmptyButton = (x, y) => ({
-  title: "",
-  x,
-  y,
-  color: {r: 0, g: 0, b: 0}
-})
-
-const Component: React.SFC<IPadProps> = ({ onDrop, onButtonPressed, onContextMenu, onSettingsButtonClick, activePage }) => {
+import { LaunchpadButton, ControllerType } from '@lunchpad/types';
+import { MakeButtonColor } from '../helper';
+const Component: React.SFC<IPadProps> = ({ onDragStart, onDragEnd, onDrop, onButtonPressed, onButtonReleased, onContextMenu, onSettingsButtonClick, activePage }) => {
   
   return (
     <PadContainer width={6} height={6}>
-      {reverse(range(0, 6)).map((y) => range(0,6).map((x) => {
-        const button  = get(activePage?.buttons ?? {}, `[${x}][${y}]`, EmptyButton(x,y)) // as Button;
-        const color =  MakeButtonColor(button.color)
+      {lodash.reverse(lodash.range(0, 6)).map((y) => lodash.range(0,6).map((x) => {
+        const isButton = lodash.get(activePage, `buttons.${x}.${y}`, false);
+        const button: LaunchpadButton  = lodash.get(activePage, `buttons.${x}.${y}`, new LaunchpadButton()) // as Button;
+        const color = MakeButtonColor(button.color)
         
         return XYToButton(x,y) !== 35 ? (
-          <LaunchpadButton
+          <Button
             x={x}
             y={y}
             color={color}
@@ -35,14 +26,16 @@ const Component: React.SFC<IPadProps> = ({ onDrop, onButtonPressed, onContextMen
             onDrop={onDrop}
             key={`${x}${y}`}
             onContextMenu={onContextMenu}
-            onClick={(e) => {
-              onButtonPressed(e, x, y, XYToButton(x,y), false);
-            }}
+            onMouseDown={(e) => onButtonPressed(e, x, y, XYToButton(x,y), false)}
+            onMouseUp={(e) => onButtonReleased(e, x, y, XYToButton(x,y), false)}
+            canDrag={isButton}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
           >
-            {button.title}
-          </LaunchpadButton>
+            <ButtonLook look={button.look} />
+          </Button>
         ) : (
-          <LaunchpadButton
+          <Button
             x={8}
             y={8}
             key="settings"
@@ -52,9 +45,10 @@ const Component: React.SFC<IPadProps> = ({ onDrop, onButtonPressed, onContextMen
             onContextMenu={() => true}
             onClick={onSettingsButtonClick}
             onDrop={() => {}}
+            canDrag={false}
           >
             SET
-          </LaunchpadButton>
+          </Button>
         )
       }
       ))}
@@ -68,5 +62,7 @@ export const Software6x6 = {
   XYToButton,
   ButtonToXY,
   Component,
+  initialize: lodash.noop,
+  unload: lodash.noop,
   limitedColor: false
 }

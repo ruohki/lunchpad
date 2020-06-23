@@ -1,5 +1,6 @@
-export * from './lib/types';
-export * from './actions'
-export * from './page'
+import 'reflect-metadata';
 
-export const FileURI = (file: string) => file.toLowerCase().startsWith("file://") ? file : `file://${file}`
+export * from './settingLabels';
+export * from './classes';
+export * from './generic';
+export * from './palettes';

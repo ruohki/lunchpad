@@ -35,10 +35,11 @@ export class MacroRunner extends EventEmitter {
   private startedActions: Array<MacroAction> = [];
   private currentAction: MacroAction;
   private cancel: boolean = false;
-
-  constructor(actions: Action[] = [], x: number, y: number) {
+  private loop: boolean;
+  constructor(actions: Action[] = [], x: number, y: number, loop = false) {
     super();
     
+    this.loop = loop;
     this.x = x;
     this.y = y;
 
@@ -63,53 +64,53 @@ export class MacroRunner extends EventEmitter {
   }
 
   public async Run() {
-    const actionPromises: Array<Promise<unknown>> = []
+    let actionPromises: Array<Promise<unknown>> = []
     
-
-    console.log("Running Macro:", this.id)
+    //console.log("Running Macro:", this.id)
     this.emit('onStart', this.id);
-    console.log("Queueing", this.actions.length, "actions")
+    //console.log("Queueing", this.actions.length, "actions")
 
     return new Promise(async (resolve, reject) => {
-      
-      for(const action of this.actions) {
-        // dont execute push to talk stuff when its turned off
-        if (action.constructor['name'] === PushToTalkStart.name || action.constructor['name'] === PushToTalkEnd.name) {
-          if (!localStorage.hasItem(settingsLabels.ptt.enabled) || (localStorage.getItem(settingsLabels.ptt.enabled) !== "true")) {
-            continue;
+      do {
+        actionPromises = new Array<Promise<unknown>>();
+        for(const action of this.actions) {
+          // dont execute push to talk stuff when its turned off
+          if (action.constructor['name'] === PushToTalkStart.name || action.constructor['name'] === PushToTalkEnd.name) {
+            if (!localStorage.hasItem(settingsLabels.ptt.enabled) || (localStorage.getItem(settingsLabels.ptt.enabled) !== "true")) {
+              continue;
+            }
           }
-        }
-
-        if (!this.cancel) {
-          this.startedActions.push(action);
-          this.currentAction = action;
-          console.log("Running Action:", action.id, action.constructor['name'])
-
-          if (action.constructor['name'] === StopAllMacrosAction.name) this.emit('onStopAll');
-          if (action.constructor['name'] === StopThisMacroAction.name) this.emit('onStopButton', this.x, this.y)
-          if (action.constructor['name'] === RestartThisMacroAction.name) this.emit('onRestartButton', this.id, this.x, this.y)
-          
-          // if the action should be awaited or just go next
-          const promise = action.Run(this);
-          actionPromises.push(promise);
-
-          promise.then(() => this.removeRunningAction(action));
-
-          if (action.wait) {
-            await promise;
-          }
-
-          console.log("Finished Action:", action.id, action.constructor['name'])
-        };
-      }
   
-      Promise.all(actionPromises).then(() => {
-        console.log("Finished Macro:", this.id)
-        this.emit('onFinished', this.id);
+          if (!this.cancel) {
+            this.startedActions.push(action);
+            this.currentAction = action;
+            //console.log("Running Action:", action.id, action.constructor['name'])
+  
+            if (action.constructor['name'] === StopAllMacrosAction.name) this.emit('onStopAll');
+            if (action.constructor['name'] === StopThisMacroAction.name) this.emit('onStopButton', this.x, this.y)
+            if (action.constructor['name'] === RestartThisMacroAction.name) this.emit('onRestartButton', this.id, this.x, this.y)
+            
+            // if the action should be awaited or just go next
+            const promise = action.Run(this);
+            actionPromises.push(promise);
+  
+            promise.then(() => this.removeRunningAction(action));
+  
+            if (action.wait) {
+              await promise;
+            }
+  
+            //console.log("Finished Action:", action.id, action.constructor['name'])
+          };
+        }
         
-        if (this.cancel) reject();
-        else resolve();
-      })
+        await Promise.all([...actionPromises]);
+      } while(this.loop && !this.cancel)
+      
+      if (this.cancel) reject();
+      else resolve();
+      
+      this.emit('onFinished', this.id);
     });
   }
 

@@ -4,11 +4,15 @@ import styled from 'styled-components';
 import { SliderPicker } from 'react-color'
 import Circle from 'react-color/lib/Circle'
 
-import { Color } from '@lunchpad/types'
+interface RGB {
+  r: number
+  g: number
+  b: number
+}
 
 interface ILaunchpadColorPicker {
-  color: Color
-  onChange: (color: Color) => void;
+  color: RGB
+  onChange: (color: RGB) => void;
 }
 
 const ColorContainer = styled.div`
@@ -42,8 +46,8 @@ const LaunchpadColorPicker: React.SFC<ILaunchpadColorPicker> = ({ color, onChang
     g: Math.round(rgb.g),
     b: Math.round(rgb.b)
   });
-  
-  return (
+
+  return ( 
     <ColorContainer>
       <StyledCircle
         style={{ }}

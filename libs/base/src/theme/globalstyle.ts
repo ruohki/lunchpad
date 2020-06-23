@@ -50,7 +50,7 @@ export const GlobalStyle = createGlobalStyle`
     font-size: 1.6rem;
   }
 
-  input {
+  input, textarea {
     font-family: "Exo 2";
     font-size: 1.6rem;
   }

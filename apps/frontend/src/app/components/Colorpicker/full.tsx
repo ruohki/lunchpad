@@ -9,10 +9,9 @@ import { PickerContainer, SaturationCursor, ColorPickerElementWrapper, HueCursor
 import { Full } from './palettes';
 
 import { MenuContext } from '@lunchpad/contexts'
-import { useMouseHovered } from 'react-use'
+import { useMouseHovered, useMeasure  } from 'react-use'
 
 export const FullPillPicker = (props) => {
-  const [ color ] = React.useState(props.color);
   const { showContextMenu, closeMenu } = React.useContext(MenuContext.Context);
 
   const ref = React.useRef(null);
@@ -20,7 +19,15 @@ export const FullPillPicker = (props) => {
 
   const Picker = <FullPickerWrapper {...props} />
 
-  return <Button width="100%" height="30px" color={`rgb(${props.color.r},${props.color.g},${props.color.b})`} ref={ref} onClick={() => showContextMenu(mouse.posX, mouse.posY, Picker)}></Button>
+  return (
+    <Button 
+      width="100%"
+      height="30px"
+      color={props.color}
+      ref={ref}
+      onClick={() => showContextMenu(mouse.posX, mouse.posY, Picker, 420, 246)}
+    />
+  )
 }
 
 const FullPickerWrapper = (props) => {

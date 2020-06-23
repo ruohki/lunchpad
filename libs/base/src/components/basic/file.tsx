@@ -17,6 +17,8 @@ export const File: React.SFC<IFile> = ({ editable, accept, value, onChange, ...r
   
   const onSelectFile = () => {
     if (inputRef.current !== undefined) {
+      const savedValue = inputRef.current.value
+      inputRef.current.value = "";
       inputRef.current.click();
     }
   }
