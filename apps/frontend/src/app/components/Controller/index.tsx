@@ -63,7 +63,7 @@ export default () => {
     if (pad && pad.buildColors) {
       pad.buildColors(sendSysEx, activePage, Array.from( running ).map(([key, value]) => ({ x: value.x, y: value.y })));
     }
-  }, [ running, pad, activePage ]);
+  });
 
   const copyButton = (x: number, y: number) => {
     let btn = Object.assign({}, lodash.get(activePage, `buttons.${x}.${y}`, undefined))
