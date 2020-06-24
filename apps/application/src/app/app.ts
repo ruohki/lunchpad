@@ -2,8 +2,9 @@ import { BrowserWindow, shell, Tray, Menu, ipcMain } from 'electron';
 import { rendererAppName, rendererAppPort } from './constants';
 import { join } from 'path';
 import { format } from 'url';
+import AutoLaunch from 'auto-launch';
 
-import { ipcLabels } from '@lunchpad/types';
+import { ipcLabels, LaunchpadButton } from '@lunchpad/types';
 
 import * as Configstore from 'configstore';
 const config = new Configstore('lunchpad', {stayOnTop: false})
@@ -18,8 +19,10 @@ export default class Lunchpad {
 
   static isQuiting: boolean = false;
   static stayOnTop: boolean;
+  static minimizeToTray: boolean;
+  static runAtStartup: boolean;
 
-  
+  static Launcher: any;
 
   public static isDevelopmentMode() {
     const isEnvironmentSet: boolean = 'ELECTRON_IS_DEV' in process.env;
@@ -71,6 +74,20 @@ export default class Lunchpad {
     Lunchpad.stayOnTop = value;
   }
 
+  private static SetMinimizeToTray(value: boolean) {
+    config.set('minimizeToTray', value);
+    Lunchpad.minimizeToTray = value;
+  }
+
+  private static SetRunAtStartup(value: boolean) {
+    if (value) {
+      Lunchpad.Launcher.enable();
+    } else {
+      Lunchpad.Launcher.disable();
+    }
+    config.set('runAtStartup', value);
+    Lunchpad.runAtStartup = value;
+  }
   private static initMainWindow() {
     // Create the browser window.
     Lunchpad.mainWindow = new BrowserWindow({
@@ -112,6 +129,18 @@ export default class Lunchpad {
       label: "Stay on top",
       checked: Lunchpad.stayOnTop,
       click: (e) => Lunchpad.SetStayOnTop(e.checked)
+    }, { 
+      type: "checkbox",
+      label: "Minimize to tray",
+      checked: Lunchpad.minimizeToTray,
+      click: (e) => Lunchpad.SetMinimizeToTray(e.checked)
+    }, { 
+      type: "checkbox",
+      label: "Run at startup",
+      checked: Lunchpad.runAtStartup,
+      click: (e) => Lunchpad.SetRunAtStartup(e.checked)
+    }, {
+      type: "separator"
     }, {
       label: "Stop all running macros",
       click: () => Lunchpad.mainWindow.webContents.send(ipcLabels.macros.stopAll),
@@ -127,8 +156,10 @@ export default class Lunchpad {
     Lunchpad.tray.on('double-click', () => Lunchpad.mainWindow.show())
 
     Lunchpad.mainWindow.on('minimize', (event) => {
-      event.preventDefault();
-      Lunchpad.mainWindow.hide();
+      if (Lunchpad.minimizeToTray) {
+        event.preventDefault();
+        Lunchpad.mainWindow.hide();
+      }
     });
 
     Lunchpad.mainWindow.on('close', (event) => {
@@ -176,9 +207,11 @@ export default class Lunchpad {
     // Electron.BrowserWindow into this function
     // so this class has no dependencies. This
     // makes the code easier to write tests for
-    
+    Lunchpad.Launcher = new AutoLaunch({ name: "Lunchpad"});
     Lunchpad.stayOnTop = config.get('stayOnTop');
-    
+    Lunchpad.minimizeToTray = config.get('minimizeToTray');
+    Lunchpad.Launcher.isEnabled().then(isEnabled => Lunchpad.runAtStartup = isEnabled);
+
 
     Lunchpad.BrowserWindow = browserWindow;
     Lunchpad.application = app;
