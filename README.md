@@ -1,5 +1,9 @@
 ![Lunchpad Logo](https://github.com/ruohki/lunchpad/raw/master/.github/logo.png)
 
+![Discord Shield](https://discordapp.com/api/guilds/658127965183541255/widget.png?style=shield)
+[![ko-fi](https://www.ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/X8X71UNDO)
+
+
 ## What is this?
 Lunchpad is a Macro application that makes use of Novation(tm) Launchpads.
 However you dont need one to use this application.
