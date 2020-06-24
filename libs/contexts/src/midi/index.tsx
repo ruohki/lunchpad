@@ -1,116 +1,182 @@
-import { EventEmitter } from 'events'
-import React, { useEffect, useState, useContext } from 'react';
-import WebMidi, { Input, Output } from 'webmidi';
+import * as React from "react";
+import { EventEmitter } from "events";
+import lodash from 'lodash'
 
-import { settingsLabels } from '@lunchpad/types';
+import WebMidi, { Input, Output, InputEventMidimessage } from "webmidi";
 import { useSettings } from '@lunchpad/hooks';
+import { settingsLabels } from '@lunchpad/types';
 
 
-export interface IMidiContext {
-  input: false | Input
-  output: false | Output
-  emitter: MidiEvents
-  onButtonPressed: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, note: number, cc: boolean) => void
+interface IDevice {
+  name: string;
+  id: string;
 }
 
-const CONTROL_CHANGE = 0xB0;
+interface IPressed {
+  note: number;
+  cc: boolean;
+}
+
+interface IMidiContext {
+  openOutput(id: string): void;
+  openInput(id: string): void;
+  sendSysEx(code: number[], data: number[]): void;
+
+  output: string;
+  outputs: Output[];
+  currentOutput: (Output | false)
+
+  input: string;
+  inputs: Input[];
+  currentInput: (Input | false)
+  pressed: IPressed[];
+
+  emitter: MidiEmitter;
+}
+
+const CONTROL_CHANGE = 0xb0;
 const NOTE_OFF = 0x80;
 const NOTE_ON = 0x90;
+const POLY_AFTERTOUCH = 0xa0;
 
-const POLY_AFTERTOUCH = 0xA0;
+const midiContext = React.createContext<Partial<IMidiContext>>({});
+const Provider = midiContext.Provider;
 
-const midiContext = React.createContext<Partial<IMidiContext>>({})
-const { Provider } = midiContext;
-
-declare interface MidiEvents {
-  on(event: 'ButtonPressed', listener: (note: number, cc: boolean, sw: boolean) => void): this;
-  on(event: 'ButtonReleased', listener: (note: number, cc: boolean) => void): this;
+declare interface MidiEmitter {
+  on(
+    event: "onButtonDown",
+    listener: (note: number, cc: boolean) => void
+  ): this;
+  on(event: "onButtonUp", listener: (note: number, cc: boolean) => void): this;
 }
-class MidiEvents extends EventEmitter {}
+
+class MidiEmitter extends EventEmitter {}
+
+let emitter = new MidiEmitter();
+
+export { emitter as MidiEmitter };
 
 const MidiProvider = ({ children }) => {
-  const [ midiInput ] = useSettings(settingsLabels.midiInput, "");
-  const [ midiOutput ] = useSettings(settingsLabels.midiOutput, "");
+  const [ input, setInput ] = useSettings(settingsLabels.midiInput, "");
+  const [ output, setOutput ] = useSettings(settingsLabels.midiOutput, "");
 
-  const [ emitter, setEmitter ] = React.useState(new MidiEvents());
-  const [ input, setInput ] = useState<false | Input>();
-  const [ output, setOutput ] = useState<false | Output>();
+  const [pressed, setPressed] = React.useState<IPressed[]>([]);
 
-  useEffect(() => {
-    WebMidi.enable((err) => {
-      if (err) return console.error(err);
-      setInput(WebMidi.getInputByName(midiInput));
-      setOutput(WebMidi.getOutputByName(midiOutput))
-    }, true);
+  const [midiInput, setMidiInput] = React.useState<Input | false>();
+  const [midiOutput, setMidiOutput] = React.useState<Output | false>();
 
-    return () => {
+  React.useEffect(() => { emitter = new MidiEmitter() }, [])
+
+  React.useEffect(() => {
+    if (
+      (midiInput && midiInput.state === "connected") ||
+      (midiOutput && midiOutput.state === "connected")
+    ) {
+      setMidiInput(false);
+      setMidiOutput(false);
       WebMidi.disable();
     }
-  }, [ midiInput, midiOutput ])
 
-  useEffect(() => {
-    if (!input) return;
+    WebMidi.enable(err => {
+      if (err) return console.error(err);
+      setMidiInput(lodash.isEmpty(output) ? false : WebMidi.getInputById(input) || WebMidi.getInputByName(input));
+      setMidiOutput(lodash.isEmpty(output) ? false : WebMidi.getOutputById(output) || WebMidi.getOutputByName(output));
+    }, true);
+    return () => {
+      if (WebMidi.enabled) WebMidi.disable();
+    };
+  }, [input, output]);
 
-    const messageHandler = (event) => {
-      const [ msg, note, value] = event.data;
-      
+  const setButtonUp = React.useCallback((note: number, cc = false) => {
+    emitter.emit("onButtonUp", note, cc);
+    setPressed(pressed => {
+      const index = pressed.findIndex(
+        button => button.note === note && button.cc === cc
+      );
+      pressed.splice(index, 1);
+      return [...pressed];
+    });
+  }, []);
+
+  const setButtonDown = React.useCallback(
+    (note: number, cc = false) => {
+      emitter.emit("onButtonDown", note, cc);
+      setPressed([
+        {
+          note,
+          cc
+        },
+        ...pressed
+      ]);
+    },
+    [pressed, setPressed]
+  );
+
+  // Register Events on target Device
+  React.useEffect(() => {
+    const midiMessage = (event: InputEventMidimessage) => {
+      const [msg, note, value] = Array.from(event.data);
+
       if (msg === NOTE_ON) {
         if (value === 0) {
-          emitter.emit('ButtonReleased', note, false, false)
-        } else if ( value >= 25) {
-          emitter.emit('ButtonPressed', note, false, false)
+          setButtonUp(note, false);
+        } else if (value >= 25) {
+          setButtonDown(note, false);
         }
       } else if (msg === NOTE_OFF) {
-        emitter.emit('ButtonReleased', note, false, false)
+        setButtonUp(note, false);
       } else if (msg === CONTROL_CHANGE) {
         if (value) {
-          emitter.emit('ButtonPressed', note, true, false)
+          setButtonDown(note, true);
         } else {
-          emitter.emit('ButtonReleased', note, true)
+          setButtonUp(note, true);
         }
       } else if (msg === POLY_AFTERTOUCH) {
         if (value > 50) {
-          emitter.emit('ButtonPressed', note, false, false)
+          setButtonDown(note, false);
         } else if (value === 0) {
-          emitter.emit('ButtonReleased', note, false)
+          setButtonUp(note, false);
         }
       }
+    };
+
+    if (midiInput) {
+      midiInput.removeListener("midimessage", "all", midiMessage);
+      midiInput.on("midimessage", "all", midiMessage);
     }
-    
-    input.addListener("midimessage", "all", messageHandler);
-    
     return () => {
-      if (input) input.removeListener("midimessage", "all", messageHandler);
-    }
+      if (midiInput) {
+        midiInput.removeListener("midimessage", "all", midiMessage);
+      }
+    };
+  }, [midiInput, setButtonDown]);
 
-  }, [ input, output, emitter /* setButton */, /* activePage */ ])
-  
-  const onButtonPressed = (event, note, cc = false) => {
-    // Clicks wont get looped sounds etc
-    emitter.emit('ButtonPressed', note, cc, true);
-  }
+  const sendSysEx = React.useCallback(
+    (code: number[], data: number[]) => {
+      if (WebMidi.enabled && midiOutput) {
+        midiOutput.sendSysex(code, data);
+      }
+    },
+    [midiOutput]
+  );
+    
+  const value = {
+    pressed,
+    input,
+    inputs: WebMidi.inputs,
+    currentInput: midiInput,
+    output,
+    outputs: WebMidi.outputs,
+    currentOutput: midiOutput,
+    sendSysEx,
+    emitter,
+    openInput: (id: string) => setInput(id),
+    openOutput: (id: string) => setOutput(id)
+  };
+  return <Provider value={value}>{children}</Provider>;
+};
 
-  return (
-    <Provider value={{
-      emitter,
-      input,
-      output,
-      onButtonPressed
-    }}>
-      {children}
-    </Provider>
-  )
-}
-
-export const MidiContext = {
-  Provider: MidiProvider,
+export default {
   Context: midiContext,
-}
-
-
-
-
-
-
-
-
+  Provider: MidiProvider
+};

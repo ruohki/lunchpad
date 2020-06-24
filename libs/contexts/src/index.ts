@@ -1,5 +1,5 @@
 //export * from './midi';
-import MidiContext from './midi/new';
+import MidiContext from './midi';
 
 export { MidiContext }
 export * from './audio';

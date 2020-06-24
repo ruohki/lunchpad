@@ -33,7 +33,7 @@ export default () => {
   const [ showIcons ] = useSettings(settingsLabels.icons, "true");
   const { addNotification } = React.useContext(NotificationContext.Context)
   const { showContextMenu, closeMenu } = useContext(MenuContext.Context);
-  const { emitter: MidiEmitter, sendSysEx, pressed } = React.useContext(MidiContext.Context);
+  const { emitter: MidiEmitter, sendSysEx, currentInput, currentOutput } = React.useContext(MidiContext.Context);
   const { setButton, clearButton, activePage } = React.useContext(LayoutContext.Context);
   const { running, stopAll, stopSpecific } = React.useContext(MacroContext.Context);
 
@@ -50,14 +50,14 @@ export default () => {
     if (Launchpad) {
       if (pad) pad.unload(sendSysEx);
       Launchpad.initialize(sendSysEx);
+      console.log("Init")
       setPad(Launchpad)
     }
 
     return () => {
       if (Launchpad) Launchpad.unload(sendSysEx);
     }
-  }, [ controller ])
-
+  }, [ controller, currentInput, currentOutput ])
 
   React.useEffect(() => {
     if (pad && pad.buildColors) {
