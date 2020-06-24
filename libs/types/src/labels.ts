@@ -24,3 +24,8 @@ export const settingsLabels = {
   },
 }
 
+export const ipcLabels = {
+  macros: {
+    stopAll: 'macros.stopall'
+  }
+}

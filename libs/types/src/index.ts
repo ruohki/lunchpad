@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 
-export * from './settingLabels';
+export * from './labels';
 export * from './classes';
 export * from './generic';
 export * from './palettes';

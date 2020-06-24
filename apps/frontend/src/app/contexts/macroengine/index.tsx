@@ -6,12 +6,15 @@ import * as Devices from '@lunchpad/controller';
 import { MidiContext, LayoutContext } from '@lunchpad/contexts';
 import { IPad } from '@lunchpad/controller';
 import { useSettings } from '@lunchpad/hooks';
-import { settingsLabels, Action, LaunchpadButton } from '@lunchpad/types';
+import { settingsLabels, Action, LaunchpadButton, ipcLabels } from '@lunchpad/types';
 
 import { MacroRunner } from '@lunchpad/macroengine'
 import { uniqueId } from 'lodash';
 import { Counter } from './counter';
 import { PushToTalk } from './pushtotalk';
+
+
+const { ipcRenderer } = window.require('electron');
 
 export interface IMacroContext {
   running: Map<string, MacroRunner>
@@ -45,6 +48,7 @@ const MacroProvider = ({ children }) => {
   const stopSpecific = (x: number, y: number): void => {
     running.forEach(r => (r.x === x && r.y === y) ? r.Stop() : lodash.noop())
   }
+
   const addRunner = React.useCallback((id: string, runner: MacroRunner, oldId: (string | false) = false) => {
     let run = new Map(running.set(id, runner))
     //if (oldId) run.delete(oldId);
@@ -70,8 +74,9 @@ const MacroProvider = ({ children }) => {
     const PTTCounter = new Counter(0);
     const pushToTalk = new PushToTalk();
     
-    const pressed = (note: number, cc: boolean) => {
+    ipcRenderer.on(ipcLabels.macros.stopAll, stopAll);
 
+    const pressed = (note: number, cc: boolean) => {
       const [ x, y ] = pad.ButtonToXY(note, cc);
       const button = lodash.get(activePage, `buttons.${x}.${y}`, undefined) as LaunchpadButton;
       if (!button || button.down.length <= 0) return;
@@ -196,6 +201,7 @@ const MacroProvider = ({ children }) => {
     emitter.on('onButtonUp', released)
 
     return () => {
+      ipcRenderer.removeListener(ipcLabels.macros.stopAll, stopAll);
       emitter.removeListener('onButtonDown', pressed)
       emitter.removeListener('onButtonUp', released)
       clearRunner();
