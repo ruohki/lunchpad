@@ -25,7 +25,8 @@
         "zip"
       ],
       "publisherName": "Tillmann Hübner",
-      "asar": true
+      "asar": true,
+      "certificateFile" : "build/cerificate.pfx"
     },
     "mac": {
         "target":[
@@ -47,4 +48,5 @@
       "publisherDisplayName": "Tillmann Hübner",
       "backgroundColor": "transparent"
     }
+    
 }
