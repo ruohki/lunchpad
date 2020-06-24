@@ -1,9 +1,7 @@
 import * as React from 'react';
 import set from 'lodash/setWith';
 import lodash from 'lodash';
-
 import { v4 as uuid } from 'uuid';
-
 
 import { Page, LaunchpadButton, settingsLabels, LaunchpadButtonColorMode, LaunchpadSolidButtonColor, LaunchpadFlashingButtonColor, LaunchpadPulsingButtonColor, LaunchpadRGBButtonColor } from '@lunchpad/types';
 import { useSettings } from '@lunchpad/hooks';
@@ -161,7 +159,6 @@ const LayoutProvider = ({ children }) => {
       clearButton,
       swapButtons
     }}>
-
       {children}
     </Provider>
   );

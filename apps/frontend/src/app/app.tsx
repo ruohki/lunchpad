@@ -22,6 +22,7 @@ import { settingsLabels as settings } from '@lunchpad/types';
 import Controller from './components/Controller';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { MacroContext } from './contexts/macroengine';
+import { Helmet } from './helmet';
 
 const ProviderGarden = ({ children }) => {
   const [ output ] = useSettings(settings.soundOutput, 'default');
@@ -56,6 +57,7 @@ export const App = () => {
     <AppContainer ref={ref}>
       <GlobalStyle />
       <ProviderGarden>
+        <Helmet />
         <ScaleBox>
           <Controller />
         </ScaleBox>
