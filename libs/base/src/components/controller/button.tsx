@@ -173,7 +173,7 @@ export const LaunchpadButton: React.SFC<ButtonProps> = (props) => {
     </StyledControllerButton>
   )
   return (
-    <StyledButtonContainer color={props.color} ref={drop}>
+    <StyledButtonContainer color={props.color} round={props.round} ref={drop}>
       {props.clip ? <ClipContainer round={props.round}>{Button}</ClipContainer> : Button}
     </StyledButtonContainer>
   )
