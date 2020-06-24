@@ -6,7 +6,6 @@ import { TriangleRight, TriangleUpSolid, Circle, TriangleDownSolid, TriangleLeft
 import { Page, ControllerType, LaunchpadButton, LaunchpadRGBButtonColor, LaunchpadButtonLook, LaunchpadButtonLookType, LaunchpadButtonLookText, LaunchpadButtonLookImage, LaunchpadButtonColorMode, LaunchpadSolidButtonColor, LaunchpadFlashingButtonColor, LaunchpadPulsingButtonColor } from '@lunchpad/types'
 
 import { PadContainer, ButtonLook } from '../components';
-import { XYToButton, ButtonToXY } from './helper'
 import { IPadProps, IPad } from '..';
 
 import { MakeButtonColor } from '../helper';
@@ -65,6 +64,9 @@ const sideButtons = {
   79: <Icon icon={TriangleRight} />,
   89: <Icon icon={TriangleRight} />,
 }
+
+const XYToButton = (x: number, y: number): number => y * 10 + x
+const ButtonToXY = (note: number): [ number, number ] =>[(note % 10), Math.floor(note / 10)]
 
 const Component: React.SFC<IPadProps> = (props) => (
   <PadContainer width={10} height={10}>

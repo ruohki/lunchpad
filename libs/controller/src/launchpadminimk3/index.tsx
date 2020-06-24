@@ -14,7 +14,6 @@ import {
 import { Page, ControllerType, LaunchpadButton, LaunchpadRGBButtonColor, LaunchpadButtonLook, LaunchpadButtonLookType, LaunchpadButtonLookText, LaunchpadButtonLookImage, LaunchpadButtonColorMode, LaunchpadSolidButtonColor, LaunchpadFlashingButtonColor, LaunchpadPulsingButtonColor } from '@lunchpad/types'
 
 import { PadContainer, ButtonLook } from '../components';
-import { XYToButton, ButtonToXY } from './helper'
 import { IPadProps, IPad } from '..';
 
 import { MakeButtonColor } from '../helper';
@@ -44,8 +43,10 @@ const RightRow = [
 const Vendor = [0x0, 0x20, 0x29];
 const Mode = [0x2, 0xD, 0x0, 0x7F];
 const Unload = [0x2, 0xD, 0x0, 0x04];
-
 const Color = [0x2, 0xD, 0x3];
+
+const XYToButton = (x: number, y: number): number => (y + 1) * 10 + x + 1
+const ButtonToXY = (note: number): [ number, number ] => [(note % 10) - 1, Math.floor(note / 10) - 1] 
 
 const Component: React.SFC<IPadProps> = (props) => (
   <PadContainer width={9} height={9}>

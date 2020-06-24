@@ -7,7 +7,6 @@ import { Icon, TriangleRight, TriangleUpSolid, TriangleDownSolid, TriangleLeftSo
 import { Page, ControllerType, LaunchpadButton, LaunchpadRGBButtonColor, LaunchpadButtonLook, LaunchpadButtonLookType, LaunchpadButtonLookText, LaunchpadButtonLookImage, LaunchpadButtonColorMode, LaunchpadSolidButtonColor, LaunchpadFlashingButtonColor, LaunchpadPulsingButtonColor } from '@lunchpad/types'
 
 import { PadContainer, ButtonLook } from '../components';
-import { XYToButton, ButtonToXY } from './helper'
 import { IPadProps, IPad } from '..';
 
 import { MakeButtonColor } from '../helper';
@@ -44,6 +43,10 @@ const Solid = [0x2, 0x18, 0x0A];
 const Flashing = [0x2, 0x18, 0x23];
 const Pulsing = [0x2, 0x18, 0x28];
 const RGB = [0x2, 0x18, 0x0B];
+
+
+const XYToButton = (x: number, y: number): number => (y < 8 ) ? (y + 1) * 10 + x + 1 : 104 + x
+const ButtonToXY = (note: number): [ number, number] => note < 104 ? [(note % 10) - 1, Math.floor(note / 10) - 1] : [note - 104, 8 ]
 
 const Component: React.SFC<IPadProps> = (props) => (
   <PadContainer width={9} height={9}>

@@ -7,10 +7,12 @@ import { LaunchpadButton as Button } from '@lunchpad/base'
 import { Page, ControllerType, LaunchpadButton, LaunchpadRGBButtonColor, LaunchpadButtonLook, LaunchpadButtonLookType, LaunchpadButtonLookText, LaunchpadButtonLookImage, LaunchpadButtonColorMode, LaunchpadSolidButtonColor, LaunchpadFlashingButtonColor, LaunchpadPulsingButtonColor, RGBIndexPalette } from '@lunchpad/types'
 
 import { PadContainer, ButtonLook } from '../components';
-import { XYToButton, ButtonToXY } from './helper'
 import { IPadProps, IPad } from '..';
 
 import { MakeButtonColor } from '../helper';
+
+const XYToButton = (x: number, y: number): number => (y === 8) ? 104 + x : (0x70 - (y * 0x10)) + x
+const ButtonToXY = (note: number, cc: boolean): [ number, number ] => (cc) ? [ note - 104, 8 ] : [(note % 16), 7 - Math.floor((note / 16)) ]
 
 const Component: React.SFC<IPadProps> = (props) => (
   <PadContainer width={9} height={9}>
