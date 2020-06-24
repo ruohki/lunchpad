@@ -156,7 +156,6 @@ const Component: React.SFC<IPadProps> = (props) => (
 const initialize = (send: (code: number[], data: number[]) => void) => {
   // Switch to programmers mode
   send(Vendor, Mode);
-  send(Vendor, Layout);
 }
 
 const unload = (send: (code: number[], data: number[]) => void) => {
