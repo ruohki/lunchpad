@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Notification, NotificationContainer, Severity } from './components'
 import { AnimatePresence } from "framer-motion";
 import { v4 as uuid } from 'uuid';
-import _ from 'lodash';
+import lodash from 'lodash';
 
 export interface INotificationContext {
   addNotification: (text: string, delay?: number, severity?: Severity) => string,
@@ -10,11 +10,18 @@ export interface INotificationContext {
   useNotification(): [(text: string, delay?: number, severity?: Severity) => void, () => void]
 }
 
+interface INotification {
+  id: string
+  text: string
+  delay: number
+  severity: Severity
+}
+
 const notificationContext = React.createContext<Partial<INotificationContext>>({});
 const { Provider } = notificationContext;
 
 const NotificationProvider = ( { children } ) => {
-  const [ notifications, setNotifications ] = React.useState([]);
+  const [ notifications, setNotifications ] = React.useState<Array<INotification>>([]);
   
   const removeNotification = React.useCallback((id: string) => {
     setNotifications(notifications => {
@@ -26,6 +33,8 @@ const NotificationProvider = ( { children } ) => {
 
   const addNotification = React.useCallback((text: string, delay = 10000, severity = Severity.info): string => {
     const id = uuid();
+
+    if (lodash.some(notifications, n => n.text === text && n.delay === delay && n.severity === severity)) return;
 
     setNotifications([{
       id,
@@ -61,7 +70,7 @@ const NotificationProvider = ( { children } ) => {
               animate={{ opacity: 1, y: 0}}
               exit={{ opacity: 0, y: 50 }}
             >
-              {text}
+              <div dangerouslySetInnerHTML={{__html: text}} />
             </Notification>
           ))}
         </AnimatePresence>

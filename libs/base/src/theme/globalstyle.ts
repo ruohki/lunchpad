@@ -33,6 +33,10 @@ export const GlobalStyle = createGlobalStyle`
     font-size: 62.5%;
     user-select: none;
   }
+  
+  img {
+    user-select: none;
+  }
 
   body {
     font-family: "Exo 2";

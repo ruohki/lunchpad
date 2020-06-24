@@ -13,7 +13,7 @@ export default () => {
       
       <Split direction="row">
         <Child align="flex-start">
-          <img width={128} height={128} src={logo} alt="Lunchpad" />
+          <img draggable="false" width={128} height={128} src={logo} alt="Lunchpad" />
         </Child>
         
         <Child grow align="flex-start" >

@@ -18,13 +18,16 @@ export interface IPoint {
 export interface IPadProps {
   showIcons: boolean
   activePage: Page
-  onButtonPressed: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number, cc: boolean) => void
-  onButtonReleased: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number, cc: boolean) => void
-  onContextMenu: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number) => void
   onSettingsButtonClick: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void
-  onDrop: (target: any, payload: any) => void
-  onDragStart?: (x: number, y: number) => void
-  onDragEnd?: (x: number, y: number) => void
+  buttonProps: {
+    onMouseDown: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number, cc: boolean) => void
+    onMouseUp: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number, cc: boolean) => void
+    onContextMenu: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number) => void
+    onDrop: (target: any, payload: any, modifier) => void
+    onDragStart?: (x: number, y: number) => void
+    onDragEnd?: (x: number, y: number, modifier: string) => void
+    onDraggedWithoutModifier?: () => void
+  }
 }
 
 export interface IPad {

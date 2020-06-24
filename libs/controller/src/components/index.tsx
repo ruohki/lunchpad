@@ -39,6 +39,7 @@ export const ButtonFaceImage = styled.img<IButtonFaceImage>`
   padding: 0.25rem 0.25rem 0.5rem 0.25rem;
   width: 90%;
   height: auto;
+  
 `
 
 interface IButtonLookComponent {
@@ -61,6 +62,7 @@ export const ButtonLook: React.SFC<IButtonLookComponent> = (props) => {
     const imgLook = props.look as LaunchpadButtonLookImage;
     return (
       <ButtonFaceImage
+        draggable="false"
         src={imgLook.uri}
       />
     )

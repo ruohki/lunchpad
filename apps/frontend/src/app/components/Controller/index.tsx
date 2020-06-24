@@ -31,7 +31,7 @@ export default () => {
   const [ mode ] = useSettings(settingsLabels.mode, "Software");
   const [ controller, setController ] = useSettings(settingsLabels.controller, "Software6x6");
   const [ showIcons ] = useSettings(settingsLabels.icons, "true");
-  const { addNotification } = React.useContext(NotificationContext.Context)
+  const { addNotification  } = React.useContext(NotificationContext.Context)
   const { showContextMenu, closeMenu } = useContext(MenuContext.Context);
   const { emitter: MidiEmitter, sendSysEx, currentInput, currentOutput } = React.useContext(MidiContext.Context);
   const { setButton, clearButton, activePage } = React.useContext(LayoutContext.Context);
@@ -42,6 +42,8 @@ export default () => {
   
   const [ pad, setPad ] = React.useState<IPad>();
   
+  const [ showDnDNotification ] = NotificationContext.useNotification();
+
   const Component = React.useMemo(() => pad?.Component, [ pad ]);
   // Repaint the Pad when the active layout changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -128,7 +130,7 @@ export default () => {
     ))
   }
 
-  const onDrop = (a: ILocation, payload: Record<string, string>) => {
+  const onDrop = (a: ILocation, payload: Record<string, string>, modifier: string) => {
     const soundOutput = localStorage.getItem(settingsLabels.soundOutput) ?? "default"
     const enablePtt = localStorage.getItem(settingsLabels.ptt.enabled) ?? "false"
     if ('files' in payload) {
@@ -180,14 +182,15 @@ export default () => {
       stopSpecific(parseInt(payload.x), parseInt(payload.y));
       stopSpecific(a.x, a.y);
 
-      if (ButtonTarget && lodash.isEmpty(ButtonSource)) {
+      /* if (ButtonTarget && lodash.isEmpty(ButtonSource)) {
         setButton(ButtonTarget, parseInt(payload.x), parseInt(payload.y), activePage.id);
         clearButton(a.x, a.y, activePage.id);
-      } else if (ButtonSource && lodash.isEmpty(ButtonTarget)) {
+      } else  */
+      if (ButtonSource && lodash.isEmpty(ButtonTarget)) {
         setButton(ButtonSource, a.x, a.y, activePage.id);
-        clearButton(parseInt(payload.x), parseInt(payload.y), activePage.id);
+        if (modifier === "ctrl") clearButton(parseInt(payload.x), parseInt(payload.y), activePage.id);
       } else {
-        setButton(ButtonTarget, parseInt(payload.x), parseInt(payload.y), activePage.id);
+        if (modifier === "ctrl") setButton(ButtonTarget, parseInt(payload.x), parseInt(payload.y), activePage.id);
         setButton(ButtonSource, a.x, a.y, activePage.id);
       }
     }
@@ -197,17 +200,23 @@ export default () => {
     <Component
       showIcons={showIcons === "true"}
       activePage={activePage}
-      onButtonPressed={(e, x, y, note, cc) => {
-        if (e.button === 0) MidiEmitter.emit('onButtonDown', note, cc)
-      }}
-      onButtonReleased={(e, x, y, note, cc) => {
-        if (e.button === 0) MidiEmitter.emit('onButtonUp', note, cc)
-      }}
       onSettingsButtonClick={() => openSettings(<Settings onClose={() => closeSettings()} />)}
-      onContextMenu={handleContextMenu}
-      onDrop={onDrop}
-      onDragStart={stopSpecific}
-      onDragEnd={stopSpecific}
+      buttonProps={{
+        onMouseDown: (e, x, y, note, cc) => {
+          if (e.button === 0) MidiEmitter.emit('onButtonDown', note, cc)
+        },
+        onMouseUp: (e, x, y, note, cc) => {
+          if (e.button === 0) MidiEmitter.emit('onButtonUp', note, cc)
+        },
+        onContextMenu: handleContextMenu,
+        onDrop,
+        onDragStart: stopSpecific,
+        onDragEnd: (x: number, y: number, modifier: string) => {
+          if (modifier === "") {
+            addNotification("To move a button hold down the [<span style=\"color: var(--COLOR_BLURPLE)\">control</span>] key, the [<span style=\"color: var(--COLOR_BLURPLE)\">alt</span>] key will create a copy.", 2500)
+          }
+        },
+      }}
     />
   ) : (
     <div />

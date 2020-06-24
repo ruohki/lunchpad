@@ -1,10 +1,13 @@
 import * as React from 'react';
 import styled from 'styled-components';
+import lodash from 'lodash';
 
 import { useDrag, useDrop  } from 'react-dnd'
 import { NativeTypes } from 'react-dnd-html5-backend'
 
 import buttonMask from '../../../assets/buttonMask';
+import useKeyboardJs from 'libs/hooks/src/useKeyboard';
+import { useMouse, useMouseHovered } from 'react-use';
 
 interface StyledButtonProps {
   round?: boolean
@@ -80,20 +83,22 @@ interface ButtonProps {
   round?: boolean
   clip?: boolean
   color?: string
-  keyId: string | number,
+  note: { note: number, cc?: boolean },
   disabled?: boolean,
   x: number,
   y: number,
-  onMouseDown?: (event?: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void,
-  onMouseUp?: (event?: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void,
+  onMouseDown?: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number, cc: boolean) => void,
+  onMouseUp?: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number, cc: boolean) => void,
 
   onClick?: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number) => void,
   onContextMenu?: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number) => void,
-  onDragStart?: (x: number, y: number) => void
-  onDragEnd?: (x: number, y: number) => void
-  onDrop: ( target: any, payload: any) => void;
+  onDragStart?: (x: number, y: number, modifier: string) => void
+  onDragEnd?: (x: number, y: number, modifier: string) => void
+  onDrop?: ( target: any, payload: any, modifier: string) => void;
   canDrag: boolean
-
+  
+  // TODO: Remove alter
+  onDraggedWithoutModifier?: () => void
 }
 
 interface IDragPayload {
@@ -102,24 +107,28 @@ interface IDragPayload {
   files?: File[]
 }
 
-export const LaunchpadButton: React.SFC<ButtonProps> = ({ onDragStart, onDragEnd, canDrag, onMouseDown, onMouseUp, onDrop, children, onClick, onContextMenu, x, y, keyId, clip = false, color = "#b1b1b1", ...rest }) => {
-  
-  const [ disabled, setDisabled ] = React.useState(false);
+export const LaunchpadButton: React.SFC<ButtonProps> = (props) => {
+  const [ willMove ] = useKeyboardJs("ctrl")
+  const [ willCopy ] = useKeyboardJs("alt")
 
+  const [ disabled, setDisabled ] = React.useState(false);
+  
+  const modifier = willMove ? "ctrl" : willCopy ? "alt" : ""
+  const canMove = willMove || willCopy;
+  
   const [, drag] = useDrag({
-    item: { id: keyId, type: "BUTTON", x, y},
+    item: { id: props.note.note, type: "BUTTON", x: props.x, y: props.y},
     begin: () => {
       setDisabled(true)
       //@ts-ignore
-      onMouseUp({ button: 0 });
-      onDragStart(x, y);
+      props.onMouseUp({ button: 0 });
+      props.onDragStart(props.x, props.y, modifier );
     },
     end: (result) => {
-      //remove();
       setDisabled(false)
-      onDragEnd(x, y);
+      props.onDragEnd(props.x, props.y, modifier);
     },
-    canDrag: () => canDrag
+    canDrag: () => canMove && props.canDrag
   })
 
   const [, drop] = useDrop({
@@ -127,7 +136,7 @@ export const LaunchpadButton: React.SFC<ButtonProps> = ({ onDragStart, onDragEnd
     canDrop: (item) => {
       const data = item as IDragPayload
       if ('files' in data) return true;
-      if (data.id !== keyId) return true;
+      if (parseInt(data.id) !== props.note.note) return true;
       
       return false;
     },
@@ -135,46 +144,37 @@ export const LaunchpadButton: React.SFC<ButtonProps> = ({ onDragStart, onDragEnd
       if (!monitor.isOver()) {
         //remove();
       } else if (monitor.isOver() && !monitor.canDrop()) {
-        if (monitor.getItem().id === keyId) {
+        if (monitor.getItem().id === props.note.note) {
           //show(`Cannot swap the button with itself. Please try to drop onto another button.`, 0, Severity.error);
         }
       }
     },
-    hover: (item) => {
-      //console.log(item)
-    },
-    drop: (item) => onDrop({ x, y }, item)
-      /* const data = item as IDragPayload;
-      if ('files' in data) {
-        if (data.files.length > 1) {
-          //return showWithDelay(`Too many files, please just drop one audiofile on a button.`, 25000, Severity.error);
-        } else if (!data.files[0].type.match("audio")) {
-          //return showWithDelay(`Only audio files are curently allowed to drag and drop onto buttons.`, 2500, Severity.error);
-        }
-      } else if ('id' in data) {
-        //onSwitch(data.id, )
-        //showWithDelay(`Switched buttons`, 1000)
-      } */
-    //}
+    drop: (item) => props.onDrop({ x: props.x, y: props.y }, item, modifier)
   })
-  
+
   const Button = (
     <StyledControllerButton
       disabled={disabled}
       ref={drag}
-      onContextMenu={(e) => {
-        onContextMenu(e, x, y, parseInt(keyId.toString()))
-      }}
-      onMouseDown={onMouseDown}
-      onMouseUp={onMouseUp}
-      onClick={(e) => onClick(e, x, y, parseInt(keyId.toString()))}
+      onContextMenu={(e) => props.onContextMenu(e, props.x, props.y, props.note.note)}
+      onMouseDown={(e) => !canMove ? props.onMouseDown(e, props.x, props.y, props.note.note, props.note.cc) : lodash.noop()}
+      onMouseUp={(e) => !canMove ? props.onMouseUp(e, props.x, props.y, props.note.note, props.note.cc) : lodash.noop()}
+      onMouseLeave={(e) => {
+        if (!canMove && e.buttons === 1 && props.canDrag) {
+          props.onMouseUp(e, props.x, props.y, props.note.note, props.note.cc) 
+          props.onDragEnd(props.x, props.y, modifier);
+        } else {
+          lodash.noop()}
+        }
+      }
+      onClick={(e) => props.onClick(e, props.x, props.y, props.note.note)}
     >
-      {children}
+      {props.children}
     </StyledControllerButton>
   )
   return (
-    <StyledButtonContainer color={color} ref={drop} {...rest}>
-      {clip ? <ClipContainer round={rest.round}>{Button}</ClipContainer> : Button}
+    <StyledButtonContainer color={props.color} ref={drop}>
+      {props.clip ? <ClipContainer round={props.round}>{Button}</ClipContainer> : Button}
     </StyledButtonContainer>
   )
 }
@@ -182,10 +182,12 @@ export const LaunchpadButton: React.SFC<ButtonProps> = ({ onDragStart, onDragEnd
 LaunchpadButton.defaultProps = {
   clip: false,
   color: "#b1b1b1",
-  onClick: () => true,
-  onContextMenu: () => true,
   round: false,
   disabled: false,
-  onDragStart: () => {},
-  onDragEnd: () => {}
+  onDrop: lodash.noop,
+  onClick: lodash.noop,
+  onContextMenu: lodash.noop,
+  onDragStart: lodash.noop,
+  onDragEnd: lodash.noop,
+  onDraggedWithoutModifier: lodash.noop
 }

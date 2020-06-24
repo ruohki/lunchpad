@@ -1,3 +1,5 @@
+//TODO: Pass down class instead of using event emitter
+
 import * as React from 'react';
 import lodash from 'lodash';
 
@@ -12,7 +14,6 @@ import { MacroRunner } from '@lunchpad/macroengine'
 import { uniqueId } from 'lodash';
 import { Counter } from './counter';
 import { PushToTalk } from './pushtotalk';
-
 
 const { ipcRenderer } = window.require('electron');
 

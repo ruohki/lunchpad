@@ -45,64 +45,48 @@ const Flashing = [0x2, 0x18, 0x23];
 const Pulsing = [0x2, 0x18, 0x28];
 const RGB = [0x2, 0x18, 0x0B];
 
-const Component: React.SFC<IPadProps> = ({
-  showIcons,
-  onButtonPressed,
-  onButtonReleased,
-  onContextMenu,
-  onSettingsButtonClick,
-  activePage,
-  onDrop,
-  onDragStart,
-  onDragEnd,
-}) => {
-  return (
-    <PadContainer width={9} height={9}>
-      {lodash.reverse(lodash.range(0, 9)).map((y) => lodash.range(0,9).map((x) => {
-        const isButton = lodash.get(activePage, `buttons.${x}.${y}`, false);
-        const button: LaunchpadButton  = lodash.get(activePage, `buttons.${x}.${y}`, new LaunchpadButton()) // as Button;
-        const color = MakeButtonColor(button.color)
-        
-        return XYToButton(x,y) !== 112 ? (
-          <Button
-            x={x}
-            y={y}
-            color={color}
-            keyId={XYToButton(x,y)}
-            round={x === 8 || y === 8}
-            clip={x === 8 || y === 8}
-            key={`${x}${y}`}
-            onContextMenu={onContextMenu}
-            onMouseDown={(e) => onButtonPressed(e, x, y, XYToButton(x,y), false)}
-            onMouseUp={(e) => onButtonReleased(e, x, y, XYToButton(x,y), false)}
-            onDrop={onDrop}
-            canDrag={isButton}
-            onDragStart={onDragStart}
-            onDragEnd={onDragEnd}
-          >
-            {!showIcons ? <ButtonLook look={button.look} /> : x === 8 || y === 8 ? x === 8 ? RightRow[7 - y] : UpRow[x] : <ButtonLook look={button.look} />}
-          </Button>
-        ) : (
-          <Button
-            x={8}
-            y={8}
-            key="settings"
-            keyId={112}
-            color={"#6a45ff"}
-            round
-            onContextMenu={() => true}
-            onClick={onSettingsButtonClick}
-            onDrop={() => {}}
-            canDrag={false}
-          >
-            SET
-          </Button>
-        )
-      }
-      ))}
-    </PadContainer>
-  )
-}
+const Component: React.SFC<IPadProps> = (props) => (
+  <PadContainer width={9} height={9}>
+    {lodash.reverse(lodash.range(0, 9)).map((y) => lodash.range(0,9).map((x) => {
+      const isButton = !!lodash.get(props.activePage, `buttons.${x}.${y}`, false);
+      const button: LaunchpadButton  = lodash.get(props.activePage, `buttons.${x}.${y}`, new LaunchpadButton()) // as Button;
+      const color = MakeButtonColor(button.color)
+      
+      const { buttonProps } = props;
+
+      return XYToButton(x,y) !== 112 ? (
+        <Button
+          x={x}
+          y={y}
+          color={color}
+          note={{ note: XYToButton(x,y) }}
+          round={x === 8 || y === 8}
+          clip={x === 8 || y === 8}
+          key={`${x}${y}`}
+          {...buttonProps}
+          canDrag={isButton}
+        >
+          {!props.showIcons ? <ButtonLook look={button.look} /> : x === 8 || y === 8 ? x === 8 ? RightRow[7 - y] : UpRow[x] : <ButtonLook look={button.look} />}
+        </Button>
+      ) : (
+        <Button
+          x={8}
+          y={8}
+          key="settings"
+          note={{ note: 112 }}
+          color={"#6a45ff"}
+          round
+          onContextMenu={lodash.noop}
+          onClick={props.onSettingsButtonClick}
+          canDrag={false}
+        >
+          SET
+        </Button>
+      )
+    }
+    ))}
+  </PadContainer>
+)
 
 const initialize = (send: (code: number[], data: number[]) => void) => {
   send(Vendor, Mode);
