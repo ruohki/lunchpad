@@ -6,6 +6,7 @@ export * from './launchpadx';
 export * from './launchpadminimk3';
 export * from './launchpadmk2';
 export * from './launchpadpromk2';
+export * from './launchpadpromk3';
 export * from './launchpads';
 
 export * from './software6x6';

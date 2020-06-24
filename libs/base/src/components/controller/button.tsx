@@ -11,12 +11,21 @@ import { useMouse, useMouseHovered } from 'react-use';
 
 interface StyledButtonProps {
   round?: boolean
+  margin?: string
+  small?: boolean
 }
 
+const small = `
+  width: 50%;
+  height: 50%;
+  justify-self: center;
+  align-self: center;
+`
 const StyledButtonContainer = styled.div<StyledButtonProps>`
+  ${(props) => props.small ? small : ""}
   background-color: ${(props) => props.color};
   border-radius: ${({ round }) => round ? "999" : "8"}px;
-  margin: 3px;
+  margin: ${props => props.margin};
   display: flex;
   justify-content: center;
   align-items: center;
@@ -80,7 +89,10 @@ const ClipContainer = styled.div<StyledButtonProps>`
 `
 
 interface ButtonProps {
+  small?: boolean
+  margin?: string
   round?: boolean
+  half?: boolean
   clip?: boolean
   color?: string
   note: { note: number, cc?: boolean },
@@ -173,14 +185,17 @@ export const LaunchpadButton: React.SFC<ButtonProps> = (props) => {
     </StyledControllerButton>
   )
   return (
-    <StyledButtonContainer color={props.color} round={props.round} ref={drop}>
+    <StyledButtonContainer color={props.color} round={props.round} margin={props.margin} small={props.small} ref={drop}>
       {props.clip ? <ClipContainer round={props.round}>{Button}</ClipContainer> : Button}
     </StyledButtonContainer>
   )
 }
 
 LaunchpadButton.defaultProps = {
+  margin: "3px",
+  small: false,
   clip: false,
+  half: false,
   color: "#b1b1b1",
   round: false,
   disabled: false,

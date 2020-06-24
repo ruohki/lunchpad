@@ -19,6 +19,19 @@ export const PadContainer = styled.div<IPadContainer>`
   justify-content: center;
 `;
 
+
+export const PadContainerProMK3 = styled.div`
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-gap: 0;
+  grid-template-columns: repeat(10, [col] calc(100% / 10));
+  grid-template-rows: repeat(9, [row] 2fr) 1fr 1fr;
+  
+  justify-content: center;
+`;
+
+
 interface IButtonFaceText {
   face: string
   size: number
