@@ -26,7 +26,7 @@
       ],
       "publisherName": "Tillmann Hübner",
       "asar": true,
-      "certificateFile" : "build/cerificate.pfx"
+      "certificateFile" : "build/certificate.pfx"
     },
     "mac": {
         "target":[

@@ -118,7 +118,13 @@ export default class Lunchpad {
     Lunchpad.mainWindow.setMenuBarVisibility(false)
     
     Lunchpad.tray = new Tray(join(__dirname, "assets/logo.png"));
-    Lunchpad.tray.setContextMenu(Menu.buildFromTemplate([{
+    Lunchpad.tray.setContextMenu(Menu.buildFromTemplate([{ 
+      label: "Join me on discord!",
+      icon: join(__dirname, "assets/discord.png"),
+      click: () => shell.openExternal("https://discord.com/invite/4Ys9TRR")
+    }, {
+      type: "separator"
+    }, {
       label: 'Show Lunchpad', click: () => {
         Lunchpad.mainWindow.show();
       }
