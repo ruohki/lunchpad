@@ -15,12 +15,10 @@ You can create a variety of macros, from simple playback of sounds (hello soundb
 - Launchpad S
 - Launchpad MK2
 - Launchpad X
-- Launchpad Pro MK2 (as of v0.2.1)
+- Launchpad Pro MK2
 
-### Not yet supported Launchpads
+### Not yet fully supported Launchpads
 - Launchpad Pro MK3
-
-(if you own such a device and want to contribute but cant code contact ruohki on discord)
 
 
 ### OBS & SL:OBS
