@@ -178,7 +178,7 @@ const KeystrokeHeaderMenu = ({ showMenu, closeMenu, keystrokes, onAdd }) => {
   return (
     <Split direction={'row'}>
       <Child grow>
-        {keystrokes > 0 ? keystrokes : 'No'} Keyboarde events
+        {keystrokes > 0 ? keystrokes : 'No'} Keyboard event(s)
       </Child>
       <Child padding="1rem">
         <div ref={ref}>
