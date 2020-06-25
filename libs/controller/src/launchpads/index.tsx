@@ -80,8 +80,8 @@ const buildColors = (send: (code: number[], data: number[]) => void, page: Page,
   const outputName = localStorage.getItem('general.midiOutput')
   const output = webmidi.getOutputByName(outputName);
   if (output) {
-    //output.send(0xB0, [0x0, 0x0])
-    
+    output.send(0xB0, [0x0, 0x0])
+
     // Reset
     lodash.range(0, 9).map((y) => lodash.range(0,9).map((x) => {
       const button: LaunchpadButton = lodash.get(page, `buttons.${x}.${y}`);

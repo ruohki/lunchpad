@@ -101,7 +101,6 @@ interface ButtonProps {
   y: number,
   onMouseDown?: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number, cc: boolean) => void,
   onMouseUp?: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number, cc: boolean) => void,
-
   onClick?: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number) => void,
   onContextMenu?: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>, x: number, y: number, note: number) => void,
   onDragStart?: (x: number, y: number, modifier: string) => void
@@ -199,6 +198,8 @@ LaunchpadButton.defaultProps = {
   color: "#b1b1b1",
   round: false,
   disabled: false,
+  onMouseUp: lodash.noop,
+  onMouseDown: lodash.noop,
   onDrop: lodash.noop,
   onClick: lodash.noop,
   onContextMenu: lodash.noop,
