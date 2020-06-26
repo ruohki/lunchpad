@@ -5,8 +5,7 @@ import { useSettings  } from '@lunchpad/hooks';
 import { useMidiDevices } from '@lunchpad/hooks';
 import { AudioContext, MidiContext } from '@lunchpad/contexts'
 import { settingsLabels as settings, ControllerType } from '@lunchpad/types'
-import { Split, Child, Select, Switch, KeyboardKeys, Modifiers } from '@lunchpad/base';
-import { Divider, Row } from './components';
+import { Split, Child, Select, Switch, KeyboardKeys, Modifiers, Divider, Row } from '@lunchpad/base';
 
 import * as Devices from '@lunchpad/controller';
 

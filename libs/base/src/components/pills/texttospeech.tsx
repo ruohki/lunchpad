@@ -58,7 +58,7 @@ export const TextToSpeechPill: React.SFC<ITextToSpeechPill> = ({ action, expande
     <Split direction="row">
       <Child grow basis="75%" whiteSpace="nowrap" padding="0 1rem 0 0">
         <div style={{textOverflow: "ellipsis", overflow: "hidden"}}>
-          TTS: ({lodash.find(voices, v => v.voiceURI === action.voice)?.lang}) {lodash.truncate(action.text, {length: 100})}
+          TTS: ({lodash.find(voices, v => v.voiceURI === action.voice)?.lang}) {lodash.truncate(action.text, {length: 15})}
         </div>
       </Child>
       <Child grow basis="25%">
@@ -77,7 +77,7 @@ export const TextToSpeechPill: React.SFC<ITextToSpeechPill> = ({ action, expande
     <Split direction="row">
       <Child grow whiteSpace="nowrap" padding="0 1rem 0 0">
         <div style={{textOverflow: "ellipsis", overflow: "hidden"}}>
-        TTS: ({lodash.find(voices, v => v.voiceURI === action.voice)?.lang}) {lodash.truncate(action.text, {length: 100})}
+        TTS: ({lodash.find(voices, v => v.voiceURI === action.voice)?.lang}) {lodash.truncate(action.text, {length: 30})}
         </div>
       </Child>
     </Split>

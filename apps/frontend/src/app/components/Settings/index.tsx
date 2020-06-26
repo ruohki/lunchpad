@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 
-import { Divider, Tab } from './components';
-
-import { COLOR_BLACK, Split, Child, Outer, Button } from '@lunchpad/base';
+import { COLOR_BLACK, Split, Child, Outer, Button, Divider, Tab } from '@lunchpad/base';
 
 import General from './general';
 import Pages from './pages';

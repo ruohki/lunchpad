@@ -33,4 +33,6 @@ export * from './hotkeypill'
 export * from './stopthismacro'
 export * from './restartthismacro'
 export * from './pushtotalk'
+export * from './setcolorpill'
+export * from './flipflop'
 

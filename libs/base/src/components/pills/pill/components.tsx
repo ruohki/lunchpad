@@ -28,12 +28,13 @@ interface IPillHeader {
   onRemove: (e: React.MouseEvent<HTMLButtonElement>) => void,
   onCollapse: (e: React.MouseEvent<HTMLButtonElement>) => void,
   onExpand: (e: React.MouseEvent<HTMLButtonElement>) => void,
+  onClick: (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => void,
 }
 
-const PillHeaderSFC: React.SFC<IPillHeader> = ({ children, expanded, expandable, collapsed, icon, onMoveUp, onMoveDown, onRemove, onCollapse, onExpand, ...rest }) => {
+const PillHeaderSFC: React.SFC<IPillHeader> = ({ onClick, children, expanded, expandable, collapsed, icon, onMoveUp, onMoveDown, onRemove, onCollapse, onExpand, ...rest }) => {
   return (
     <Child {...rest}>
-      <Split direction="row">
+      <Split direction="row" >
         <Child padding={"0 1rem 0 0"}>{icon}</Child>
         <Child grow>
           {rest.isExpanded ? expanded : collapsed}

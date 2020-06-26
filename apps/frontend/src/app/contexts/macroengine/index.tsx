@@ -8,7 +8,7 @@ import * as Devices from '@lunchpad/controller';
 import { MidiContext, LayoutContext } from '@lunchpad/contexts';
 import { IPad } from '@lunchpad/controller';
 import { useSettings } from '@lunchpad/hooks';
-import { settingsLabels, Action, LaunchpadButton, ipcLabels } from '@lunchpad/types';
+import { settingsLabels, Action, LaunchpadButton, ipcLabels, LaunchpadButtonColor } from '@lunchpad/types';
 
 import { MacroRunner } from '@lunchpad/macroengine'
 import { uniqueId } from 'lodash';
@@ -29,7 +29,7 @@ const { Provider } = macroContext;
 const MacroProvider = ({ children }) => {
   const [ running, setCurrentMacros ] = React.useState<Map<string, MacroRunner>>(new Map([]));
   
-  const { activePage } = React.useContext(LayoutContext.Context);
+  const { activePage, setButton } = React.useContext(LayoutContext.Context);
   const { emitter } = React.useContext(MidiContext.Context);
   const [ controller ] = useSettings(settingsLabels.controller, "Software6x6");
   const [ pad, setPad ] = React.useState<IPad>();
@@ -82,9 +82,13 @@ const MacroProvider = ({ children }) => {
       const button = lodash.get(activePage, `buttons.${x}.${y}`, undefined) as LaunchpadButton;
       if (!button || button.down.length <= 0) return;
       
+      const setBtn = (btn: LaunchpadButton, x: number, y: number) => {
+        setButton(btn, x, y, activePage.id);
+      }
+      
       const PlayMacro = (actions: Action[], loop: boolean, x: number, y: number, oldId: (string | false) = false) => {
         const id = uniqueId();
-        const macro = new MacroRunner(actions, x, y, loop);
+        const macro = new MacroRunner(button, (btn) => setBtn(btn, x, y), x, y);
         let cancel = false;
 
         macro.on('onStopButton', (x, y) => {
@@ -152,9 +156,13 @@ const MacroProvider = ({ children }) => {
       const [ x, y ] = pad.ButtonToXY(note, cc);
       const button = lodash.get(activePage, `buttons.${x}.${y}`) as LaunchpadButton;
       if (!button || button.up.length <= 0) return;
-      
       const id = uniqueId();
-      const macro = new MacroRunner(button.up, x, y);
+
+      const setBtn = (btn: LaunchpadButton, x: number, y: number) => {
+        setButton(btn, x, y, activePage.id);
+      }
+
+      const macro = new MacroRunner(button, (btn) => setBtn(btn, x, y), x, y, false);
 
       macro.on('onStopButton', (x, y) => {
         const ids = [];

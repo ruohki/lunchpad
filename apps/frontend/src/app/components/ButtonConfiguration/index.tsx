@@ -8,6 +8,8 @@ import {
   Button,
   COLOR_REDISH,
   ScrollBox,
+  Tab, 
+  Divider
 } from '@lunchpad/base';
 
 import {
@@ -19,8 +21,6 @@ import {
   ActionType,
   StopThisMacro,
 } from '@lunchpad/types';
-
-import { Tab, Divider, Row } from '../Settings/components';
 
 import { Appearance } from './appearance';
 import { Actions } from './actions';

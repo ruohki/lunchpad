@@ -31,6 +31,7 @@ export const Pill: React.SFC<IPill> = (props) => {
         onRemove={props.onRemove}
         onCollapse={() => setIsExpanded(false)}
         onExpand={() => setIsExpanded(true)}
+        onClick={() => isExpanded ? {} : setIsExpanded(true)}
       />
       <AnimatePresence>
         {isExpanded && (

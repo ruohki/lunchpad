@@ -1,23 +1,11 @@
 import * as React from 'react';
 
 import {
-  LaunchpadButtonLook,
-  LaunchpadButtonColor,
-  LaunchpadButtonLookType,
-  LaunchpadButtonLookImage,
-  LaunchpadButtonLookText,
-  LaunchpadButtonColorMode,
-  LaunchpadSolidButtonColor,
-  LaunchpadFlashingButtonColor,
-  LaunchpadPulsingButtonColor,
-  LaunchpadRGBButtonColor,
   Action
 } from '@lunchpad/types';
 
-import { Split, Select, Child, IconButton, Switch } from '@lunchpad/base';
+import { Split, Divider, Row, Child, IconButton, Switch } from '@lunchpad/base';
 
-import { LaunchpadButtonLookTextComponent, LaunchpadButtonLookImageComponent, LaunchpadButtonSolidColorComponent, LaunchpadButtonFlashingColorComponent, LaunchpadButtonPulsingColorComponent, LaunchpadButtonRGBColorComponent } from './partials';
-import { Divider, Row } from '../Settings/components';
 import { ActionEditor } from '../ActionEditor';
 import { ButtonDown, Icon, ButtonUp } from '@lunchpad/icons';
 

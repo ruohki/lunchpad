@@ -1,5 +1,6 @@
 import * as lodash from 'lodash';
 import { v4 as uuid } from 'uuid';
+import { LaunchpadButtonColor, LaunchpadSolidButtonColor } from './button';
 
 export enum ButtonMode {
   Normal = "NORMAL",
@@ -19,9 +20,13 @@ export enum ActionType {
   SwitchPage = "SWITCH_PAGE",          // done
   StopThisMacro = "STOP_THIS_MACRO",
   RestartThisMacro = "RESTART_THIS_MACRO",
-  
+  SetColor = "SET_COLOR",
   PushToTalkStart = "START_PTT",
   PushToTalkEnd = "END_PTT",
+
+  FlipFlopStart = "FLIP_FLOP_START",
+  FlipFlopMiddle = "FLIP_FLOP_MIDDLE",
+  FlipFlopEnd = "FLIP_FLOP_END",
 
   VoiceMeeter = "VOICE_MEETER",
 }
@@ -44,6 +49,14 @@ export class PairedAction extends Action {
 
   public isOther(action: Action): boolean {
     return action.id === this.endId || action.id === this.startId;
+  }
+}
+
+export class TripleAction extends PairedAction {
+  public middleId?: string;
+
+  public isOther(action: Action): boolean {
+    return action.id === this.endId || action.id === this.startId || action.id === this.middleId;
   }
 }
 
@@ -258,5 +271,51 @@ export class Hotkey extends Action {
     this.id = id;
     this.keystrokes = keystrokes;
     this.restoreAllAtEnd = restore;
+  }
+}
+
+export class SetColor extends Action {
+  public color: LaunchpadButtonColor
+  
+  constructor(color: LaunchpadButtonColor = new LaunchpadSolidButtonColor(12), id: string = uuid()) {
+    super(ActionType.SetColor);
+    this.id = id;
+    this.color = color;
+  }
+}
+
+
+export class FlipFlopStart extends TripleAction {
+  public endId: string;
+  public middleId: string;
+
+  public isA: boolean;
+
+  constructor(id: string = uuid()) {
+    super(ActionType.FlipFlopStart, id);
+    this.isA = true;
+  }
+}
+
+export class FlipFlopMiddle extends TripleAction {
+  public startId: string;
+  public endId: string;
+
+  
+
+  constructor(startId: string, id: string = uuid()) {
+    super(ActionType.FlipFlopMiddle, id);
+    this.startId = startId;
+  }
+}
+
+export class FlipFlopEnd extends TripleAction {
+  public startId: string;
+  public middleId: string;
+
+  constructor(startId: string, middleId: string, id: string = uuid()) {
+    super(ActionType.FlipFlopEnd, id);
+    this.startId = startId;
+    this.middleId = middleId;
   }
 }

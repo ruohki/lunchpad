@@ -1,9 +1,9 @@
 import * as React from 'react';
 import * as lodash from 'lodash';
 
-import { Action, PairedAction, ActionType, PlaySound, Delay, SwitchPage, StopAllMacros, RestartThisMacro, TextToSpeech, LaunchApp, Hotkey, StopThisMacro, settingsLabels, PushToTalkEnd, PushToTalkStart } from '@lunchpad/types';
+import { Action, PairedAction, ActionType, PlaySound, Delay, SwitchPage, StopAllMacros, RestartThisMacro, TextToSpeech, LaunchApp, Hotkey, StopThisMacro, settingsLabels, PushToTalkEnd, PushToTalkStart, SetColor, FlipFlopMiddle, FlipFlopStart, FlipFlopEnd } from '@lunchpad/types';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Split, Child, Tooltip, IconButton, PillList, DelayPill, PlaySoundPill, SwitchPagePill, StopAllMacrosPill, StopThisMacroPill, RestartThisMacroPill, TextToSpeechPill, HotkeyPill, LaunchAppPill, PushToTalkStartPill, PushToTalkEndPill} from '@lunchpad/base'
+import { Split, Child, Tooltip, IconButton, PillList, DelayPill, PlaySoundPill, SwitchPagePill, StopAllMacrosPill, StopThisMacroPill, RestartThisMacroPill, TextToSpeechPill, HotkeyPill, LaunchAppPill, PushToTalkStartPill, PushToTalkEndPill, SetColorPill, FlipFlopStartPill, FlipFlopMiddlePill, FlipFlopEndPill } from '@lunchpad/base'
 import { Icon, Plus } from '@lunchpad/icons';
 import { AudioContext, MenuContext, LayoutContext } from '@lunchpad/contexts';
 
@@ -52,7 +52,19 @@ export const ActionEditor: React.SFC<IActionEditor> = (props) => {
             const end = new PushToTalkEnd(start.id);
             start.endId = end.id;
             props.onChange([start, ...props.actions, end ]);
+          } else if (key === ActionType.FlipFlopStart) {
+            if (lodash.some(props.actions, a => a.type === ActionType.FlipFlopStart)) return;
+            const start = new FlipFlopStart();
+            const middle = new FlipFlopMiddle(start.id)
+            const end = new FlipFlopEnd(start.id, middle.id);
+            start.endId = end.id;
+            start.middleId = middle.id;
+            middle.endId = end.id;
+            props.onChange([...props.actions, start, middle, end ]);
+          } else if (key === ActionType.SetColor) {
+            props.onChange([...props.actions, new SetColor() ]);
           }
+          
         }}
         onClose={closeMenu}
       />
@@ -148,6 +160,36 @@ export const ActionEditor: React.SFC<IActionEditor> = (props) => {
           {...rest}
         />
       );
+    } else if (action.type === ActionType.FlipFlopStart) {
+      const { onRemove, ...rest } = pillDefaults;
+      return (
+        <FlipFlopStartPill
+          key={action.id}
+          action={action as FlipFlopStart}
+          onRemove={() => multiRemoveAction([action.id, (action as FlipFlopStart).endId, (action as FlipFlopStart).middleId])}
+          {...rest}
+        />
+      );
+    } else if (action.type === ActionType.FlipFlopMiddle) {
+      const { onRemove, ...rest } = pillDefaults;
+      return (
+        <FlipFlopMiddlePill
+          key={action.id}
+          action={action as FlipFlopMiddle}
+          onRemove={() => multiRemoveAction([action.id, (action as FlipFlopMiddle).endId, (action as FlipFlopMiddle).startId])}
+          {...rest}
+        />
+      );
+    } else if (action.type === ActionType.FlipFlopEnd) {
+      const { onRemove, ...rest } = pillDefaults;
+      return (
+        <FlipFlopEndPill
+          key={action.id}
+          action={action as FlipFlopEnd}
+          onRemove={() => multiRemoveAction([action.id, (action as FlipFlopEnd).middleId, (action as FlipFlopEnd).startId])}
+          {...rest}
+        />
+      );
     } else if (action.type === ActionType.SwitchPage)
       return (
         <SwitchPagePill
@@ -204,6 +246,16 @@ export const ActionEditor: React.SFC<IActionEditor> = (props) => {
         <LaunchAppPill
           key={action.id}
           action={action as LaunchApp}
+          {...pillDefaults}
+        />
+      );
+    else if (action.type === ActionType.SetColor)
+      return (
+        <SetColorPill
+          showContextMenu={showContextMenu}
+          limitedColor={false}
+          key={action.id}
+          action={action as SetColor}
           {...pillDefaults}
         />
       );

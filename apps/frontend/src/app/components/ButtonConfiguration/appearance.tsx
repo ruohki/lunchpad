@@ -13,10 +13,11 @@ import {
   LaunchpadRGBButtonColor
 } from '@lunchpad/types';
 
-import { Split, Select, Child } from '@lunchpad/base';
+import { Split, Select, Child, Divider, Row } from '@lunchpad/base';
 
 import { LaunchpadButtonLookTextComponent, LaunchpadButtonLookImageComponent, LaunchpadButtonSolidColorComponent, LaunchpadButtonFlashingColorComponent, LaunchpadButtonPulsingColorComponent, LaunchpadButtonRGBColorComponent, LaunchpadButtonLegacyColorComponent } from './partials';
-import { Divider, Row } from '../Settings/components';
+
+import { MenuContext } from '@lunchpad/contexts';
 
 interface IAppearance {
   limitedColor: boolean
@@ -36,6 +37,7 @@ const getClosestLegacyColor = (color: LaunchpadRGBButtonColor) => {
 }
 
 export const Appearance: React.SFC<IAppearance> = (props) => {
+  const { showContextMenu } = React.useContext(MenuContext.Context)
   // Look functions
   const setLookType = (mode: LaunchpadButtonLookType) => {
     if (mode === LaunchpadButtonLookType.Image) {
@@ -113,6 +115,7 @@ export const Appearance: React.SFC<IAppearance> = (props) => {
       {props.look.type === LaunchpadButtonLookType.Text && (
         <LaunchpadButtonLookTextComponent
           look={props.look as LaunchpadButtonLookText}
+          showContextMenu={showContextMenu}
           onChangeCaption={setLookTextCaption}
           onChangeFace={setLookTextFace}
           onChangeSize={setLookTextSize}
@@ -145,6 +148,7 @@ export const Appearance: React.SFC<IAppearance> = (props) => {
         <>
           {props.baseColor.mode === LaunchpadButtonColorMode.Static && (
             <LaunchpadButtonSolidColorComponent
+              showContextMenu={showContextMenu}
               color={props.baseColor as LaunchpadSolidButtonColor}
               onChangeColor={idx => setColorSolid(idx, props.onChangeBaseColor)}
             />
@@ -152,6 +156,7 @@ export const Appearance: React.SFC<IAppearance> = (props) => {
           {props.baseColor.mode === LaunchpadButtonColorMode.Flashing && (
             <LaunchpadButtonFlashingColorComponent
               color={props.baseColor as LaunchpadFlashingButtonColor}
+              showContextMenu={showContextMenu}
               onChangeColorA={idx => setColorFlashingA(idx, props.baseColor as LaunchpadFlashingButtonColor, props.onChangeBaseColor)}
               onChangeColorB={idx => setColorFlashingB(idx, props.baseColor as LaunchpadFlashingButtonColor, props.onChangeBaseColor)}
             />
@@ -159,12 +164,14 @@ export const Appearance: React.SFC<IAppearance> = (props) => {
           {props.baseColor.mode === LaunchpadButtonColorMode.Pulsing && (
             <LaunchpadButtonPulsingColorComponent
               color={props.baseColor as LaunchpadPulsingButtonColor}
+              showContextMenu={showContextMenu}
               onChangeColor={idx => setColorPulsing(idx, props.onChangeBaseColor)}
             />
           )}
           {props.baseColor.mode === LaunchpadButtonColorMode.RGB && (
             <LaunchpadButtonRGBColorComponent
               color={props.baseColor as LaunchpadRGBButtonColor}
+              showContextMenu={showContextMenu}
               onChangeColor={color => setColorRGB(color, props.onChangeBaseColor)}
             />
           )}
@@ -172,6 +179,7 @@ export const Appearance: React.SFC<IAppearance> = (props) => {
       ) : (
         <LaunchpadButtonLegacyColorComponent
           color={props.baseColor as LaunchpadRGBButtonColor}
+          showContextMenu={showContextMenu}
           onChangeColor={color => setColorRGB(color, props.onChangeBaseColor)}
         />
       )}
@@ -202,12 +210,14 @@ export const Appearance: React.SFC<IAppearance> = (props) => {
               {props.activeColor.mode === LaunchpadButtonColorMode.Static && (
                 <LaunchpadButtonSolidColorComponent
                   color={props.activeColor as LaunchpadSolidButtonColor}
+                  showContextMenu={showContextMenu}
                   onChangeColor={idx => setColorSolid(idx, props.onChangeActiveColor)}
                 />
               )}
               {props.activeColor.mode === LaunchpadButtonColorMode.Flashing && (
                 <LaunchpadButtonFlashingColorComponent
                   color={props.activeColor as LaunchpadFlashingButtonColor}
+                  showContextMenu={showContextMenu}
                   onChangeColorA={idx => setColorFlashingA(idx, props.activeColor as LaunchpadFlashingButtonColor, props.onChangeActiveColor)}
                   onChangeColorB={idx => setColorFlashingB(idx, props.activeColor as LaunchpadFlashingButtonColor, props.onChangeActiveColor)}
                 />
@@ -215,12 +225,14 @@ export const Appearance: React.SFC<IAppearance> = (props) => {
               {props.activeColor.mode === LaunchpadButtonColorMode.Pulsing && (
                 <LaunchpadButtonPulsingColorComponent
                   color={props.activeColor as LaunchpadPulsingButtonColor}
+                  showContextMenu={showContextMenu}
                   onChangeColor={idx => setColorPulsing(idx, props.onChangeActiveColor)}
                 />
               )}
               {props.activeColor.mode === LaunchpadButtonColorMode.RGB && (
                 <LaunchpadButtonRGBColorComponent
                   color={props.activeColor as LaunchpadRGBButtonColor}
+                  showContextMenu={showContextMenu}
                   onChangeColor={color => setColorRGB(color, props.onChangeActiveColor)}
                 />
               )}
@@ -228,6 +240,7 @@ export const Appearance: React.SFC<IAppearance> = (props) => {
           ) : (
             <LaunchpadButtonLegacyColorComponent
               color={props.activeColor as LaunchpadRGBButtonColor}
+              showContextMenu={showContextMenu}
               onChangeColor={color => setColorRGB(color, props.onChangeActiveColor)}
             />
           )}

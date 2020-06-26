@@ -1,7 +1,6 @@
 import React from 'react';
 
-import { logo, Split, Child, LinkButton, ScrollBox } from '@lunchpad/base'
-import { Divider } from './components';
+import { logo, Split, Child, LinkButton, ScrollBox, Divider } from '@lunchpad/base'
 
 import * as versionInfo from '../../../../../../version.json';
 

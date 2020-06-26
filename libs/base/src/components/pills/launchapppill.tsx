@@ -26,7 +26,7 @@ export const LaunchAppPill: React.SFC<ILaunchAppPill> = ({ action, expanded, onC
 
   const Expanded = (
     <Split direction="row">
-      <Child grow whiteSpace="nowrap" padding="0 1rem 0 0"><div style={{textOverflow: "ellipsis", overflow: "hidden"}}>Launch: {action.executable}</div></Child>
+      <Child grow whiteSpace="nowrap" padding="0 1rem 0 0"><div style={{textOverflow: "ellipsis", overflow: "hidden"}}>Launch: {lodash.truncate(action.executable, { length: 45})}</div></Child>
     </Split>
   )
   

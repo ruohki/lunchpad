@@ -1,4 +1,4 @@
-export const Full = [
+const RGBCirclesFull = [
   '#FF0000',
   '#FF2400',
   '#FF4900',
@@ -49,7 +49,7 @@ export const Full = [
   '#FFFFFF'
 ];
 
-export const Small = [
+const RGBCirclesSmall = [
   '#000000',
   '#FFFFFF',
   '#FF0000',
@@ -60,7 +60,7 @@ export const Small = [
   '#FF00FF'
 ];
 
-export const Limited = [
+const Legacy = [
   '#000000',
   '#550000',
   '#AA0000',
@@ -79,7 +79,7 @@ export const Limited = [
   '#FFFF00'
 ];
 
-export const RGBIndexPalette = [
+const Indexed = [
   '#000000',
   '#1c1c1c',
   '#7c7c7c',
@@ -209,3 +209,10 @@ export const RGBIndexPalette = [
   '#b05c00',
   '#481400'
 ];
+
+export const Palettes = {
+  RGBCirclesFull,
+  RGBCirclesSmall,
+  Indexed,
+  Legacy
+}

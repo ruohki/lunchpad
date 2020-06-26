@@ -1,115 +1,42 @@
 import * as React from 'react';
-import { LaunchpadButtonLookText, LaunchpadButtonLookImage, LaunchpadSolidButtonColor, LaunchpadFlashingButtonColor, LaunchpadPulsingButtonColor, LaunchpadRGBButtonColor } from '@lunchpad/types';
-import { Row, Input, Split, Child, Switch, File, Slider, Select, Palettes } from '@lunchpad/base';
+import styled from 'styled-components';
+
+import { LaunchpadSolidButtonColor, LaunchpadFlashingButtonColor, LaunchpadPulsingButtonColor, LaunchpadRGBButtonColor, LaunchpadButtonColor, LaunchpadButtonColorMode } from '@lunchpad/types';
+
+import { Row, Split, Child } from '../../basic/layout';
+import { Button } from '../../basic/button';
+import { Palettes, IndexPillPicker, FullPillPicker, StyledCircle } from '../../colorpicker'
+import { darken } from 'polished';
 
 
-import { FullPillPicker, IndexPillPicker, LegacyPicker, StyledCircle } from '@lunchpad/base';
+interface IColorDisplay {
+  color: string
+}
+const ColorDisplay = styled.div<IColorDisplay>`
+border-radius: 3px;
+  display: inline-block;
+  margin-left: 2rem;
+  width: 6rem;
+  height: 1rem;
+  background-color: ${props => props.color};
+  border: 2px solid ${props => darken(0.1, props.color)};
+`
 
-interface ILaunchpadButtonLookTextComponent {
-  look: LaunchpadButtonLookText
-  onChangeCaption: (caption: string) => void
-  onChangeFace: (face: string) => void
-  onChangeSize: (size: number) => void
-  onChangeColor: (color: string) => void
-  showContextMenu: (x: number, y: number, component: JSX.Element, width?: number, height?: number) => void
+interface IColorPreview {
+  color: LaunchpadButtonColor
 }
 
-export const LaunchpadButtonLookTextComponent: React.SFC<ILaunchpadButtonLookTextComponent> = (props) => (
-  <>
-    <Row title="Title:">
-      <Input face={props.look.face} value={props.look.caption} onChange={e => props.onChangeCaption(e.target.value)} />
-    </Row>
-    <Row title="Appearance:">
-      <Split direction="row">
-        <Child basis="33%" padding="0 0.5rem 0 0">
-          <Select
-            value={props.look.face}
-            onChange={e => props.onChangeFace(e.target.value)}
-          >
-            <option value="Exo 2">Exo 2 (default)</option>
-            <option value="Roboto">Roboto</option>
-            <option value="Source Sans Pro">Source Sans Pro</option>
-            <option value="Oswald">Oswald</option>
-            <option value="Noto Serif">Noto Serif</option>
-            <option value="Font Awesome 5 Free">FontAwesome Free Regular</option>
-            <option value="Font Awesome 5 Brands">FontAwesome Free Brands</option>
-          </Select>
-        </Child>
-        <Child basis="33%" padding="0 0.5rem 0 0.5rem">
-          <Split direction="row">
-            <Child grow>
-              <Slider
-                value={props.look.size / 73 * 100}
-                onChange={e => props.onChangeSize(Math.round(parseInt(e.target.value) / 100 * 73) || 0)}
-              />
-            </Child>
-            <Child padding="0 0 0 1rem">
-              {props.look.size}px
-            </Child>
-          </Split>
-        </Child>
-        <Child basis="34%" padding="0 0 0 0.5rem">
-          <FullPillPicker
-            color={props.look.color}
-            showContextMenu={props.showContextMenu}
-            onChange={c => props.onChangeColor(c.hex)}
-          />
-        </Child>
-      </Split>
-    </Row>
-  </>
-)
-
-interface ILaunchpadButtonLookImageComponent {
-  look: LaunchpadButtonLookImage
-  onChangeUri: (uri: string) => void
-}
-
-export const LaunchpadButtonLookImageComponent: React.SFC<ILaunchpadButtonLookImageComponent> = (props) => {
-  const [ embed, setEmbed ] = React.useState<boolean>();
-
-  const isDataUri = props.look.uri.startsWith("data");
-
-  const size = isDataUri ? atob(props.look.uri.split(',')[1]).length : 0;
-  const setFile = async (file: string) => {
-    if (embed) {
-      const blob = await fetch(file).then(r => r.blob());
-      const dataUrl = await new Promise<string>(resolve => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.readAsDataURL(blob);
-      });
-      console.log(dataUrl)
-      props.onChangeUri(dataUrl);
-    } else {
-      console.log(file)
-      props.onChangeUri(file);
-    }
+export const PillColorPreview: React.SFC<IColorPreview> = (props) => {
+  switch (props.color.mode) {
+    case LaunchpadButtonColorMode.Static:
+      return <ColorDisplay color={Palettes.Indexed[(props.color as LaunchpadSolidButtonColor).color]} />
+    case LaunchpadButtonColorMode.Flashing:
+      return <><ColorDisplay color={Palettes.Indexed[(props.color as LaunchpadFlashingButtonColor).color]} /><ColorDisplay color={Palettes.Indexed[(props.color as LaunchpadFlashingButtonColor).alt]} /></>
+    case LaunchpadButtonColorMode.Pulsing:
+      return <ColorDisplay color={Palettes.Indexed[(props.color as LaunchpadPulsingButtonColor).color]} />
+    case LaunchpadButtonColorMode.RGB:
+      return <ColorDisplay color={(props.color as LaunchpadRGBButtonColor).color} />
   }
-
-  return (
-    <>
-      <Row title="">
-        <Split direction="row">
-          <Child padding="0 1rem 0 0">
-            <Switch
-              value={embed}
-              onChange={setEmbed}
-            />
-          </Child>
-          <Child grow>
-            <span>Embed image in config</span>
-          </Child>
-        </Split>
-      </Row>
-      <Row title="URI:">
-        <File
-          accept="image/gif,image/png,image/jpeg"
-          value={props.look.uri.startsWith("data") ? `[embedded image] (${(size / 1024).toFixed(2)} KB)` : props.look.uri} onChange={setFile}
-        />
-      </Row>
-    </>
-  )
 }
 
 interface ILaunchpadButtonSolidColorComponent {

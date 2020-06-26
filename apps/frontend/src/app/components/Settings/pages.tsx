@@ -1,7 +1,7 @@
 import React, { useContext, useState, useRef, useEffect } from 'react';
 
 import { darken } from 'polished';
-import { COLOR_REDISH, COLOR_BLACK, COLOR_MENU, Split, Child, Tooltip, Button, IconButton } from '@lunchpad/base';
+import { COLOR_REDISH, COLOR_BLACK, COLOR_MENU, Split, Child, Tooltip, Button, IconButton, EditInput } from '@lunchpad/base';
 
 import { Icon, Trash, Pen, PageOpen } from '@lunchpad/icons'
 
@@ -9,8 +9,6 @@ import PagesList, { ListItem } from '../List'
 import { LayoutContext, Severity, useNotification } from '@lunchpad/contexts';
 
 import {useFocus} from '@lunchpad/hooks';
-
-import { EditInput } from './components';
 
 //TODO: Clean this mess up :S
 
