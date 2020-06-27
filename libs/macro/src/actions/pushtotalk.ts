@@ -18,8 +18,7 @@ export class PushToTalkStartAction extends MacroAction {
     this.runner = runner;
     return new Promise(resolve => {
       runner.emit('onPushToTalkStart');
-
-      resolve()
+      setTimeout(resolve, 250)
     })
   }
 
@@ -44,8 +43,7 @@ export class PushToTalkEndAction extends MacroAction {
     this.runner = runner;
     return new Promise(resolve => {
       runner.emit('onPushToTalkEnd');
-      
-      resolve()
+      setTimeout(resolve, 250)
     })
   }
 
