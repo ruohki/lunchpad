@@ -14,6 +14,7 @@ interface IActionEditor {
   header: JSX.Element
   actions: Action[]
   onChange: (actions: Action[]) => void
+  limitedColors: boolean
 }
 
 export const ActionEditor: React.SFC<IActionEditor> = (props) => {
@@ -253,7 +254,7 @@ export const ActionEditor: React.SFC<IActionEditor> = (props) => {
       return (
         <SetColorPill
           showContextMenu={showContextMenu}
-          limitedColor={false}
+          limitedColor={props.limitedColors}
           key={action.id}
           action={action as SetColor}
           {...pillDefaults}

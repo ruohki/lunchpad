@@ -113,6 +113,7 @@ const ButtonConfigDialog: React.SFC<IButtonConfigDialog> = props => {
                 onChangeDown={setDown}
                 up={up}
                 onChangeUp={setUp}
+                limitedColors={limitedColor}
               />
             )}
             {/* activeTab === 2 && (

@@ -13,7 +13,7 @@ interface IActions {
   down: Action[]
   up: Action[]
   loop: boolean
-
+  limitedColors?: boolean
   onChangeLoop(loop: boolean): void
   onChangeDown(actions: Action[]): void
   onChangeUp(actions: Action[]): void
@@ -50,6 +50,7 @@ export const Actions: React.SFC<IActions> = (props) => {
       </Child>
       <Child padding="0 1rem 0 0">
         {activeTab === 0 && <ActionEditor
+          limitedColors={props.limitedColors}
           header={header}
           actions={props.down}
           onChange={props.onChangeDown}
@@ -58,8 +59,13 @@ export const Actions: React.SFC<IActions> = (props) => {
           header={header}
           actions={props.up}
           onChange={props.onChangeUp}
+          limitedColors={props.limitedColors}
         />}
       </Child>
     </Split>
   )
+}
+
+Actions.defaultProps = {
+  limitedColors: false
 }
