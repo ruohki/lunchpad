@@ -107,7 +107,6 @@ const ButtonToXY = (note: number): [ number, number ] => {
   else return [(note % 10), 0]
 }
 
-console.log(...ButtonToXY(98))
 const Component: React.SFC<IPadProps> = (props) => (
   <PadContainerProMK3>
     {lodash.reverse(lodash.range(0, 11)).map((y) => lodash.range(0,10).map((x) => {

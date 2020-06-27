@@ -52,7 +52,6 @@ export default () => {
     if (Launchpad) {
       if (pad) pad.unload(sendSysEx);
       Launchpad.initialize(sendSysEx);
-      console.log("Init")
       setPad(Launchpad)
     }
 
@@ -145,7 +144,7 @@ export default () => {
         const pttStart = new PushToTalkStart();
         const pttEnd = new PushToTalkEnd(pttStart.id);
         pttStart.endId = pttEnd.id;
-        console.log(button.down)
+        
         if (enablePtt === "true") button.down.push(pttStart);
         //@ts-ignore
         button.down.push(new PlaySound(FileURI(payload.files[0].path), soundOutput))
