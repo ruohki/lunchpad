@@ -38,6 +38,7 @@ export class HotkeyAction extends MacroAction {
           await delay(lodash.clamp(keystroke.delay, 0, 5000));
         } else if (part.type === HotkeyKeystrokeType.String) {
           const keystroke = part as HotkeyKeystrokeString;
+          robot.setKeyboardDelay(keystroke.delay);
           console.log("Hotkey: String", keystroke.text)
           if (keystroke.delay > 0) {
             //robot.typeStringDelayed(keystroke.text, 60000 / keystroke.delay);

@@ -60,7 +60,7 @@
     "react-use": "^14.3.0",
     "ref-array-napi": "^1.2.1",
     "reflect-metadata": "^0.1.13",
-    "robotjs": "^0.6.0",
+    "robotjs": "git+https://github.com/ruohki/robotjs.git",
     "styled-components": "5.0.1",
     "svgson": "^4.1.0",
     "typeface-exo-2": "^1.1.4",

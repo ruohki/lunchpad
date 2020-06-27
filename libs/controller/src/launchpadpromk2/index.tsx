@@ -10,14 +10,14 @@ import { IPadProps, IPad } from '..';
 
 import { MakeButtonColor } from '../helper';
 
-const Vendor = [0x0, 0x20, 0x29];
-const Mode = [0x2, 0x10, 0x21, 0x0];
-const Programmer = [0x2, 0x10, 0x22, 0x0];
+const Vendor = [0x0, 0x20, 0x29, 0x02];
+const Mode = [0x10, 0x21, 0x0];
+const Programmer = [0x10, 0x22, 0x0];
 
-const Solid = [0x2, 0x10, 0x0A];
-const Flashing = [0x2, 0x10, 0x23];
-const Pulsing = [0x2, 0x10, 0x28];
-const RGB = [0x2, 0x10, 0x0B];
+const Solid = [0x10, 0x0A];
+const Flashing = [0x10, 0x23];
+const Pulsing = [0x10, 0x28];
+const RGB = [0x10, 0x0B];
 
 const isRound = (x: number, y: number) => {
   return (x === 0 || x === 9) || (y === 0 || y === 9) 
@@ -113,7 +113,7 @@ const Component: React.SFC<IPadProps> = (props) => (
 const initialize = (send: (code: number[], data: number[]) => void) => {
   send(Vendor, Mode);
   send(Vendor, Programmer);
-  send(Vendor, [0x2, 0x10, 0x0E, 0x0]);
+  send(Vendor, [0x10, 0x0E, 0x0]);
 }
 
 const unload = (send: (code: number[], data: number[]) => void) => {
@@ -163,28 +163,28 @@ const buildColors = (send: (code: number[], data: number[]) => void, page: Page,
   }))
 
   if (solids.length > 0) {
-    const colors = lodash.chunk(solids, 77);
+    const colors = lodash.chunk(solids, 2 * 96);
     const [ part1 = [], part2 = [] ] = colors;
 
     if (part1.length > 0) send(Vendor, [...Solid, ...part1]);
     if (part2.length > 0) send(Vendor, [...Solid, ...part2]);
   }
   if (flashing.length > 0) {
-    const colors = lodash.chunk(flashing, 77);
+    const colors = lodash.chunk(flashing, 2 * 96);
     const [ part1 = [], part2 = [] ] = colors;
 
     if (part1.length > 0) send(Vendor, [...Flashing, ...part1]);
     if (part2.length > 0) send(Vendor, [...Flashing, ...part2]);
   }
   if (pulsing.length > 0) {
-    const colors = lodash.chunk(pulsing, 77);
+    const colors = lodash.chunk(pulsing, 2 * 96);
     const [ part1 = [], part2 = [] ] = colors;
 
     if (part1.length > 0) send(Vendor, [...Pulsing, ...part1]);
     if (part2.length > 0) send(Vendor, [...Pulsing, ...part2]);
   }
   if (rgb.length > 0) {
-    const colors = lodash.chunk(rgb, 77);
+    const colors = lodash.chunk(rgb, 4 * 77);
     const [ part1 = [], part2 = [] ] = colors;
 
     if (part1.length > 0) send(Vendor, [...RGB, ...part1]);
