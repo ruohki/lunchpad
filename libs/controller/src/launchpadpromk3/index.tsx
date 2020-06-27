@@ -165,9 +165,9 @@ const unload = (send: (code: number[], data: number[]) => void) => {
 
 const buildColors = (send: (code: number[], data: number[]) => void, page: Page, activeButtons: Array<{x: number, y: number}>) => {
   
-  const colors = lodash.flattenDeep(lodash.range(0, 9).map((y) => lodash.range(0,9).map((x) => {
+  const colors = lodash.flattenDeep(lodash.range(0, 11).map((y) => lodash.range(0,10).map((x) => {
     const button: LaunchpadButton = lodash.get(page, `buttons.${x}.${y}`);
-    //console.log(activeButtons, x,y , lodash.some(activeButtons, { x, y }))
+    
     if (button) {
       const isActive = lodash.some(activeButtons, { x, y });
 
@@ -189,7 +189,7 @@ const buildColors = (send: (code: number[], data: number[]) => void, page: Page,
       }
     } else {
       // Clear the button or if its top right make it fade
-      return x === 8 && y === 8 ? [2, 99, 45] : [0, XYToButton(x,y), 0]
+      return XYToButton(x,y) === 99 ? [2, XYToButton(x,y), 45] : [0, XYToButton(x,y), 0]
     }
   })))
 
