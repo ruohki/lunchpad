@@ -1,7 +1,7 @@
 import * as React from 'react';
 
 import { Split, Divider, Row, Child, IconButton, Switch, Input, Textarea } from '@lunchpad/base';
-import { LaunchpadButton } from '@lunchpad/types';
+import { LaunchpadButton } from '../../contexts/layout/classes';
 
 interface IImportExport {
   button: LaunchpadButton

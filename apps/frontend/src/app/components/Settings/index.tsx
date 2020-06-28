@@ -5,6 +5,7 @@ import { COLOR_BLACK, Split, Child, Outer, Button, Divider, Tab } from '@lunchpa
 import General from './general';
 import Pages from './pages';
 import About from './about';
+import { Connections } from './connections';
 
 const Settings = ({ onClose }) => {
   const [ activeTab, setTab ] = useState<number>(0);
@@ -21,13 +22,17 @@ const Settings = ({ onClose }) => {
               <Tab active={activeTab === 1} title="Pages" onClick={() => setTab(1)} />
             </Child>
             <Child>
-              <Tab active={activeTab === 2} title="About..." onClick={() => setTab(2)} />
+              <Tab active={activeTab === 2} title="Connections" onClick={() => setTab(2)} />
+            </Child>
+            <Child>
+              <Tab active={activeTab === 3} title="About..." onClick={() => setTab(3)} />
             </Child>
           </Split>
         </Child>
         {activeTab === 0 && <General />}
         {activeTab === 1 && <Pages />}
-        {activeTab === 2 && <About />}
+        {activeTab === 2 && <Connections />}
+        {activeTab === 3 && <About />}
         <Split padding="0 1rem 1rem 1rem">
           <Child basis="0">
             <Divider />

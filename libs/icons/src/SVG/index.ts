@@ -41,3 +41,4 @@ export * from "./TriangleRightSolid";
 export * from "./TriangleUp";
 export * from "./TriangleUpSolid";
 export * from "./TTS";
+export * from "./OBS";

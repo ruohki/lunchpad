@@ -6,9 +6,9 @@
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    "types": ["node", "jest"],
     "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "types": ["node", "jest"]
+    "experimentalDecorators": true
   },
   "files": [
     "../../node_modules/@nrwl/react/typings/cssmodule.d.ts",

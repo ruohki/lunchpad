@@ -2,19 +2,26 @@ import React, { useContext } from 'react'
 import * as lodash from 'lodash';
 
 import { v4 as uuid } from 'uuid';
+import { deserialize } from 'typescript-json-serializer';
 
 import { useSettings } from '@lunchpad/hooks';
 import ButtonContextMenu from '../ContextMenu/button';
-import {MenuContext, MidiContext,LayoutContext, NotificationContext, AudioContext, useModal } from '@lunchpad/contexts';
-import { LaunchpadButton, PlaySound, FileURI, ActionType, PushToTalkStart, PushToTalkEnd, LaunchpadButtonLookText, LaunchpadButtonLookType } from '@lunchpad/types';
+import { MenuContext, MidiContext, NotificationContext, useModal } from '@lunchpad/contexts';
+import { FileURI } from '@lunchpad/types';
 import { settingsLabels } from '@lunchpad/types'
 import Settings from '../Settings';
 import ConfigDialog from '../ButtonConfiguration';
 
-import * as Devices from '@lunchpad/controller';
-import { IPad } from '@lunchpad/controller';
+import * as Devices from '../../controller';
 
-import { MacroContext } from '../../contexts/macroengine';
+import { Playground } from '../../contexts/playground';
+import { MacroContext } from '../../contexts/macro/index';
+import { LayoutContext } from '../../contexts/layout';
+import { LaunchpadButton, LaunchpadButtonLookText, LaunchpadButtonLookType, LaunchpadSolidButtonColor } from '../../contexts/layout/classes';
+import { PushToTalkEnd, PushToTalkStart } from '../../actions/pushtotalk';
+import { ActionType } from '../../actions';
+import { PlaySound } from '../../actions/playsound';
+
 
 const { remote } = window.require('electron');
 
@@ -40,7 +47,7 @@ export default () => {
   const [ openSettings, closeSettings ] = useModal();
   const [ showConfigDialog, closeConfigDialog ] = useModal();
   
-  const [ pad, setPad ] = React.useState<IPad>();
+  const [ pad, setPad ] = React.useState<Devices.IPad>();
   
   const [ showDnDNotification ] = NotificationContext.useNotification();
 
@@ -48,7 +55,7 @@ export default () => {
   // Repaint the Pad when the active layout changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(() => {
-    const Launchpad = Devices[controller as string] as IPad
+    const Launchpad = Devices[controller as string] as Devices.IPad
     if (Launchpad) {
       if (pad) pad.unload(sendSysEx);
       Launchpad.initialize(sendSysEx);
@@ -107,7 +114,8 @@ export default () => {
             addNotification(`Button (${x},${y}) copied`, 1000)
           } else if (key === "pasteButton") {
             try {
-              let newBtn = JSON.parse(remote.clipboard.readText('clipboard')) as LaunchpadButton;
+              let newBtn = deserialize<LaunchpadButton>(JSON.parse(remote.clipboard.readText('clipboard')), LaunchpadButton)
+              
               if (("look" in newBtn) && ("color" in newBtn) && ("down" in newBtn)) {
                 const button = Object.assign(new LaunchpadButton(), newBtn);
                 setButton(button, x,y, activePage.id);
@@ -140,6 +148,7 @@ export default () => {
         const name = payload.files[0].name.split('.').slice(0, -1).join('.')
         const button = new LaunchpadButton();
         button.look = new LaunchpadButtonLookText(name);
+        button.color = new LaunchpadSolidButtonColor(Math.ceil(Math.random() * 127))
         //@ts-ignore
         const pttStart = new PushToTalkStart();
         const pttEnd = new PushToTalkEnd(pttStart.id);

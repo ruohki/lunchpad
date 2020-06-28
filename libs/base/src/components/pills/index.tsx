@@ -20,19 +20,3 @@ export const PillList: React.SFC<IPillList> = (props) => {
     </Split>
   )
 }
-
-export * from './pill'
-
-export * from './audiopill'
-export * from './delaypill'
-export * from './switchpagepill'
-export * from './stopallmacros'
-export * from './texttospeech'
-export * from './launchapppill'
-export * from './hotkeypill'
-export * from './stopthismacro'
-export * from './restartthismacro'
-export * from './pushtotalk'
-export * from './setcolorpill'
-export * from './flipflop'
-

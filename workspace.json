@@ -10,6 +10,7 @@
         "build": {
           "builder": "@nrwl/web:build",
           "options": {
+            "showCircularDependencies": false,
             "outputPath": "dist/apps/frontend",
             "index": "apps/frontend/src/index.html",
             "main": "apps/frontend/src/main.tsx",
@@ -344,37 +345,6 @@
           "options": {
             "jestConfig": "libs/controller/jest.config.js",
             "tsConfig": "libs/controller/tsconfig.spec.json",
-            "passWithNoTests": true
-          }
-        }
-      }
-    },
-    "macro": {
-      "root": "libs/macro",
-      "sourceRoot": "libs/macro/src",
-      "projectType": "library",
-      "schematics": {},
-      "architect": {
-        "lint": {
-          "builder": "@nrwl/linter:lint",
-          "options": {
-            "linter": "eslint",
-            "config": "libs/macro/.eslintrc",
-            "tsConfig": [
-              "libs/macro/tsconfig.lib.json",
-              "libs/macro/tsconfig.spec.json"
-            ],
-            "exclude": [
-              "**/node_modules/**",
-              "!libs/macro/**"
-            ]
-          }
-        },
-        "test": {
-          "builder": "@nrwl/jest:jest",
-          "options": {
-            "jestConfig": "libs/macro/jest.config.js",
-            "tsConfig": "libs/macro/tsconfig.spec.json",
             "passWithNoTests": true
           }
         }

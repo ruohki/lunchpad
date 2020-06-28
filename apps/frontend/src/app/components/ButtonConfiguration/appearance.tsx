@@ -1,23 +1,11 @@
 import * as React from 'react'
 
-import {
-  LaunchpadButtonLook,
-  LaunchpadButtonColor,
-  LaunchpadButtonLookType,
-  LaunchpadButtonLookImage,
-  LaunchpadButtonLookText,
-  LaunchpadButtonColorMode,
-  LaunchpadSolidButtonColor,
-  LaunchpadFlashingButtonColor,
-  LaunchpadPulsingButtonColor,
-  LaunchpadRGBButtonColor
-} from '@lunchpad/types';
-
 import { Split, Select, Child, Divider, Row } from '@lunchpad/base';
 
 import { LaunchpadButtonLookTextComponent, LaunchpadButtonLookImageComponent, LaunchpadButtonSolidColorComponent, LaunchpadButtonFlashingColorComponent, LaunchpadButtonPulsingColorComponent, LaunchpadButtonRGBColorComponent, LaunchpadButtonLegacyColorComponent } from './partials';
 
 import { MenuContext } from '@lunchpad/contexts';
+import { LaunchpadButtonLook, LaunchpadButtonColor, LaunchpadRGBButtonColor, LaunchpadButtonLookType, LaunchpadButtonLookImage, LaunchpadButtonLookText, LaunchpadButtonColorMode, LaunchpadSolidButtonColor, LaunchpadFlashingButtonColor, LaunchpadPulsingButtonColor } from '../../contexts/layout/classes';
 
 interface IAppearance {
   limitedColor: boolean
@@ -30,7 +18,7 @@ interface IAppearance {
 }
 
 const getClosestLegacyColor = (color: LaunchpadRGBButtonColor) => {
-  const { r, g, b } = LaunchpadRGBButtonColor.getRGB(color);
+  const { r, g, b } = color.getRGB()
   const red = Math.round(r / 85).toString().padStart(2, "0")
   const green = Math.round(g / 85).toString().padStart(2, "0")
   return `#${red}${green}00`

@@ -72,6 +72,8 @@ export const IconButton = styled(IconButtonSFC)`
   transform: rotate(${(props) => props.rotation}deg);
   
   & > * {
+    padding: 0 !important;
+    margin: 0 !important;
     color: ${(props) => props.disabled ? darken(0.3, COLOR_GRAY) : props.active ? props.hover : COLOR_GRAY};
   }
 

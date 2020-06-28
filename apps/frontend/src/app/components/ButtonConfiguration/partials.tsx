@@ -1,9 +1,10 @@
 import * as React from 'react';
-import { LaunchpadButtonLookText, LaunchpadButtonLookImage, LaunchpadSolidButtonColor, LaunchpadFlashingButtonColor, LaunchpadPulsingButtonColor, LaunchpadRGBButtonColor } from '@lunchpad/types';
+
 import { Row, Input, Split, Child, Switch, File, Slider, Select, Palettes } from '@lunchpad/base';
 
 
 import { FullPillPicker, IndexPillPicker, LegacyPicker, StyledCircle } from '@lunchpad/base';
+import { LaunchpadButtonLookImage, LaunchpadSolidButtonColor, LaunchpadFlashingButtonColor, LaunchpadPulsingButtonColor, LaunchpadRGBButtonColor, LaunchpadButtonLookText } from '../../contexts/layout/classes';
 
 interface ILaunchpadButtonLookTextComponent {
   look: LaunchpadButtonLookText

@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { Icon, PageOpen, Trash, PageCopy, PageAdd, PagePaste } from '@lunchpad/icons';
 
-import { Split, Child, Row, Pill, Input, IconButton, COLOR_REDISH, Tooltip } from '@lunchpad/base'
+import { Split, Child, Row, Input, IconButton, COLOR_REDISH, Tooltip } from '@lunchpad/base'
+import Pill from '../../../actions/pill';
 
 interface IPage {
   id: string

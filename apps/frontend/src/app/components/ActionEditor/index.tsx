@@ -1,14 +1,36 @@
 import * as React from 'react';
 import * as lodash from 'lodash';
 
-import { Action, PairedAction, ActionType, PlaySound, Delay, SwitchPage, StopAllMacros, RestartThisMacro, TextToSpeech, LaunchApp, Hotkey, StopThisMacro, settingsLabels, PushToTalkEnd, PushToTalkStart, SetColor, FlipFlopMiddle, FlipFlopStart, FlipFlopEnd } from '@lunchpad/types';
+
 import { AnimatePresence, motion } from 'framer-motion';
-import { Split, Child, Tooltip, IconButton, PillList, DelayPill, PlaySoundPill, SwitchPagePill, StopAllMacrosPill, StopThisMacroPill, RestartThisMacroPill, TextToSpeechPill, HotkeyPill, LaunchAppPill, PushToTalkStartPill, PushToTalkEndPill, SetColorPill, FlipFlopStartPill, FlipFlopMiddlePill, FlipFlopEndPill } from '@lunchpad/base'
+import { Split, Child, Tooltip, IconButton, PillList, } from '@lunchpad/base'
 import { Icon, Plus } from '@lunchpad/icons';
-import { AudioContext, MenuContext, LayoutContext } from '@lunchpad/contexts';
+import { AudioContext, MenuContext } from '@lunchpad/contexts';
 
 import AddActionMenu from '../ContextMenu/addAction';
 import { useSettings  } from '@lunchpad/hooks';
+import { OBSStudioContext } from '../../contexts/obs-studio';
+import { ActionType, Action, PairedAction } from '../../actions';
+import { PlaySound, PlaySoundPill } from '../../actions/playsound';
+import { Delay, DelayPill } from '../../actions/delay';
+import { SwitchPage, SwitchPagePill } from '../../actions/switchpage';
+import { StopAllMacros, StopAllMacrosPill } from '../../actions/stopallmacros';
+import { RestartThisMacro, RestartThisMacroPill } from '../../actions/restartthismacro';
+import { TextToSpeech, TextToSpeechPill } from '../../actions/tts';
+import { LaunchApp, LaunchAppPill } from '../../actions/launchapp';
+import { Hotkey } from '../../actions/hotkey/classes';
+import { StopThisMacro, StopThisMacroPill } from '../../actions/stopthismacro';
+import { PushToTalkStart, PushToTalkEnd, PushToTalkStartPill, PushToTalkEndPill } from '../../actions/pushtotalk';
+import { FlipFlopStart, FlipFlopMiddle, FlipFlopEnd, FlipFlopStartPill, FlipFlopMiddlePill, FlipFlopEndPill } from '../../actions/flipflop';
+import { SetColor, SetColorPill } from '../../actions/setcolor';
+import { OBSToggleSource, OBSToggleSourcePill } from '../../actions/obs-studio/togglesource';
+import { OBSSwitchScene, OBSSwitchScenePill, OBSSaveReplayPill, OBSSaveReplay } from '../../actions/obs-studio';
+import { HotkeyPill } from '../../actions/hotkey/components';
+import { settingsLabels } from '@lunchpad/types';
+import { LayoutContext } from '../../contexts/layout';
+import { OBSToggleStreaming, OBSToggleStreamingPill } from '../../actions/obs-studio/togglestreaming';
+import { OBSToggleFilter, OBSToggleFilterPill } from '../../actions/obs-studio/togglefilter';
+import { OBSToggleMixer, OBSToggleMixerPill } from '../../actions/obs-studio/setaudio';
 
 interface IActionEditor {
   header: JSX.Element
@@ -21,6 +43,7 @@ export const ActionEditor: React.SFC<IActionEditor> = (props) => {
   const { showContextMenu, closeMenu } = React.useContext(MenuContext.Context);
   const { outputDevices } = React.useContext(AudioContext.Context);
   const { pages } = React.useContext(LayoutContext.Context);
+  const { currentScene, currentCollection, scenes, collections, sceneItems, sources, getSourceFilters } = React.useContext(OBSStudioContext.Context);
   
   const [ outputDevice ] = useSettings(settingsLabels.soundOutput, "default");
 
@@ -64,11 +87,23 @@ export const ActionEditor: React.SFC<IActionEditor> = (props) => {
             props.onChange([...props.actions, start, middle, end ]);
           } else if (key === ActionType.SetColor) {
             props.onChange([...props.actions, new SetColor() ]);
+          } else if (key === ActionType.OBSSwitchScene) {
+            props.onChange([...props.actions, new OBSSwitchScene(currentScene, currentCollection)]);
+          } else if (key === ActionType.OBSToggleSource) {
+            props.onChange([...props.actions, new OBSToggleSource(currentScene, currentCollection, sceneItems[0].name ?? "")]);
+          } else if (key === ActionType.OBSStartStopStream) {
+            props.onChange([...props.actions, new OBSToggleStreaming()]);
+          } else if (key === ActionType.OBSSaveReplayBuffer) {
+            props.onChange([...props.actions, new OBSSaveReplay()]);
+          } else if (key === ActionType.OBSToggleFilter) {
+            props.onChange([...props.actions, new OBSToggleFilter()]);
+          } else if (key === ActionType.OBSToggleMixer) {
+            props.onChange([...props.actions, new OBSToggleMixer(currentScene, currentCollection, sceneItems[0].name ?? "")]);
           }
-          
         }}
         onClose={closeMenu}
-      />
+      />,
+      300, 600
     );
   };
 
@@ -257,6 +292,67 @@ export const ActionEditor: React.SFC<IActionEditor> = (props) => {
           limitedColor={props.limitedColors}
           key={action.id}
           action={action as SetColor}
+          {...pillDefaults}
+        />
+      );
+    else if (action.type === ActionType.OBSSwitchScene)
+      return (
+        <OBSSwitchScenePill
+          scenes={scenes}
+          collections={collections}
+          currentCollection={currentCollection}
+          key={action.id}
+          action={action as OBSSwitchScene}
+          {...pillDefaults}
+        />
+      );
+    else if (action.type === ActionType.OBSToggleSource)
+      return (
+        <OBSToggleSourcePill
+          scenes={scenes}
+          collections={collections}
+          currentCollection={currentCollection}
+          currentScene={currentScene}
+          sources={sceneItems}
+          key={action.id}
+          action={action as OBSToggleSource}
+          {...pillDefaults}
+        />
+      );
+    else if (action.type === ActionType.OBSToggleMixer)
+      return (
+        <OBSToggleMixerPill
+          scenes={scenes}
+          collections={collections}
+          currentCollection={currentCollection}
+          currentScene={currentScene}
+          sources={sceneItems}
+          key={action.id}
+          action={action as OBSToggleMixer}
+          {...pillDefaults}
+        />
+      );
+    else if (action.type === ActionType.OBSToggleFilter)
+      return (
+        <OBSToggleFilterPill
+          key={action.id}
+          action={action as OBSToggleFilter}
+          {...pillDefaults}
+        />
+      );
+    else if (action.type === ActionType.OBSStartStopStream)
+      return (
+        <OBSToggleStreamingPill
+          key={action.id}
+          action={action as OBSToggleStreaming}
+          {...pillDefaults}
+        />
+      );
+    else if (action.type === ActionType.OBSSaveReplayBuffer)
+      return (
+        <OBSSaveReplayPill
+          key={action.id}
+          action={action as OBSSaveReplay}
           {...pillDefaults}
         />
       );

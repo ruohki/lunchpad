@@ -14,7 +14,6 @@ interface IFile {
 
 export const File: React.SFC<IFile> = ({ editable, accept, value, onChange, ...rest }) => {
   const inputRef = React.useRef<HTMLInputElement>();
-  
   const onSelectFile = () => {
     if (inputRef.current !== undefined) {
       const savedValue = inputRef.current.value

@@ -15,14 +15,18 @@ import { DndProvider } from 'react-dnd';
 import { useSettings } from '@lunchpad/hooks';
 
 import { GlobalStyle, AppContainer, ScaleBox } from '@lunchpad/base';
-import { AudioContext, MidiContext, ModalContext, LayoutContext, MenuContext, NotificationContext } from '@lunchpad/contexts';
+import { AudioContext, MidiContext, ModalContext, MenuContext, NotificationContext } from '@lunchpad/contexts';
 import { useEssentialCSSVariable } from '@lunchpad/hooks';
 import { settingsLabels as settings } from '@lunchpad/types';
 
 import Controller from './components/Controller';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { MacroContext } from './contexts/macroengine';
+import { MacroContext } from './contexts/macro/index';
+import { OBSStudioContext } from './contexts/obs-studio';
+import { LayoutContext } from './contexts/layout';
+
 import { Helmet } from './helmet';
+import { Playground } from './contexts/playground';
 
 const ProviderGarden = ({ children }) => {
   const [ output ] = useSettings(settings.soundOutput, 'default');
@@ -33,15 +37,17 @@ const ProviderGarden = ({ children }) => {
         <AudioContext.Provider sinkId={output}>
           <LayoutContext.Provider>
             <MidiContext.Provider>
-              <MenuContext.Provider>
-                <ModalContext.Provider>
-                  <DndProvider backend={Backend}>
-                    <MacroContext.Provider>
-                      {children}
-                    </MacroContext.Provider>
-                  </DndProvider>
-                </ModalContext.Provider>
-              </MenuContext.Provider>
+              <OBSStudioContext.Provider>
+                <MenuContext.Provider>
+                  <ModalContext.Provider>
+                    <DndProvider backend={Backend}>
+                      <MacroContext.Provider>
+                        {children}
+                      </MacroContext.Provider>
+                    </DndProvider>
+                  </ModalContext.Provider>
+                </MenuContext.Provider>
+              </OBSStudioContext.Provider>
             </MidiContext.Provider>
           </LayoutContext.Provider>
         </AudioContext.Provider>
@@ -59,6 +65,7 @@ export const App = () => {
       <ProviderGarden>
         <Helmet />
         <ScaleBox>
+          <Playground />
           <Controller />
         </ScaleBox>
       </ProviderGarden>

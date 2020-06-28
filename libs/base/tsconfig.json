@@ -3,7 +3,9 @@
   "compilerOptions": {
     "types": ["node", "jest"],
     "jsx": "react",
-    "allowSyntheticDefaultImports":true
+    "allowSyntheticDefaultImports":true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true
   },
   "include": ["**/*.ts"]
 }

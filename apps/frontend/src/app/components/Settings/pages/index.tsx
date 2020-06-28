@@ -4,10 +4,11 @@ import {  Split, Child, Tooltip, IconButton, PillList, Outer } from '@lunchpad/b
 
 import { Icon, Plus, PagePaste } from '@lunchpad/icons'
 
-import { LayoutContext, Severity, useNotification } from '@lunchpad/contexts';
+import { Severity, useNotification } from '@lunchpad/contexts';
 import { AnimatePresence, motion } from 'framer-motion';
 import { PagePill } from './pagepill';
-import { Page } from '@lunchpad/types';
+import { Page } from '../../../contexts/layout/classes';
+import { LayoutContext } from '../../../contexts/layout';
 
 const { remote } = window.require('electron')
 

@@ -1,13 +1,10 @@
 import * as React from 'react';
 
-import {
-  Action
-} from '@lunchpad/types';
-
 import { Split, Divider, Row, Child, IconButton, Switch } from '@lunchpad/base';
 
 import { ActionEditor } from '../ActionEditor';
 import { ButtonDown, Icon, ButtonUp } from '@lunchpad/icons';
+import { Action } from '../../actions';
 
 interface IActions {
   down: Action[]

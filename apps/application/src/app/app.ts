@@ -4,7 +4,7 @@ import { join } from 'path';
 import { format } from 'url';
 import AutoLaunch from 'auto-launch';
 
-import { ipcLabels, LaunchpadButton } from '@lunchpad/types';
+import { ipcLabels } from '@lunchpad/types';
 
 import * as Configstore from 'configstore';
 const config = new Configstore('lunchpad', {stayOnTop: false})
@@ -117,6 +117,8 @@ export default class Lunchpad {
     Lunchpad.mainWindow.center();
     Lunchpad.mainWindow.setMenuBarVisibility(false)
     
+    if (Lunchpad.minimizeToTray) Lunchpad.mainWindow.hide();
+
     Lunchpad.tray = new Tray(join(__dirname, "assets/logo.png"));
     Lunchpad.tray.setContextMenu(Menu.buildFromTemplate([{ 
       label: "Join the Discord!",

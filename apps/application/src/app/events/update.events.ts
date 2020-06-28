@@ -1,7 +1,5 @@
 import { app, dialog } from 'electron';
 import { autoUpdater } from 'electron-updater';
-import { platform, arch } from 'os';
-import { updateServerUrl } from '../constants';
 import App from '../app';
 
 export default class UpdateEvents {

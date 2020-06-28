@@ -12,20 +12,13 @@ import {
   Divider
 } from '@lunchpad/base';
 
-import {
-  LaunchpadButton,
-  /* Button as ControllerButton, */
-  Action,
-  LaunchpadButtonLook,
-  LaunchpadButtonColor,
-  ActionType,
-  StopThisMacro,
-} from '@lunchpad/types';
-
 import { Appearance } from './appearance';
 import { Actions } from './actions';
 import { ImportExport } from './importexport';
 import { usePrevious, useFirstMountState } from 'react-use';
+import { LaunchpadButtonLook, LaunchpadButtonColor, LaunchpadButton } from '../../contexts/layout/classes';
+import { Action, ActionType } from '../../actions';
+import { StopThisMacro } from '../../actions/stopthismacro';
 
 interface IButtonConfigDialog {
   button: LaunchpadButton

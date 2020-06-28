@@ -1,12 +1,12 @@
 import * as React from 'react';
 import HelmetComponent from 'react-helmet';
 
-import { LayoutContext } from '@lunchpad/contexts';
-import * as Devices from '@lunchpad/controller';
+import * as Devices from './controller';
 import { settingsLabels } from '@lunchpad/types';
 
 import * as versionInfo from '../../../../version.json';
 import { useSettings } from '@lunchpad/hooks';
+import { LayoutContext } from './contexts/layout';
 
 export const Helmet = () => {
   const { activePage } = React.useContext(LayoutContext.Context);

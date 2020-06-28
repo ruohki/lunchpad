@@ -17,7 +17,7 @@ interface IAudioRange {
 }
 
 const fs = window.require('fs');
-const audioContext = new AudioContext();
+
 
 const filterData = (audioBuffer, samples = 140) => {
   const rawData = audioBuffer.getChannelData(0);
@@ -51,6 +51,7 @@ export const WaveForm: React.SFC<IWaveForm> = ({ file }) => {
   const ref = React.useRef<HTMLCanvasElement>();
 
   React.useEffect(() => {
+    const audioContext = new AudioContext();
     const canvas = ref.current;
     const context = canvas.getContext("2d");
 
@@ -66,7 +67,7 @@ export const WaveForm: React.SFC<IWaveForm> = ({ file }) => {
         const data = normalizeData(filterData(audioBuffer, samples));
 
         const width = canvas.width / samples;
-
+        audioContext.close();
         drawBar(context, 0, 50, 1000, 2, "#ff0000");
         data.forEach((d, i) => {
           let height = d * 100;
@@ -85,6 +86,10 @@ export const WaveForm: React.SFC<IWaveForm> = ({ file }) => {
           );
         });
       });
+      return () => {
+        console.log("Closing")
+        if (audioContext.state !== "closed") audioContext.close()
+      }
   }, [file]);
 
   return (

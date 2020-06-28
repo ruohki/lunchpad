@@ -15,7 +15,7 @@ interface IIcon {
 
 const Container = styled.div`
   display: inline-flex;
-  alignSelf: center;
+  align-self: center;
 
   `
 const SVGParent = styled.div`

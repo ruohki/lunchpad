@@ -22,6 +22,14 @@ export const settingsLabels = {
     config: 'layout.config',
     active: 'layout.activePage',
   },
+  connections: {
+    obsStudio: {
+      enabled: 'connections.obsStudio.enabled',
+      autoConnect: 'connections.obsStudio.autoConnect',
+      address: 'connections.obsStudio.address',
+      password: 'connections.obsStudio.password'
+    }
+  }
 }
 
 export const ipcLabels = {

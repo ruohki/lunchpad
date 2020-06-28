@@ -8,7 +8,7 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "importHelpers": true,
-    "target": "es2015",
+    "target": "ESNext",
     "module": "esnext",
     "typeRoots": ["./types", "node_modules/@types"],
     "lib": ["es2017", "dom"],
