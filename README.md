@@ -16,8 +16,6 @@ You can create a variety of macros, from simple playback of sounds (hello soundb
 - Launchpad MK2
 - Launchpad X
 - Launchpad Pro MK2
-
-### Not yet fully supported Launchpads
 - Launchpad Pro MK3
 
 
