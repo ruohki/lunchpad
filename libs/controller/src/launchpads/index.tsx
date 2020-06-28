@@ -80,16 +80,16 @@ const buildColors = (send: (code: number[], data: number[]) => void, page: Page,
   const outputName = localStorage.getItem('general.midiOutput')
   const output = webmidi.getOutputByName(outputName);
   if (output) {
-    output.send(0xB0, [0x0, 0x0])
+    //output.send(0xB0, [0x0, 0x0])
 
     // Reset
     lodash.range(0, 9).map((y) => lodash.range(0,9).map((x) => {
       const button: LaunchpadButton = lodash.get(page, `buttons.${x}.${y}`);
       //console.log(activeButtons, x,y , lodash.some(activeButtons, { x, y }))
+      const btnIdx = XYToButton(x, y);
       if (button) {
         const isActive = lodash.some(activeButtons, { x, y });
         let color = isActive ? lodash.get(button, 'activeColor', button.color) : button.color
-        const btnIdx = XYToButton(x, y);
         if (color.mode !== LaunchpadButtonColorMode.RGB) {
           const index = color.color as number;
           color = new LaunchpadRGBButtonColor(RGBIndexPalette[index])
@@ -108,6 +108,13 @@ const buildColors = (send: (code: number[], data: number[]) => void, page: Page,
             output.send(0xB0, [ btnIdx, legacyColor ])
           } else {
             output.send(0x90, [ btnIdx, legacyColor ])
+          }
+        } else {
+          if (y === 8) {
+            // Toprow needs CC
+            output.send(0xB0, [ btnIdx, 0xC ])
+          } else {
+            output.send(0x90, [ btnIdx, 0xC ])
           }
         }
       }

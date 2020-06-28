@@ -10,7 +10,6 @@
         "build": {
           "builder": "@nrwl/web:build",
           "options": {
-            "baseHref": "/",
             "outputPath": "dist/apps/frontend",
             "index": "apps/frontend/src/index.html",
             "main": "apps/frontend/src/main.tsx",
@@ -26,6 +25,7 @@
           },
           "configurations": {
             "production": {
+              "baseHref": "./",
               "fileReplacements": [
                 {
                   "replace": "apps/frontend/src/environments/environment.ts",
