@@ -43,8 +43,8 @@ const PillHeaderSFC: React.SFC<IPillHeader> = ({ onClick, children, expanded, ex
         {onMoveUp && <Child padding="0"><IconButton icon={<Icon icon={ArrowUp} />} onClick={onMoveUp} /></Child>}
         {(onMoveUp && onMoveDown) && <Child padding="0 1rem 0 0" />}
         {onMoveDown && <Child padding="0"><IconButton icon={<Icon icon={ArrowDown} />} onClick={onMoveDown} /></Child>}
-        <Child padding="0 1rem 0 1rem"><VerticalPipe /></Child>
-        <Child padding="0"><IconButton hover={COLOR_REDISH} onClick={onRemove} icon={<Icon icon={Trash} />} /></Child>
+        {onRemove &&<Child padding="0 1rem 0 1rem"><VerticalPipe /></Child>}
+        {onRemove && <Child padding="0"><IconButton hover={COLOR_REDISH} onClick={onRemove} icon={<Icon icon={Trash} />} /></Child>}
         {expandable && <Child padding="0 1rem 0 1rem"><VerticalPipe /></Child>}
         {expandable && <Child padding="0">
           <IconButton onClick={rest.isExpanded ? onCollapse : onExpand} icon={<Icon icon={ChevronDown} />} rotation={rest.isExpanded ? 0 : 180} />

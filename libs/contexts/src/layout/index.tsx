@@ -14,6 +14,7 @@ export interface ILayoutContext {
   setActivePage(name: string): void
 
   addPage(name: string): void
+  pastePage(page: Page, id?: string): void
   removePage(id: string): void
   renamePage(id: string, name: string): boolean
 
@@ -74,11 +75,23 @@ const LayoutProvider = ({ children }) => {
     updateLayout([...layout, new Page(name, id)]);
   }
 
+  const pastePage = (page: Page, id: string = "") => {
+    if (lodash.isEmpty(id)) {
+      const id = uuid();
+      const newPage = new Page(page.name, id);
+      newPage.buttons = page.buttons;
+      updateLayout([...layout, newPage]);
+    } else {
+      updateLayout([...layout.map(p => p.id === page.id ? page : p)]);
+
+    }
+  }
+
   const removePage = (id: string) => {
     const idx = layout.findIndex(p => p.id === id)
     if (id === "default" || idx === -1 ) return;
     
-    if (layout[idx].name === activePage.name) {
+    if (layout[idx].id === activePage.id) {
       setActivePage("default");
     }
     updateLayout(layout.filter(p => p.id !== id));
@@ -152,6 +165,7 @@ const LayoutProvider = ({ children }) => {
       setActivePage,
       
       addPage,
+      pastePage,
       removePage,
       renamePage,
 
