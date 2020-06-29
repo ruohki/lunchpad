@@ -23,7 +23,7 @@ export default class Main {
 
     // initialize auto updater service
     if (!App.isDevelopmentMode()) {
-      // UpdateEvents.initAutoUpdateService();
+       UpdateEvents.initAutoUpdateService();
     }
   }
 }
