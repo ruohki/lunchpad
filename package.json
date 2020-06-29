@@ -39,6 +39,7 @@
     "auto-launch": "^5.0.5",
     "configstore": "^5.0.1",
     "document-register-element": "1.13.1",
+    "electron-updater": "^4.3.1",
     "ffi-napi": "^3.0.1",
     "framer-motion": "^1.11.0",
     "keyboardjs": "^2.6.2",
