@@ -59,6 +59,7 @@ export const PlaySoundPill: React.SFC<IPlaySoundPill> = ({ action, expanded, out
     StopBuffer();
 
     const gainNode = audio.createGain();
+    console.log(action.volume)
     gainNode.gain.value = action.volume;
     gainNode.connect(audio.destination);
 
@@ -94,16 +95,19 @@ export const PlaySoundPill: React.SFC<IPlaySoundPill> = ({ action, expanded, out
       .then(setAudioBuffer);
   }, [ action.soundfile ])
 
+  const rangeToVol = (value) => value <= 50 ? value / 50 : (((value - 50) / 50) * 19) + 1
+  const volToRange = (volume) => volume <= 1 ? (volume * 100) / 2 : (((volume - 1) / 19) * 50) + 50
+
   const Collapsed = (
     <Split direction="row">
       <Child grow basis="75%" whiteSpace="nowrap" padding="0 1rem 0 0"><div style={{textOverflow: "ellipsis", overflow: "hidden"}}>Play: {_.truncate(filename, { length: 30})}</div></Child>
       <Child grow basis="25%">
         <Slider
-          value={action.volume * 100}
-          onChange={(e) => setProp({ volume: (parseInt(e.target.value) / 100)})}
+          value={volToRange(action.volume)}
+          onChange={(e) => setProp({ volume: (rangeToVol(e.target.value))})}
         />
       </Child>
-      <Child padding="0 0 0 1rem">{Math.round(action.volume * 100)}%</Child>
+      <Child padding="0 0 0 1rem">{Math.round(volToRange(action.volume) * 2)}%</Child>
       {!playing && <Child padding="0 0 0 1rem"><IconButton icon={<Icon icon={TriangleRight} />} onClick={(e) => PlayBuffer()} /></Child>}
       {playing && <Child padding="0 0 0 1rem"><IconButton icon={<Icon icon={Rectangle} />} onClick={() => StopBuffer()} /></Child>}
     </Split>
@@ -159,10 +163,10 @@ export const PlaySoundPill: React.SFC<IPlaySoundPill> = ({ action, expanded, out
         <Row title="Volume:">
           <Split direction="row">
             <Child grow>
-              <Slider value={action.volume * 100} onChange={(e) => setProp({ volume: parseInt(e.target.value) / 100})} />
+              <Slider value={volToRange(action.volume)} onChange={(e) => setProp({ volume: rangeToVol(e.target.value) })} />
             </Child>
             <Child padding="0 0 0 1rem">
-              {Math.round(action.volume * 100)}%
+              {Math.round(volToRange(action.volume) * 2)}%
             </Child>
             {!playing && <Child padding="0 0 0 1rem">
               <IconButton icon={<Icon icon={TriangleRight} />} onClick={() => PlayBuffer()} />
