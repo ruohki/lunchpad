@@ -54,7 +54,7 @@ export default () => {
             </Child>
             <Child padding="1rem">
               <Tooltip title="Try to import a page from clipboard">
-                <IconButton icon={<Icon icon={PagePaste} />} onClick={tryImport}>Import from clipboard</IconButton>
+                <IconButton icon={<Icon icon={PagePaste} />} onClick={tryImport}>Import as new Page</IconButton>
               </Tooltip>
             </Child>
             <Child padding="1rem">
