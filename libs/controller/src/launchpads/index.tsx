@@ -96,26 +96,26 @@ const buildColors = (send: (code: number[], data: number[]) => void, page: Page,
         }
         const { r, g, b } = LaunchpadRGBButtonColor.getRGB(color as LaunchpadRGBButtonColor);
         // Probably the right colors
-        if ((r % 85 === 0) && (g % 85 === 0) && (b === 0)) {
-          const brightnessR = Math.round(r / 85)
-          const brightnessG = Math.round(g / 85)
+        //if ((r % 85 === 0) && (g % 85 === 0) && (b === 0)) {
+        const brightnessR = Math.round(r / 85)
+        const brightnessG = Math.round(g / 85)
 
-          // From the programmers reference manual
-          // 0x10 * 0-3 Greens + 0-3 Reds + 0xC Normal LED
-          const legacyColor = 0x10 * brightnessG + brightnessR + 0xC
-          if (y === 8) {
-            // Toprow needs CC
-            output.send(0xB0, [ btnIdx, legacyColor ])
-          } else {
-            output.send(0x90, [ btnIdx, legacyColor ])
-          }
+        // From the programmers reference manual
+        // 0x10 * 0-3 Greens + 0-3 Reds + 0xC Normal LED
+        const legacyColor = 0x10 * brightnessG + brightnessR + 0xC
+        if (y === 8) {
+          // Toprow needs CC
+          output.send(0xB0, [ btnIdx, legacyColor ])
         } else {
-          if (y === 8) {
-            // Toprow needs CC
-            output.send(0xB0, [ btnIdx, 0xC ])
-          } else {
-            output.send(0x90, [ btnIdx, 0xC ])
-          }
+          output.send(0x90, [ btnIdx, legacyColor ])
+        }
+        //}
+      } else {
+        if (y === 8) {
+          // Toprow needs CC
+          output.send(0xB0, [ btnIdx, 0xC ])
+        } else {
+          output.send(0x90, [ btnIdx, 0xC ])
         }
       }
     }))
