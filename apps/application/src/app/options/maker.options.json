@@ -20,8 +20,8 @@
     "win": {
       "icon": "build/logo.ico",
       "target": [
-        "nsis",
-        "zip"
+        "zip",
+        "nsis"
       ],
       "publisherName": "Tillmann Hübner",
       "asar": true,
