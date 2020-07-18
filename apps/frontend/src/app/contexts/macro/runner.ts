@@ -149,7 +149,7 @@ export class MacroRunner extends EventEmitter {
           //if (containsFlipFlop && !flipFlopActive) continue;
           // dont execute push to talk stuff when its turned off
           if (action.constructor['name'] === PushToTalkStart.name || action.constructor['name'] === PushToTalkEnd.name) {
-            if (!localStorage.hasItem(settingsLabels.ptt.enabled) || (localStorage.getItem(settingsLabels.ptt.enabled) !== "true")) {
+            if (!localStorage.getItem(settingsLabels.ptt.enabled) || (localStorage.getItem(settingsLabels.ptt.enabled) !== "true")) {
               continue;
             }
           }

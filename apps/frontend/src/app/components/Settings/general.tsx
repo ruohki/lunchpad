@@ -1,6 +1,6 @@
 import React, { useContext } from 'react'
 
-import { useSettings  } from '@lunchpad/hooks';
+import { useSettings, useLocalStorage  } from '@lunchpad/hooks';
 
 import { useMidiDevices } from '@lunchpad/hooks';
 import { AudioContext, MidiContext } from '@lunchpad/contexts'
@@ -11,25 +11,27 @@ import * as Devices from '../../controller';
 import { KeyboardKeys } from '../../actions/hotkey/keys';
 import { Modifiers } from '../../actions/hotkey/components/modifiers';
 
+
+
 export default () => {
   const midiDevices = useMidiDevices();
   const { inputs, outputs } = React.useContext(MidiContext.Context);
 
-  const { outputDevices } = useContext(AudioContext.Context)
+  const { outputDevices } = useContext(AudioContext.Context)  
 
-  const [ mode, _saveMode ] = useSettings(settings.mode, ControllerType.Software);
+  const [ mode, _saveMode ] = useLocalStorage<string>(settings.mode, ControllerType.Software);
   
-  const [ controller, setController ] = useSettings(settings.controller, "Software6x6");
-  const [ showIcons, setShowIcons ] = useSettings(settings.icons, true);
+  const [ controller, setController ] = useLocalStorage<string>(settings.controller, "Software6x6");
+  const [ showIcons, setShowIcons ] = useLocalStorage<boolean>(settings.icons, true);
 
-  const [ midiInput, setMidiInput ] = useSettings(settings.midiInput, "");
-  const [ midiOutput, setMidiOutput ] = useSettings(settings.midiOutput, "");
+  const [ midiInput, setMidiInput ] = useLocalStorage<string>(settings.midiInput, "");
+  const [ midiOutput, setMidiOutput ] = useLocalStorage<string>(settings.midiOutput, "");
   
-  const [ output, saveOutput ] = useSettings(settings.soundOutput, "default");
+  const [ output, saveOutput ] = useLocalStorage<string>(settings.soundOutput, "default");
   
-  const [ enablePtt, setEnablePtt ] = useSettings(settings.ptt.enabled, false);
-  const [ pttKey, savePttKey ] = useSettings(settings.ptt.key, "enter");
-  const [ pttModifier, savePttModifier ] = useSettings(settings.ptt.modifier, "[]");
+  const [ enablePtt, setEnablePtt ] = useLocalStorage<boolean>(settings.ptt.enabled, false);
+  const [ pttKey, savePttKey ] = useLocalStorage<string>(settings.ptt.key, "enter");
+  const [ pttModifier, savePttModifier ] = useLocalStorage<string[]>(settings.ptt.modifier, []);
   
   const saveMode = mode => {
     if (mode === ControllerType.Software) setController("Software6x6")
@@ -75,8 +77,8 @@ export default () => {
             <Split direction="row">
               <Child padding="0 1rem 0 0">
                 <Switch
-                  value={showIcons === "true"}
-                  onChange={val => setShowIcons(`${val}`)}
+                  value={showIcons}
+                  onChange={setShowIcons}
                 />
               </Child>
               <Child grow>
@@ -141,8 +143,8 @@ export default () => {
         <Split direction="row">
           <Child padding="0 1rem 0 0">
             <Switch
-              value={enablePtt === "true"}
-              onChange={val => setEnablePtt(`${val}`)}
+              value={enablePtt === true}
+              onChange={val => setEnablePtt(val)}
             />
           </Child>
           <Child grow>
@@ -150,16 +152,16 @@ export default () => {
           </Child>
         </Split>
       </Row>
-      {enablePtt === "true" && (
+      {enablePtt === true && (
         <Row title="Keyboard">
           <Split direction="row">
             <Child grow padding="0 1rem 0 0">
-              <Select value={pttKey} onChange={(e) => savePttKey(e.target.value)}>
+              <Select value={pttKey} onChange={(e) => savePttKey(e.target.value) }>
                 {KeyboardKeys.map(k => <option key={k} value={k}>{k}</option>)}
               </Select>
             </Child>
             <Child grow>
-              <Modifiers modifiers={JSON.parse(pttModifier)} onChange={(mods) => savePttModifier(JSON.stringify(mods))} />
+              <Modifiers modifiers={pttModifier} onChange={(mods) => savePttModifier(mods)} />
             </Child>
           </Split>
         </Row>

@@ -117,10 +117,8 @@ const OBSStudioProvider = (props) => {
       obs.current.connect({ address, password }).then(() => {
         obs.current.send('GetVersion').then((result) => {
           const [ major, minor, fix] = result["obs-websocket-version"].split(".");
-          console.log(major, minor);
           if (parseInt(major) <= 4) {
             if (parseInt(minor) < 8) {
-              console.log("Ohoh")
               setEnabled(false)
               return showErrorMessage("Please upgrade your obs-websocket plugin version to 4.8.0+", 5000, Severity.error);
             }

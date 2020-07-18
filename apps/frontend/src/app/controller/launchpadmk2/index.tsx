@@ -11,27 +11,25 @@ import { MakeButtonColor } from '../helper';
 import { LaunchpadButton, Page, LaunchpadButtonColorMode, LaunchpadSolidButtonColor, LaunchpadFlashingButtonColor, LaunchpadPulsingButtonColor, LaunchpadRGBButtonColor } from '../../contexts/layout/classes';
 import { ControllerType } from '@lunchpad/types';
 
-const UpRow = [
-  <Icon icon={TriangleUpSolid} />,
-  <Icon icon={TriangleDownSolid} />,
-  <Icon icon={TriangleLeftSolid} />,
-  <Icon icon={TriangleRightSolid} />,
-  <span>Session</span>,
-  <span>User 1</span>,
-  <span>User 2</span>,
-  <span>Mixer</span>,
-]
+const sideButtons = {
+  19: <Icon icon={TriangleRight} />,
+  29: <Icon icon={TriangleRight} />,
+  39: <Icon icon={TriangleRight} />,
+  49: <Icon icon={TriangleRight} />,
+  59: <Icon icon={TriangleRight} />,
+  69: <Icon icon={TriangleRight} />,
+  79: <Icon icon={TriangleRight} />,
+  89: <Icon icon={TriangleRight} />,
 
-const RightRow = [
-  <Icon icon={TriangleRight} />,
-  <Icon icon={TriangleRight} />,
-  <Icon icon={TriangleRight} />,
-  <Icon icon={TriangleRight} />,
-  <Icon icon={TriangleRight} />,
-  <Icon icon={TriangleRight} />,
-  <Icon icon={TriangleRight} />,
-  <Icon icon={TriangleRight} />,
-]
+  104: <Icon icon={TriangleUpSolid} />,
+  105: <Icon icon={TriangleDownSolid} />,
+  106: <Icon icon={TriangleLeftSolid} />,
+  107: <Icon icon={TriangleRightSolid} />,
+  108: <span>Session</span>,
+  109: <span>User 1</span>,
+  110: <span>User 2</span>,
+  111: <span>Mixer</span>,
+}
 
 const Vendor = [0x0, 0x20, 0x29];
 const Mode = [0x2, 0x18, 0x22, 0x0];
@@ -48,6 +46,9 @@ const RGB = [0x2, 0x18, 0x0B];
 const XYToButton = (x: number, y: number): number => (y < 8 ) ? (y + 1) * 10 + x + 1 : 104 + x
 const ButtonToXY = (note: number): [ number, number] => note < 104 ? [(note % 10) - 1, Math.floor(note / 10) - 1] : [note - 104, 8 ]
 
+const isClip = (x: number, y: number) => {
+  return (x === 8 || y === 8)
+}
 const Component: React.SFC<IPadProps> = (props) => (
   <PadContainer width={9} height={9}>
     {lodash.reverse(lodash.range(0, 9)).map((y) => lodash.range(0,9).map((x) => {
@@ -63,13 +64,13 @@ const Component: React.SFC<IPadProps> = (props) => (
           y={y}
           color={color}
           note={{ note: XYToButton(x,y) }}
-          round={x === 8 || y === 8}
-          clip={x === 8 || y === 8}
+          round={isClip(x, y)}
+          clip={props.showIcons && isClip(x, y)}
           key={`${x}${y}`}
           {...buttonProps}
           canDrag={isButton}
         >
-          {!props.showIcons ? <ButtonLook look={button.look} /> : x === 8 || y === 8 ? x === 8 ? RightRow[7 - y] : UpRow[x] : <ButtonLook look={button.look} />}
+          {isClip(x,y) ? props.showIcons ? sideButtons[XYToButton(x,y)] : <ButtonLook look={button.look} /> : <ButtonLook look={button.look} /> }
         </Button>
       ) : (
         <Button

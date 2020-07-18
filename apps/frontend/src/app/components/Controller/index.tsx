@@ -4,7 +4,7 @@ import * as lodash from 'lodash';
 import { v4 as uuid } from 'uuid';
 import { deserialize } from 'typescript-json-serializer';
 
-import { useSettings } from '@lunchpad/hooks';
+import { useSettings, useLocalStorage } from '@lunchpad/hooks';
 import ButtonContextMenu from '../ContextMenu/button';
 import { MenuContext, MidiContext, NotificationContext, useModal } from '@lunchpad/contexts';
 import { FileURI } from '@lunchpad/types';
@@ -35,9 +35,8 @@ interface ILocation {
 
 
 export default () => {
-  const [ mode ] = useSettings(settingsLabels.mode, "Software");
-  const [ controller, setController ] = useSettings(settingsLabels.controller, "Software6x6");
-  const [ showIcons ] = useSettings(settingsLabels.icons, "true");
+  const [ controller ] = useLocalStorage<string>(settingsLabels.controller, "Software6x6");
+  const [ showIcons ] = useLocalStorage<boolean>(settingsLabels.icons, true);
   const { addNotification  } = React.useContext(NotificationContext.Context)
   const { showContextMenu, closeMenu } = useContext(MenuContext.Context);
   const { emitter: MidiEmitter, sendSysEx, currentInput, currentOutput } = React.useContext(MidiContext.Context);
@@ -206,7 +205,7 @@ export default () => {
 
   return Component ? (
     <Component
-      showIcons={showIcons === "true"}
+      showIcons={showIcons}
       activePage={activePage}
       onSettingsButtonClick={() => openSettings(<Settings onClose={() => closeSettings()} />)}
       buttonProps={{

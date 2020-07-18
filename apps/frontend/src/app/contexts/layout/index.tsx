@@ -69,6 +69,7 @@ const LayoutProvider = ({ children }) => {
 
   const updateLayout = (l) => {
     localStorage.setItem(settingsLabels.layout.old, localStorage.getItem(settingsLabels.layout.config))
+    console.log(l)
     localStorage.setItem(settingsLabels.layout.config, JSON.stringify(l))
     const idx = l.findIndex(p => p.id === activePageID)
     const pages = [...l]

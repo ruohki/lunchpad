@@ -1,15 +1,12 @@
 import * as lodash from 'lodash';
 import * as React from 'react';
-import { SetStateAction, Dispatch } from 'react'
 
 interface CustomEvent extends Event {
   key: string
   value: any
 }
 
-export const isClient = typeof window === 'object';
-
-const originalSetItem = localStorage.setItem; 
+const originalSetItem = localStorage.setItem;
 localStorage.setItem = function(key, value, dispatch = true) {
   const event = new Event('localStoreUpdate') as CustomEvent;
 
@@ -17,94 +14,103 @@ localStorage.setItem = function(key, value, dispatch = true) {
   event.key = key;
 
   if (dispatch) document.dispatchEvent(event);
-  originalSetItem.apply(this, arguments);
-}
-
-type parserOptions<T> =
-  | {
-      raw: true;
-    }
-  | {
-      raw: false;
-      serializer: (value: T) => string;
-      deserializer: (value: string) => T;
-    };
-
-const noop = () => {};
-
-
-export function useLocalStorage<T>(key: string, def: any) {
-  // pull the initial value from local storage if it is already set
-  const [state, setState] = React.useState<T | null>(() => {
-      const exValue = localStorage.getItem(key)
-      if (exValue) {
-          return JSON.parse(exValue) as T
-      }
-      return null
-  })
-
-  // save the new value when it changes
-  React.useEffect(() => {
-      localStorage.setItem(key, JSON.stringify(state))
-  }, [state])
-
-  // memoize a storage watcher callback back because everything in hooks should be memoized
-  const storageWatcher = React.useCallback(
-      (e: StorageEvent) => {
-          if (e.newValue) {
-              // update ours if we
-              setState((currState) => {
-                  const newDat = JSON.parse(e.newValue || "null")
-                  return newDat == state ? newDat : currState
-              })
-          }
-      },
-      [state]
-  )
-
-  const updated = React.useCallback((e: CustomEvent) => {
-    if (key === e.key) {
-      setState(JSON.parse(e.value))
-    }
-  }, [state]);
-
-  // install the watcher
-  React.useEffect(() => {
-      window.addEventListener("storage", storageWatcher)
-      document.addEventListener("localStoreUpdate", updated, false);
-      // stop listening on remove
-      return () => {
-          window.removeEventListener("storage", storageWatcher)
-          document.removeEventListener('localStoreUpdate', updated);
-      }
-  }, [state])
-
-  return [ state, setState ] as const;
-}
-
-export const useSettings = (key, defaultValue): [string, (value: any) => void] => {
   //@ts-ignore
-  if (lodash.isEmpty(localStorage.getItem(key))) localStorage.setItem(key, defaultValue, false);
-  
-  const [ value, setValue ] = React.useState(localStorage.getItem(key));
-   
+  originalSetItem.apply(this, arguments);
+};
+
+export function useLocalStorage<T>(key: string, defaultValue: T | null = null): [T, React.Dispatch<React.SetStateAction<T>>] {
+  const [ value, setValue ] = React.useState<T | null>(() => {
+    const rawVal = localStorage.getItem(key);
+    if (!rawVal) return defaultValue
+    if (rawVal?.toLowerCase() === "true") return true
+    else if (rawVal?.toLowerCase() === "false") return false
+    else {
+      try {
+        return JSON.parse(rawVal)
+      } catch {
+        return rawVal
+      }
+    }
+  });
+
+  React.useEffect(() => {
+    if ((typeof value === "object") || (Array.isArray(value))) {
+      localStorage.setItem(key, JSON.stringify(value));
+    } else localStorage.setItem(key, (value as unknown) as string);
+  }, [ value ])
+
+  const storageEvent = React.useCallback((e: StorageEvent) => {
+    setValue(currValue => {
+      if ((typeof e.newValue === "object") || (Array.isArray(e.newValue))) {
+        const newDat = JSON.parse(e.newValue);
+        return newDat
+      } else {
+        const newDat = e.newValue as unknown as T;
+        return newDat
+      }
+    })
+  }, [ value ])
+
+  const customEvent = React.useCallback((e: CustomEvent) => {
+    if (e.key === key) {
+      setValue(currValue => {
+        if ((typeof e.value === "object") || (Array.isArray(e.value))) {
+          const newDat = JSON.parse(e.value);
+          return newDat
+        } else {
+          const newDat = e.value as unknown as T;
+          return newDat
+        }
+      })
+    }
+  }, [ value ])
+
+  React.useEffect(() => {
+    window.addEventListener('storage', storageEvent);
+    //@ts-ignore
+    document.addEventListener('localStoreUpdate', customEvent);
+    // stop listening on remove
+    return () => {
+      window.removeEventListener('storage', storageEvent);
+      //@ts-ignore
+      document.removeEventListener('localStoreUpdate', customEvent);
+    };
+  }, [value]);
+
+  return [value, setValue];
+}
+
+
+
+
+export const useSettings = useLocalStorage /* (
+  key,
+  defaultValue
+): [string, (value: any) => void] => {
+  //@ts-ignore
+  if (lodash.isEmpty(localStorage.getItem(key)))
+    localStorage.setItem(key, defaultValue, false);
+
+  const [value, setValue] = React.useState(localStorage.getItem(key));
+
   React.useEffect(() => {
     const updated = (e: CustomEvent) => {
       if (key === e.key) {
-        setValue(JSON.parse(e.value))
+        setValue(JSON.parse(e.value));
       }
-    }
+    };
 
-    document.addEventListener("localStoreUpdate", updated, false);
+    document.addEventListener('localStoreUpdate', updated, false);
 
     return () => {
       document.removeEventListener('localStoreUpdate', updated);
-    }
-  }, [key])
+    };
+  }, [key]);
 
-  const set = (value) => {
-    localStorage.setItem(key, value)
-  }
+  const set = value => {
+    localStorage.setItem(key, value);
+  };
 
   return [value, set];
-}
+};
+ */
