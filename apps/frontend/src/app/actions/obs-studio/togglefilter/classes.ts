@@ -18,10 +18,11 @@ export class OBSToggleFilter extends Action {
   private cancel: boolean = false;
   private OBSStudio: Partial<IOBSStudioContext>
 
-  constructor(sourceName: string = "", filterName: string = "", id: string = uuid()) {
+  constructor(sourceName: string = "", filterName: string = "", toggle: boolean = false, id: string = uuid()) {
     super(ActionType.OBSToggleFilter, id);
     this.sourceName = sourceName;
     this.filterName = filterName;
+    this.toggle = toggle;
   }
 
   setOBSContext = (obsContext: Partial<IOBSStudioContext>) => this.OBSStudio = obsContext;

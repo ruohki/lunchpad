@@ -178,7 +178,7 @@ export const SetColorPill: React.SFC<ISetColorPill> = (props) => {
   const [ showBody, setExpanded ] = React.useState<boolean>(props.expanded);
 
   const setColor = (color: LaunchpadButtonColor) => {
-    props.onChange(Object.assign({}, lodash.set(props.action, 'color', color)));
+    props.onChange(lodash.set(props.action, 'color', color));
   }
   
   const setColorMode = (mode: LaunchpadButtonColorMode) => {
@@ -196,23 +196,23 @@ export const SetColorPill: React.SFC<ISetColorPill> = (props) => {
   }
 
   const setColorRGB = (rgb: string) => {
-    props.onChange(Object.assign({}, lodash.set(props.action, 'color', new LaunchpadRGBButtonColor(rgb))));
+    props.onChange(lodash.set(props.action, 'color', new LaunchpadRGBButtonColor(rgb)));
   }
   
   const setColorSolid = (index: number) => {
-    props.onChange(Object.assign({}, lodash.set(props.action, 'color', new LaunchpadSolidButtonColor(index))));
+    props.onChange(lodash.set(props.action, 'color', new LaunchpadSolidButtonColor(index)));
   }
   
   const setColorFlashingA = (index: number) => {
-    props.onChange(Object.assign({}, lodash.set(props.action, 'color', new LaunchpadFlashingButtonColor(index, (props.action.color as LaunchpadFlashingButtonColor).alt))));
+    props.onChange(lodash.set(props.action, 'color', new LaunchpadFlashingButtonColor(index, (props.action.color as LaunchpadFlashingButtonColor).alt)));
   }
   
   const setColorFlashingB = (index: number) => {
-    props.onChange(Object.assign({}, lodash.set(props.action, 'color', new LaunchpadFlashingButtonColor((props.action.color as LaunchpadFlashingButtonColor).color, index))));
+    props.onChange(lodash.set(props.action, 'color', new LaunchpadFlashingButtonColor((props.action.color as LaunchpadFlashingButtonColor).color, index)));
   }
   
   const setColorPulsing = (index: number) => {
-    props.onChange(Object.assign({}, lodash.set(props.action, 'color', new LaunchpadPulsingButtonColor(index))));
+    props.onChange(lodash.set(props.action, 'color', new LaunchpadPulsingButtonColor(index)));
   }
 
 

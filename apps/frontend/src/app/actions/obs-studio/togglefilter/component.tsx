@@ -38,7 +38,7 @@ export const OBSToggleFilterPill: React.SFC<IOBSToggleFilterPill> = (props) => {
       setCurrentFilters(filter);
       if (lodash.isEmpty(props.action.filterName) && filter.length > 0) setFilter(filter[0].name)
     });
-  }, [ props.action.sourceName ])
+  }, [ props.action.sourceName, isUnknownSource ])
 
   const Expanded = (
     <Split direction="row">
@@ -55,7 +55,6 @@ export const OBSToggleFilterPill: React.SFC<IOBSToggleFilterPill> = (props) => {
       </Child>
     </Split>
   )
-
   return (
     <Pill
       isExpanded={showBody}
@@ -80,9 +79,9 @@ export const OBSToggleFilterPill: React.SFC<IOBSToggleFilterPill> = (props) => {
             {sources.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
           </Select>
         </Row>
-        <Row title="Filter:">
+        {!isUnknownSource && <Row title="Filter:">
           <Select
-            value={props.action.sourceName}
+            value={props.action.filterName}
             //@ts-ignore
             onChange={(e) => setFilter(e.target.value)}
           >
@@ -90,8 +89,8 @@ export const OBSToggleFilterPill: React.SFC<IOBSToggleFilterPill> = (props) => {
             {lodash.isEmpty(props.action.filterName) && <option value="">No filter selected</option>}
             {currentFilters.map(f => <option key={f.name} value={f.name}>{f.name}</option>)}
           </Select>
-        </Row>
-        <Row title="Enabled:">
+        </Row>}
+        {!isUnknownSource && <Row title="Enabled:">
           <Split direction="row">
             <Child padding="0 1rem 0 0">
               <Switch
@@ -103,7 +102,7 @@ export const OBSToggleFilterPill: React.SFC<IOBSToggleFilterPill> = (props) => {
               <span>set filter state to {props.action.toggle ? 'enabled' : 'disabled'}</span>
             </Child>
           </Split>
-        </Row>
+        </Row>}
       </Split>
     </Pill>
   )

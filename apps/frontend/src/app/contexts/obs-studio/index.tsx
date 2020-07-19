@@ -130,12 +130,6 @@ const OBSStudioProvider = (props) => {
   }
 
   React.useEffect(() => {
-    if (enabled && isConnected) {
-      
-    }
-  }, [ enabled, isConnected ])
-
-  React.useEffect(() => {
     if (autoConnect && enabled) {
       connect();
     }
@@ -160,14 +154,14 @@ const OBSStudioProvider = (props) => {
   }).catch(OBSError)
 
   React.useEffect(() => {
-    if (isConnected) {
+    if (enabled && isConnected) {
       fetchSceneCollections();
       fetchCurrentCollection();
       fetchScenes();
       fetchCurrentScene();
       fetchSources();
     }
-  }, [ isConnected ])
+  }, [ isConnected, enabled ])
 
   React.useEffect(() => {
     obs.current.on('SceneCollectionListChanged', fetchSceneCollections);
@@ -178,17 +172,24 @@ const OBSStudioProvider = (props) => {
     
     obs.current.on('SourceCreated', fetchSources);
     obs.current.on('SourceDestroyed', fetchSources);
+    obs.current.on('SourceRenamed', fetchSources);
+    obs.current.on('SourceFilterAdded', fetchSources);
+    obs.current.on('SourceFilterRemoved', fetchSources);
 
     obs.current.on('ScenesChanged', fetchScenes);
     obs.current.on('SwitchScenes', result => {
       setCurrentScene(result["scene-name"]);
       setSceneItems(result.sources);
     });
+  
     return () => {
       obs.current.removeAllListeners('SceneCollectionListChanged')
       obs.current.removeAllListeners('SceneCollectionChanged')
       obs.current.removeAllListeners('SourceCreated')
       obs.current.removeAllListeners('SourceDestroyed')
+      obs.current.removeAllListeners('SourceRenamed')
+      obs.current.removeAllListeners('SourceFilterAdded')
+      obs.current.removeAllListeners('SourceFilterRemoved')
       obs.current.removeAllListeners('ScenesChanged')
       obs.current.removeAllListeners('SwitchScenes')
     }

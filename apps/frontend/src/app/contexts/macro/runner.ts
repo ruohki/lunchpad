@@ -82,11 +82,9 @@ export class MacroRunner extends EventEmitter {
           break;
         case ActionType.SetColor:
           (raw as SetColor).setColorFunction((color) => {
-            console.log(button)
             button.color = color;
             contexts.layout.setButton(button, this.x, this.y, this.contexts.layout.activePage.id);
           });
-          console.log(raw)
           this.actions.push(raw)
           break;
         case ActionType.OBSSwitchScene:

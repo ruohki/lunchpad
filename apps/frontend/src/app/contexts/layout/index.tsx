@@ -57,20 +57,26 @@ const canParse = (json: string): boolean => {
 
 
 const LayoutProvider = ({ children }) => {
-  const raw: Array<Page> = localStorage.getItem(settingsLabels.layout.config) ? JSON.parse(localStorage.getItem(settingsLabels.layout.config)): [ defaultPage ];
-  const configLayout = raw.map(el => deserialize<Page>(el,Page));
   
-  const [ layout, _setLayout ] = React.useState<Array<Page>>(configLayout)
+  const [ layout, _setLayout ] = React.useState<Array<Page>>(() => {
+    try {
+      const raw: Array<Page> = JSON.parse(localStorage.getItem(settingsLabels.layout.config));
+      if ((raw === null) || (raw === undefined)) throw Error();
+      return raw.map(el => deserialize<Page>(el,Page));
+    } catch {
+      localStorage.setItem(settingsLabels.layout.config, JSON.stringify([ defaultPage ]))
+      return [ deserialize<Page>(defaultPage,Page) ]
+    }
+  })
+
   const [ activePageID, setActivePageID ] = useSettings(settingsLabels.layout.active, "default")
   
   const idx = layout.findIndex(p => p.id === activePageID)
   const [ activePage, _setActivePage ] = React.useState<Page>(layout[idx]);
-  
 
   const updateLayout = (l) => {
     localStorage.setItem(settingsLabels.layout.old, localStorage.getItem(settingsLabels.layout.config))
-    console.log(l)
-    localStorage.setItem(settingsLabels.layout.config, JSON.stringify(l))
+    localStorage.setItem(settingsLabels.layout.config, JSON.stringify(l.map(page => serialize(page))))
     const idx = l.findIndex(p => p.id === activePageID)
     const pages = [...l]
     _setLayout(pages);
@@ -84,7 +90,7 @@ const LayoutProvider = ({ children }) => {
     _setLayout(pages);
     _setActivePage(pages[idx]); */
   }
-  
+
   const setLayout = (id: string, page: Page) => {
     updateLayout([...layout.map(p => p.id === id ? page : p)]);
   }
