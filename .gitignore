@@ -39,3 +39,4 @@ testem.log
 Thumbs.db
 crash.log
 version.json
+*.nx-tmp
