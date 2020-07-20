@@ -18,20 +18,20 @@ interface ITextToSpeechPill {
   onMoveDown: (id: string) => void
 }
 
-export const TextToSpeechPill: React.SFC<ITextToSpeechPill> = ({ action, expanded, onChange, onRemove, onMoveUp, onMoveDown }) => {
-  const [ showBody, setExpanded ] = React.useState<boolean>(expanded);
+export const TextToSpeechPill: React.SFC<ITextToSpeechPill> = (props) => {
+  const [ showBody, setExpanded ] = React.useState<boolean>(props.expanded);
   const [ playing, setPlaying ] = React.useState<boolean>(false);
   const [ utterance, setUtterance ] = React.useState<SpeechSynthesisUtterance>();
 
-  const setProp = (props) => {
-    onChange(Object.assign({}, action, props))
+  const setProp = (prop) => {
+    props.onChange(Object.assign(props.action, prop))
   }
 
   const Speak = () => {
     if (!utterance) return;
     Stop();
     setPlaying(true);
-    utterance.volume = action.volume;
+    utterance.volume = props.action.volume;
     speechSynthesis.speak(utterance);
   }
   
@@ -41,11 +41,11 @@ export const TextToSpeechPill: React.SFC<ITextToSpeechPill> = ({ action, expande
   }
 
   React.useEffect(() => {
-    const utt = new SpeechSynthesisUtterance(action.text);
-    const vc = lodash.find(voices, v => v.voiceURI === action.voice)
-    if (!lodash.isEmpty(action.voice)) utt.voice = vc;
+    const utt = new SpeechSynthesisUtterance(props.action.text);
+    const vc = lodash.find(voices, v => v.voiceURI === props.action.voice)
+    if (!lodash.isEmpty(props.action.voice)) utt.voice = vc;
     setUtterance(utt);
-  }, [ action.text, action.voice ])
+  }, [ props.action.text, props.action.voice ])
 
   React.useEffect(() => {
     if (!utterance) return;
@@ -57,16 +57,16 @@ export const TextToSpeechPill: React.SFC<ITextToSpeechPill> = ({ action, expande
     <Split direction="row">
       <Child grow basis="75%" whiteSpace="nowrap" padding="0 1rem 0 0">
         <div style={{textOverflow: "ellipsis", overflow: "hidden"}}>
-          TTS: ({lodash.find(voices, v => v.voiceURI === action.voice)?.lang}) {lodash.truncate(action.text, {length: 15})}
+          TTS: ({lodash.find(voices, v => v.voiceURI === props.action.voice)?.lang}) {lodash.truncate(props.action.text, {length: 15})}
         </div>
       </Child>
       <Child grow basis="25%">
         <Slider
-          value={action.volume * 100}
+          value={props.action.volume * 100}
           onChange={(e) => setProp({ volume: (parseInt(e.target.value) / 100)})}
         />
       </Child>
-      <Child padding="0 0 0 1rem">{Math.round(action.volume * 100)}%</Child>
+      <Child padding="0 0 0 1rem">{Math.round(props.action.volume * 100)}%</Child>
       {!playing && <Child padding="0 0 0 1rem"><IconButton icon={<Icon icon={TriangleRight} />} onClick={(e) => Speak()} /></Child>}
       {playing && <Child padding="0 0 0 1rem"><IconButton icon={<Icon icon={Rectangle} />} onClick={() => Stop()} /></Child>}
     </Split>
@@ -76,7 +76,7 @@ export const TextToSpeechPill: React.SFC<ITextToSpeechPill> = ({ action, expande
     <Split direction="row">
       <Child grow whiteSpace="nowrap" padding="0 1rem 0 0">
         <div style={{textOverflow: "ellipsis", overflow: "hidden"}}>
-        TTS: ({lodash.find(voices, v => v.voiceURI === action.voice)?.lang}) {lodash.truncate(action.text, {length: 30})}
+        TTS: ({lodash.find(voices, v => v.voiceURI === props.action.voice)?.lang}) {lodash.truncate(props.action.text, {length: 30})}
         </div>
       </Child>
     </Split>
@@ -88,9 +88,9 @@ export const TextToSpeechPill: React.SFC<ITextToSpeechPill> = ({ action, expande
       icon={<Icon icon={TTS} />}
       expanded={Expanded}
       collapsed={Collapsed}
-      onRemove={() => onRemove(action.id)}
-      onMoveUp={onMoveUp ? () => onMoveUp(action.id) : null}
-      onMoveDown={onMoveDown ? () => onMoveDown(action.id) : null}
+      onRemove={() => props.onRemove(props.action.id)}
+      onMoveUp={props.onMoveUp ? () => props.onMoveUp(props.action.id) : null}
+      onMoveDown={props.onMoveDown ? () => props.onMoveDown(props.action.id) : null}
       onExpand={() => setExpanded(true)}
       onCollapse={() => setExpanded(false)}
     >
@@ -99,7 +99,7 @@ export const TextToSpeechPill: React.SFC<ITextToSpeechPill> = ({ action, expande
           <Split direction="row">
             <Child padding="0 1rem 0 0">
               <Switch
-                value={action.wait}
+                value={props.action.wait}
                 onChange={wait => setProp({ wait })}
               />
             </Child>
@@ -110,7 +110,7 @@ export const TextToSpeechPill: React.SFC<ITextToSpeechPill> = ({ action, expande
         </Row>
         <Row title="Voice:">
           <Select
-            value={action.voice}
+            value={props.action.voice}
             onChange={(e) => setProp({ voice: voices.find(v => v.voiceURI === e.target.value)?.voiceURI })}
           >
             {voices.map(v => <option key={v.voiceURI} value={v.voiceURI}>{v.name} ({v.localService ? v.lang : `${v.lang} *`})</option>)}
@@ -120,12 +120,12 @@ export const TextToSpeechPill: React.SFC<ITextToSpeechPill> = ({ action, expande
           <Split direction="row">
             <Child grow>
               <Slider
-                value={action.volume * 100}
+                value={props.action.volume * 100}
                 onChange={(e) => setProp({ volume: (parseInt(e.target.value) / 100)})}
               />
             </Child>
             <Child padding="0 0 0 1rem">
-              {Math.round(action.volume * 100)}%
+              {Math.round(props.action.volume * 100)}%
             </Child>
             {!playing && <Child padding="0 0 0 1rem">
               <IconButton icon={<Icon icon={TriangleRight} />} onClick={() => Speak()} />
@@ -136,7 +136,7 @@ export const TextToSpeechPill: React.SFC<ITextToSpeechPill> = ({ action, expande
           </Split>
         </Row>
         <Row title="Text:">
-          <Input value={action.text} onChange={e => setProp({ text: e.target.value })} />
+          <Input value={props.action.text} onChange={e => setProp({ text: e.target.value })} />
         </Row>
       </Split>
     </Pill>

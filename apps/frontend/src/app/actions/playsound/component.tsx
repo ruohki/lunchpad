@@ -41,8 +41,8 @@ export const PlaySoundPill: React.SFC<IPlaySoundPill> = (props) => {
   
   const filename = path.basename(props.action.soundfile) || "none";
   
-  const setProp = (pro) => {
-    const newProps: PlaySound = Object.assign(props.action, pro)
+  const setProp = (prop) => {
+    const newProps: PlaySound = Object.assign(props.action, prop)
     props.onChange(Object.assign(new PlaySound(newProps.soundfile, newProps.outputDevice), newProps))
   }
   

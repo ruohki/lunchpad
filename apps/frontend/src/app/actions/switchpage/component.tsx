@@ -28,8 +28,8 @@ export const SwitchPagePill: React.SFC<ISwitchPagePill> = (props) => {
   const [ showBody, setExpanded ] = React.useState<boolean>(props.expanded);
   const targetPage = lodash.find(props.pages, (p) => p.id === props.action.pageId) || props.pages[0];
 
-  const setProp = (props) => {
-    props.onChange(Object.assign({}, props.action, props))
+  const setProp = (prop) => {
+    props.onChange(Object.assign(props.action, prop))
   }
 
   const Expanded = (

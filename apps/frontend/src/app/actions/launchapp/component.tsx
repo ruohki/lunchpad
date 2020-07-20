@@ -19,8 +19,8 @@ interface ILaunchAppPill {
 export const LaunchAppPill: React.SFC<ILaunchAppPill> = (props) => {
   const [ showBody, setExpanded ] = React.useState<boolean>(props.expanded);
 
-  const setProp = (props) => {
-    props.onChange(Object.assign({}, props.action, props))
+  const setProp = (prop) => {
+    props.onChange(Object.assign(props.action, prop))
   }
 
   const Expanded = (
