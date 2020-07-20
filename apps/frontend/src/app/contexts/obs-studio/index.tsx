@@ -107,6 +107,10 @@ const OBSStudioProvider = (props) => {
       console.error(error)
       if (error.error === "Authentication Failed.")
         showErrorMessage("Authentication with OBS-Websocket failed.", 2500, Severity.error);
+      else if ('code' in error && error.code === "CONNECTION_ERROR") {
+        showErrorMessage("Cannot connect to OBS-Websocket. Is OBS Studio running and the OBS-Websocket plugin running? Disabling OBS-Studio integration.", 5000, Severity.error);
+        setEnabled(false);
+      }
     } else {
       console.error(error)
     }
