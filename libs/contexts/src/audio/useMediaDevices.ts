@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react';
 
 const noop = () => {};
 
+const updateName = (device: Partial<MediaDeviceInfo>) => {
+  if (device.deviceId === "default" || device.deviceId === "communications") {
+    return `System ${device.label}`
+  } else return device.label
+}
 const useMediaDevices = (filter: 'all' | 'audiooutput' | 'audioinput' = "all") => {
   const [state, setState] = useState([]);
 
@@ -13,7 +18,7 @@ const useMediaDevices = (filter: 'all' | 'audiooutput' | 'audioinput' = "all") =
         .enumerateDevices()
         .then(devices => {
           if (mounted) {
-            let dev = devices.map(({ deviceId, groupId, kind, label }) => ({ deviceId, groupId, kind, label }))
+            let dev = devices.map(({ deviceId, groupId, kind, label }) => ({ deviceId, groupId, kind, label: updateName({ deviceId, groupId, kind, label }) }))
             if (filter !== "all") {
               dev = [...dev].filter(({ kind }) => kind === filter);
             }

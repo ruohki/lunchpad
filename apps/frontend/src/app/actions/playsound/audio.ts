@@ -1,4 +1,5 @@
 import { EventEmitter } from "events";
+import { settingsLabels } from '@lunchpad/types';
 
 export class Sound extends EventEmitter {
   public audioContext: AudioContext;
@@ -59,7 +60,10 @@ export class Sound extends EventEmitter {
       this.audioElement.play();
       this.bufferSource.start(0, begin, duration);
       //@ts-ignore //IT DOES EXIST
-      this.audioElement.setSinkId(this.sinkId);
+      console.log(this.sinkId);
+      if (this.sinkId === "inherit") {
+        this.audioElement.setSinkId(localStorage.getItem(settingsLabels.soundOutput) || "default")
+      } else this.audioElement.setSinkId(this.sinkId);
     })
   }
 

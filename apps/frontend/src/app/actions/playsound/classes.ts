@@ -37,23 +37,29 @@ export class PlaySound extends Action {
     this.start = 0;
     this.end = 1;
     this.outputDevice = outputDevice;
-  }
 
+    this.InitSound();
+  }
+  private async InitSound() {
+    if (!this.soundfile) return;
+    try {
+      const response = await fetch(this.soundfile);
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = await this.audioContext.decodeAudioData(arrayBuffer);
+      this.duration = buffer.duration
+      this.sound = new Sound(
+        this.soundfile,
+        this.outputDevice,
+        this.volume,
+        this.start,
+        this.end
+        )
+        this.sound.audioContext = this.audioContext;
+    } catch (ex) {}
+  }
   public setAudioContext = (audio: AudioContext) => this.audioContext = audio;
   public async Run(): Promise<unknown> {
-    console.log("Running")
-    const response = await fetch(this.soundfile);
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = await this.audioContext.decodeAudioData(arrayBuffer);
-    this.duration = buffer.duration
-    this.sound = new Sound(
-      this.soundfile,
-      this.outputDevice,
-      this.volume,
-      this.start,
-      this.end
-    )
-    this.sound.audioContext = this.audioContext;
+    await this.InitSound();
     await this.sound.Init()
     if (this.sound) {
       return this.sound.Play();

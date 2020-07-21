@@ -1,8 +1,8 @@
 import * as React from 'react';
 import lodash from 'lodash';
 
-import { IMediaDevice } from '@lunchpad/types';
-import { useAnimationFrame } from '@lunchpad/hooks';
+import { IMediaDevice, settingsLabels } from '@lunchpad/types';
+import { useAnimationFrame, useLocalStorage } from '@lunchpad/hooks';
 import { Icon, TriangleRight, Rectangle, Sound } from '@lunchpad/icons';
 import { FileURI } from '@lunchpad/types';
 
@@ -33,6 +33,7 @@ interface AudioBufferSourceNodeExtra extends AudioBufferSourceNode {
 export const PlaySoundPill: React.SFC<IPlaySoundPill> = (props) => {
   const [ showBody, setExpanded ] = React.useState<boolean>(props.expanded);
   const { audio } = React.useContext(AudioContext.Context);
+  const [ defaultOutput ] = useLocalStorage<string>(settingsLabels.soundOutput, "default");
 
   const [ audioBuffer, setAudioBuffer ] = React.useState<AudioBuffer>();
   const [ player, setPlayer ] = React.useState<AudioBufferSourceNodeExtra>();
@@ -160,6 +161,7 @@ export const PlaySoundPill: React.SFC<IPlaySoundPill> = (props) => {
             value={props.action.outputDevice}
             onChange={e => setProp({ outputDevice: e.target.value })}
           >
+            <option value="inherit">Lunchpad Default ({props.outputDevices.find(d => d.deviceId === defaultOutput)?.label})</option>
             {props.outputDevices.map(e => <option key={e.deviceId} value={e.deviceId}>{e.label}</option>)}
           </Select>
         </Row>

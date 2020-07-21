@@ -17,7 +17,7 @@ import * as Devices from '../../controller';
 import { Playground } from '../../contexts/playground';
 import { MacroContext } from '../../contexts/macro/index';
 import { LayoutContext } from '../../contexts/layout';
-import { LaunchpadButton, LaunchpadButtonLookText, LaunchpadButtonLookType, LaunchpadSolidButtonColor } from '../../contexts/layout/classes';
+import { LaunchpadButton, LaunchpadButtonLookText, LaunchpadButtonLookType, LaunchpadSolidButtonColor, Page } from '../../contexts/layout/classes';
 import { PushToTalkEnd, PushToTalkStart } from '../../actions/pushtotalk';
 import { ActionType } from '../../actions';
 import { PlaySound } from '../../actions/playsound';
@@ -86,7 +86,9 @@ export default () => {
   const editButton = (x: number, y: number, limitedColor = false) => {
     const pageId = activePage.id
 
-    const button = lodash.get(activePage, `buttons.${x}.${y}`, new LaunchpadButton());
+    const button: LaunchpadButton = lodash.get<Page, any, LaunchpadButton>(activePage, `buttons.${x}.${y}`, new LaunchpadButton());
+    button.look = new LaunchpadButtonLookText("New");
+    
     stopSpecific(x, y);
     showConfigDialog(
       <ConfigDialog
