@@ -94,6 +94,7 @@ export class MacroRunner extends EventEmitter {
         case ActionType.OBSSaveReplayBuffer:
         case ActionType.OBSToggleMixer:
           (raw as OBSSwitchScene).setOBSContext(contexts.obsStudio);
+          console.log(raw)
           this.actions.push(raw)
           break;
         default:

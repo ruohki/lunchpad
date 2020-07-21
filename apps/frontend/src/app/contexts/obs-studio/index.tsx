@@ -223,6 +223,7 @@ const OBSStudioProvider = (props) => {
   }, [ isConnected ])
 
   const toggleRecording = React.useCallback((mode: StartOrStop): Promise<void> => {
+    console.log(mode)
     if (!isConnected) return;
     if (mode === StartOrStop.Start) return obs.current.send('StartRecording');
     if (mode === StartOrStop.Stop) return obs.current.send('StopRecording')

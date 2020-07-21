@@ -17,6 +17,7 @@ export class OBSToggleStreaming extends Action {
   constructor(mode: StartOrStop = StartOrStop.Start, id: string = uuid()) {
     super(ActionType.OBSStartStopStream, id);
     this.mode = mode;
+    this.target = ToggleTarget.Streaming;
   }
 
   setOBSContext = (obsContext: Partial<IOBSStudioContext>) => this.OBSStudio = obsContext;
@@ -33,13 +34,13 @@ export class OBSToggleStreaming extends Action {
 }
 
 export enum StartOrStop {
-  Start,
-  Stop,
-  Toggle,
+  Start = "START",
+  Stop = "STOP",
+  Toggle = "TOGGLE",
 }
 
 export enum ToggleTarget {
-  Streaming,
-  Recording,
-  ReplayBuffer
+  Streaming = "STREAM",
+  Recording = "RECORD",
+  ReplayBuffer = "REPLAY"
 }
