@@ -86,8 +86,8 @@ export default () => {
   const editButton = (x: number, y: number, limitedColor = false) => {
     const pageId = activePage.id
 
-    const button: LaunchpadButton = lodash.get<Page, any, LaunchpadButton>(activePage, `buttons.${x}.${y}`, new LaunchpadButton());
-    button.look = new LaunchpadButtonLookText("New");
+    const button: LaunchpadButton = lodash.get<Page, any, LaunchpadButton>(activePage, `buttons.${x}.${y}`, new LaunchpadButton(new LaunchpadButtonLookText("New")));
+    
     
     stopSpecific(x, y);
     showConfigDialog(

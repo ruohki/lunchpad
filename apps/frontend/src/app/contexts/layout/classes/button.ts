@@ -123,9 +123,9 @@ export class LaunchpadButton {
   }})
   public up: Action[];
 
-  constructor() {
-    this.look = new LaunchpadButtonLookText("");
-    this.color = new LaunchpadRGBButtonColor("#000000");
+  constructor(look: LaunchpadButtonLookText = new LaunchpadButtonLookText(""), color: LaunchpadRGBButtonColor = new LaunchpadRGBButtonColor("#000000")) {
+    this.look = look;
+    this.color = color;
     this.loop = false;
     this.down = [];
     this.up = [];
