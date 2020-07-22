@@ -83,7 +83,7 @@ export class LaunchpadButton {
       if (action.type === ActionType.PlaySound) {
         const sound = action as PlaySound;
         //console.log(sound)
-        return new PlaySound(sound.soundfile, sound.outputDevice, sound.id);
+        return new PlaySound(sound.soundfile, sound.outputDevice, sound.duration, sound.id);
       } else if (action.type === ActionType.TextToSpeech) {
         const tts = action as TextToSpeech;
         return new TextToSpeech(tts.text, tts.volume);
@@ -107,7 +107,7 @@ export class LaunchpadButton {
       if (action.type === ActionType.PlaySound) {
         const sound = action as PlaySound;
         //console.log(sound)
-        return new PlaySound(sound.soundfile, sound.outputDevice, sound.id);
+        return new PlaySound(sound.soundfile, sound.outputDevice, sound.duration, sound.id);
       } else if (action.type === ActionType.TextToSpeech) {
         const tts = action as TextToSpeech;
         return new TextToSpeech(tts.text, tts.volume);

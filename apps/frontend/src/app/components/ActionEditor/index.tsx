@@ -54,7 +54,7 @@ export const ActionEditor: React.SFC<IActionEditor> = (props) => {
       <AddActionMenu
         onSelect={key => {
           if (key === ActionType.PlaySound) {
-            props.onChange([...props.actions, new PlaySound('', outputDevice)]);
+            props.onChange([...props.actions, new PlaySound("", outputDevice, 0)]);
           } else if (key === ActionType.Delay) {
             props.onChange([...props.actions, new Delay(1000)]);
           } else if (key === ActionType.SwitchPage) {

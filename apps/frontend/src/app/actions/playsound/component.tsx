@@ -40,11 +40,10 @@ export const PlaySoundPill: React.SFC<IPlaySoundPill> = (props) => {
   const [ playbackPos, setPlaybackPos ] = React.useState<number>(0);
   const [ playing, setPlaying ] = React.useState<boolean>(false);
   
-  const filename = path.basename(props.action.soundfile) || "none";
+  const filename = path.basename(props.action.soundfile ?? "file://none")
   
   const setProp = (prop) => {
-    const newProps: PlaySound = Object.assign(props.action, prop)
-    props.onChange(Object.assign(new PlaySound(newProps.soundfile, newProps.outputDevice), newProps))
+    props.onChange(Object.assign(props.action, prop))
   }
   
   const StopBuffer = () => {
@@ -90,6 +89,7 @@ export const PlaySoundPill: React.SFC<IPlaySoundPill> = (props) => {
   });
 
   React.useEffect(() => {
+    if (!props.action.soundfile) return;
     fetch(FileURI(props.action.soundfile))
       .then(response => response.arrayBuffer())
       .then(arrayBuffer => audio.decodeAudioData(arrayBuffer))

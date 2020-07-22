@@ -68,11 +68,11 @@ const LayoutProvider = ({ children }) => {
       return [ deserialize<Page>(defaultPage,Page) ]
     }
   })
-
   const [ activePageID, setActivePageID ] = useSettings(settingsLabels.layout.active, "default")
   
   const idx = layout.findIndex(p => p.id === activePageID)
   const [ activePage, _setActivePage ] = React.useState<Page>(layout[idx]);
+  console.log(activePage)
 
   const updateLayout = (l) => {
     localStorage.setItem(settingsLabels.layout.old, localStorage.getItem(settingsLabels.layout.config))

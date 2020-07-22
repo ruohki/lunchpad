@@ -58,7 +58,8 @@ export const WaveForm: React.SFC<IWaveForm> = ({ file }) => {
     context.clearRect(0, 0, canvas.width, canvas.height);
 
     if (!fs.existsSync(file.replace('file://',''))) return;
-    
+    if (file) {
+
     fetch(file)
       .then(response => response.arrayBuffer())
       .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
@@ -67,7 +68,6 @@ export const WaveForm: React.SFC<IWaveForm> = ({ file }) => {
         const data = normalizeData(filterData(audioBuffer, samples));
 
         const width = canvas.width / samples;
-        audioContext.close();
         drawBar(context, 0, 50, 1000, 2, "#ff0000");
         data.forEach((d, i) => {
           let height = d * 100;
@@ -86,10 +86,10 @@ export const WaveForm: React.SFC<IWaveForm> = ({ file }) => {
           );
         });
       });
-      return () => {
-        console.log("Closing")
-        if (audioContext.state !== "closed") audioContext.close()
-      }
+    }
+    return () => {
+      if (audioContext.state !== "closed") audioContext.close()
+    }
   }, [file]);
 
   return (

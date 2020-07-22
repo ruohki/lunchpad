@@ -26,7 +26,7 @@ export class Sound extends EventEmitter {
     this.end = end;
   }
 
-  public async Init(): Promise<void> {
+  public async Init(): Promise<boolean> {
     const response = await fetch(this.file);
     const arrayBuffer = await response.arrayBuffer()
     this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
@@ -38,8 +38,9 @@ export class Sound extends EventEmitter {
     this.bufferSource.connect(this.destination)
     try {
       this.audioElement.srcObject = this.destination.stream;
+      return true;
     } catch {}
-
+    return false;
   }
   
   public async Play(): Promise<unknown> {
