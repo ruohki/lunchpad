@@ -20,9 +20,15 @@ You can create a variety of macros, from simple playback of sounds (hello soundb
 
 
 ### OBS & SL:OBS
-There are native macro actions in the making that will allow you to switch scenes with the press of a button .... ha!
-Right now you can use simple keybindings to do so
+OBS Studio integration through the [Websocket-Plugin](https://github.com/Palakis/obs-websocket)
+- Switch scenes
+- Toggle sources (Visible / Hidden)
+- Toggle filter (Enabled / Disabled)
+- Set a sources volume or mute it
+- Start / stop recording, streaming or your replay buffer
+- Save your replay buffer after a cool play
 
+SL:OBS integration is still on the list and will arrive soon
 
 ---
 ## Development
