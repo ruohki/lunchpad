@@ -38,11 +38,12 @@ To get up and running this is all you need:
 ```
 npm install -g @nrwl/nx
 npm install
+npm run ./node_modules/.bin/electron-rebuild
 ```
 
 Then start the development environment
 ```
-npm start frontend  & npm start application
+npm start frontend & npm start application
 ```
 
 ---
