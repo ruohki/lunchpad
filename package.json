@@ -96,7 +96,7 @@
     "babel-plugin-transform-typescript-metadata": "^0.3.0",
     "cypress": "^4.7.0",
     "dotenv": "6.2.0",
-    "electron": "^7.3.1",
+    "electron": "^9.4.0",
     "electron-rebuild": "^1.11.0",
     "eslint": "6.8.0",
     "eslint-config-prettier": "6.0.0",
