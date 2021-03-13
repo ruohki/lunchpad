@@ -1,8 +1,0 @@
-{
-  "extends": "../../tsconfig.json",
-  "compilerOptions": {
-    "types": ["node", "jest"],
-    "jsx": "react"
-  },
-  "include": ["**/*.ts", "src/lib/icons.tsx"]
-}
