@@ -1,8 +1,9 @@
+
 use midir::{Ignore, MidiInput, MidiInputConnection, MidiOutput, MidiOutputConnection};
-use std::{sync::Mutex, sync::Arc, time::Duration};
-use tokio::sync::oneshot;
-use tokio::time::timeout;
-use std::fmt;
+use tokio::{sync::oneshot, time::timeout};
+use std::{fmt, sync::{Arc, Mutex}, time::Duration};
+
+use crate::{launchpads::{Launchpad, LaunchpadType}, state::{ConnectionInfo, ConnectionInfoState}};
 
 #[derive(Debug)]
 enum DeviceCreationError {
@@ -22,10 +23,10 @@ impl fmt::Display for DeviceCreationError {
 }
 
 
-#[derive(Clone, serde::Serialize)]
-struct Device {
-  idx: usize,
-  name: String
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct Device {
+  pub idx: usize,
+  pub name: String
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -34,21 +35,35 @@ pub struct DeviceListing {
   output: Vec<Device>
 }
 
-#[derive(Debug)]
-pub enum LaunchpadType {
-  Unknown,
-  Legacy,
-  MarkTwo,
-  ProMarkTwo,
-  MiniMarkThree,
-  X,
-  ProMarkThree
-}
-
 #[derive(Default)]
 pub struct Connection{
   pub input: Mutex<Option<MidiInputConnection<()>>>,
   pub output: Mutex<Option<MidiOutputConnection>>
+}
+
+pub fn input_from_idx(idx: usize) -> Option<Device> {
+  let mut midi_in = MidiInput::new("Lunchpad input device").unwrap();
+  midi_in.ignore(Ignore::None);
+
+  let in_ports = midi_in.ports();
+  if let Some(in_port) = in_ports.get(idx) {
+    let name = midi_in.port_name(in_port).unwrap();
+    return Some(Device { idx, name })
+  }
+
+  None
+}
+
+pub fn output_from_idx(idx: usize) -> Option<Device> {
+  let midi_out = MidiOutput::new("Lunchpad output device").unwrap();
+
+  let out_ports = midi_out.ports();
+  if let Some(out_port) = out_ports.get(idx) {
+    let name = midi_out.port_name(out_port).unwrap();
+    return Some(Device { idx, name })
+  }
+
+  None
 }
 
 /// Creates a connection to a midi input device
@@ -89,12 +104,7 @@ fn connect_output(idx: usize) -> Result<MidiOutputConnection, DeviceCreationErro
   };
 }
 
-#[tauri::command]
-pub async fn connect(
-  connection: tauri::State<'_, Connection>,
-  input_idx: usize,
-  output_idx: usize
-) -> Result<(), String> {
+async fn identify_device(input_idx: usize, output_idx: usize) -> LaunchpadType {
   let (sender, receiver) = oneshot::channel::<LaunchpadType>();
   let stx = Arc::new(Mutex::new(Some(sender)));
 
@@ -103,49 +113,73 @@ pub async fn connect(
       println!("Output connected");
       connection
     },
-    Err(err) => return Err(err.to_string())
+    Err(err) => return LaunchpadType::Unknown
   };
 
   // First callback to listen for the device inquiry to identify the device
   let _input = match connect_input(input_idx, Box::new(move | msg | {
     println!("Msg: {:?}", msg);
-    if msg[0] == 240 {
-      let sender = stx.lock().unwrap().take().unwrap();
-      match msg.get(8) {
-        Some(id) => {
-          let launchpad_type = match id {
-            0x13 => LaunchpadType::MiniMarkThree,
-            0x69 => LaunchpadType::MarkTwo,
-            0x51 => LaunchpadType::ProMarkTwo,
-            0x03 => LaunchpadType::X,
-            0x23 => LaunchpadType::ProMarkThree,
-            0xFF => LaunchpadType::Legacy, //TODO Find out the actual number for legacy pads
-            _ => LaunchpadType::Unknown
-          };
-
-          sender.send(launchpad_type).unwrap();
-        },
-        None => todo!(),
-      }
-    }
+    let sender = stx.lock().unwrap().take().unwrap();
+    let launchpad_type = Launchpad::identify_device(msg);
+    sender.send(launchpad_type).unwrap();
   })) {
     Ok(connection) => {
       println!("Input connected");
       connection
     },
-    Err(err) => return Err(err.to_string())
+    Err(err) => return LaunchpadType::Unknown
   };
 
-  let message = &[0xf0u8, 0x7e, 0x7f, 0x06, 0x01, 0xf7];
-  output.send(message).unwrap();
+  // Send Device Inquiry
+  println!("Sending: {:?}", &Launchpad::device_inquiry().to_vec());
+  output.send(&Launchpad::device_inquiry().to_vec()).unwrap();
 
+  // If there is no answer after 1sec its most likely not a launchpad
   let launchpad_type = match timeout(Duration::from_millis(1000), receiver).await {
     Ok(v) => v.unwrap(),
     Err(_) => LaunchpadType::Unknown,
   };
 
+  // Boilerplate work for launchpad initialization (mode switch to programmer)
   println!("Connected Launchpad seems to be a: {:?}", launchpad_type);
-  Ok(())
+
+  launchpad_type
+}
+
+#[tauri::command]
+pub async fn connect(
+  connection_info: tauri::State<'_, ConnectionInfoState>,
+  input_idx: usize,
+  output_idx: usize
+) -> Result<LaunchpadType, String> {
+  let launchpad_type = identify_device(input_idx, output_idx).await;
+  
+  match launchpad_type {
+    LaunchpadType::Unknown => return Err("Device does not seem to a Launchpad or is in a dirty state, try reconnecting the Launchpad!".to_string()),
+    LaunchpadType::Legacy |
+    LaunchpadType::S |
+    LaunchpadType::MarkTwo |
+    LaunchpadType::ProMarkTwo |
+    LaunchpadType::MiniMarkThree |
+    LaunchpadType::X |
+    LaunchpadType::ProMarkThree => {
+      // Setup Info state about the device
+      *connection_info.0.lock().unwrap() = Some(ConnectionInfo {
+        input: input_from_idx(input_idx).unwrap(),
+        output: output_from_idx(output_idx).unwrap(),
+        launchpad_type
+      });
+      
+      // Connect & Outputs
+
+      // Send Init sequence
+      // let launchpad_data = Launchpad::new(launchpad_type);
+      // output.send(&launchpad_data.init_sequence).unwrap();
+
+      
+      Ok(launchpad_type)
+    },
+  }
 }
 
 #[tauri::command]
