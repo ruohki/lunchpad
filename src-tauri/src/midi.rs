@@ -135,7 +135,7 @@ async fn identify_device(input_idx: usize, output_idx: usize) -> LaunchpadType {
   output.send(&Launchpad::device_inquiry().to_vec()).unwrap();
 
   // If there is no answer after 1sec its most likely not a launchpad
-  let launchpad_type = match timeout(Duration::from_millis(1000), receiver).await {
+  let launchpad_type = match timeout(Duration::from_millis(250), receiver).await {
     Ok(v) => v.unwrap(),
     Err(_) => LaunchpadType::Unknown,
   };
