@@ -21,6 +21,7 @@ pub const INDEX_COLOR_PALETTE: [&'static str; 128] = [
 
 pub type RGBTuple = (u8, u8, u8);
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LaunchpadSolidColor(u8);
 impl LaunchpadSolidColor {
   pub fn to_string(&self) -> String {
@@ -43,6 +44,7 @@ impl LaunchpadSolidColor {
   }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LaunchpadFlashingColor(u8, u8);
 impl LaunchpadFlashingColor {
   pub fn to_string(&self) -> (String, String) {
@@ -58,6 +60,8 @@ impl LaunchpadFlashingColor {
     (color1.to_rgb(), color2.to_rgb())
   }
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LaunchpadPulsingColor(u8);
 impl LaunchpadPulsingColor {
   pub fn to_string(&self) -> String {
@@ -90,7 +94,7 @@ impl LaunchpadRGBColor {
   }
 }
 
-
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LaunchpadButtonColor {
   Solid(LaunchpadSolidColor),
   Flashing(LaunchpadFlashingColor),
