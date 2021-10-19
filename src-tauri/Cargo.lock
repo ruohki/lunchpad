@@ -25,21 +25,21 @@ dependencies = [
 
 [[package]]
 name = "alsa"
-version = "0.2.2"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4a0d4ebc8b23041c5de9bc9aee13b4bad844a589479701f31a5934cfe4aeb32"
+checksum = "eb213f6b3e4b1480a60931ca2035794aa67b73103d254715b1db7b70dcb3c934"
 dependencies = [
  "alsa-sys",
- "bitflags 0.9.1",
+ "bitflags 1.2.1",
  "libc",
- "nix 0.9.0",
+ "nix 0.15.0",
 ]
 
 [[package]]
 name = "alsa-sys"
-version = "0.1.2"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0edcbbf9ef68f15ae1b620f722180b82a98b6f0628d30baa6b8d2a5abc87d58"
+checksum = "db8fee663d06c4e303404ef5f40488a53e062f89ba8bfed81f42325aafad1527"
 dependencies = [
  "libc",
  "pkg-config",
@@ -61,6 +61,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tokio",
+ "toml",
 ]
 
 [[package]]
@@ -1552,9 +1553,9 @@ dependencies = [
 
 [[package]]
 name = "midir"
-version = "0.6.2"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3d79fd772d5d51036ef4a0bc143c8272ec6b76cf4915c4e31af9bde3011eb43"
+checksum = "25df1e7836ca65078a121efed77049084a434838562b9892d0401bdfb59244cc"
 dependencies = [
  "alsa",
  "bitflags 1.2.1",
@@ -1562,7 +1563,7 @@ dependencies = [
  "js-sys",
  "libc",
  "memalloc",
- "nix 0.9.0",
+ "nix 0.15.0",
  "wasm-bindgen",
  "web-sys",
  "winapi",
@@ -1696,11 +1697,12 @@ checksum = "e4a24736216ec316047a1fc4252e27dabb04218aa4a3f37c6e7ddbf1f9782b54"
 
 [[package]]
 name = "nix"
-version = "0.9.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2c5afeb0198ec7be8569d666644b574345aad2e95a53baf3a532da3e0f3fb32"
+checksum = "3b2e0b4f3320ed72aaedb9a5ac838690a8047c7b275da22711fddff4f8a14229"
 dependencies = [
- "bitflags 0.9.1",
+ "bitflags 1.2.1",
+ "cc",
  "cfg-if 0.1.10",
  "libc",
  "void",
