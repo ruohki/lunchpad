@@ -12,6 +12,7 @@ mod launchpads;
 mod midi;
 mod state;
 mod configuration;
+mod color;
 
 #[tokio::main]
 async fn main() {
