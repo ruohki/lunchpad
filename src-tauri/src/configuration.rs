@@ -15,7 +15,7 @@ const APP_INFO: AppInfo = AppInfo{name: "Lunchpad", author: "Lunchpad"};
 pub struct ApplicationConfiguration {
   pub input: Option<Device>,
   pub output: Option<Device>,
-  pub launchpad_type: Option<LaunchpadType>
+  pub launchpad_type: Option<LaunchpadType>,
 }
 
 pub struct ApplicationConfigurationState(pub Mutex<ApplicationConfiguration>);
@@ -27,8 +27,8 @@ impl ApplicationConfiguration {
         create_dir_all(&config_path)?;
       }
 
-      let config_file = PathBuf::from(&config_path).join("config.toml");
-      let serialized_config = toml::to_string(self)?;
+      let config_file = PathBuf::from(&config_path).join("config.json");
+      let serialized_config = serde_json::to_string(self)?;
       fs::write(config_file, serialized_config)?;
     
       //toml::to_string(self)
@@ -40,16 +40,16 @@ impl ApplicationConfiguration {
 
   pub fn load_or_init() -> Result<Self, Box<dyn Error>> {
     if let Ok(config_path) = get_app_root(AppDataType::UserConfig, &APP_INFO) {
-      let config_file = PathBuf::from(&config_path).join("config.toml");
+      let config_file = PathBuf::from(&config_path).join("config.json");
       if config_file.exists() {
         let data = fs::read_to_string(config_file)?;
-        let config = toml::from_str::<ApplicationConfiguration>(data.as_str())?;
+        let config = serde_json::from_str::<ApplicationConfiguration>(data.as_str())?;
         println!("{:?}", config);
         return Ok(config);
       }
     }
 
-    Ok(ApplicationConfiguration { input: None, output: None, launchpad_type: None })
+    Ok(ApplicationConfiguration { input: None, output: None, launchpad_type: None, test: None })
   }
 }
 
