@@ -3,4 +3,5 @@ node_modules/
 .vscode/
 .idea/
 .cache/
+.parcel-cache/
 dist/
