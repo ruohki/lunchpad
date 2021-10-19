@@ -49,7 +49,7 @@ impl ApplicationConfiguration {
       }
     }
 
-    Ok(ApplicationConfiguration { input: None, output: None, launchpad_type: None, test: None })
+    Ok(ApplicationConfiguration { input: None, output: None, launchpad_type: None })
   }
 }
 

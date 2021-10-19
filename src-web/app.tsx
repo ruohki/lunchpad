@@ -50,7 +50,7 @@ export const App = () => {
           }
         }).catch(console.log)}>Connect</button>
         <button onClick={() => invoke("list_devices").then(console.log).catch(console.log)}>List</button>
-        <button onClick={() => invoke("test_fn").then(console.log)}>Connect</button>
+        <button onClick={() => invoke("test_fn").then(console.log)}>Test Fn</button>
       </ScaleBox>
     </AppContainer>
   );
