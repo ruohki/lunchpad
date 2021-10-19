@@ -2,7 +2,7 @@
 use midir::{Ignore, MidiInput, MidiInputConnection, MidiOutput, MidiOutputConnection};
 use tokio::{sync::oneshot, time::timeout};
 use std::{fmt, sync::{Arc, Mutex}, time::Duration};
-
+use serde::{Serialize, Deserialize};
 use crate::{launchpads::{Launchpad, LaunchpadType}, state::{ConnectionInfo, ConnectionInfoState}};
 
 #[derive(Debug)]
@@ -23,7 +23,7 @@ impl fmt::Display for DeviceCreationError {
 }
 
 
-#[derive(Clone, Debug, serde::Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Device {
   pub idx: usize,
   pub name: String
