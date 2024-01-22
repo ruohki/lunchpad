@@ -1,29 +1,28 @@
 [package]
-name = "app"
-version = "0.1.0"
+name = "lunchpad"
+version = "0.0.0"
 description = "A Tauri App"
 authors = ["you"]
 license = ""
 repository = ""
-default-run = "app"
-edition = "2018"
-build = "src/build.rs"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = { version = "1.0.0-beta.3" }
+tauri-build = { version = "1.5", features = [] }
 
 [dependencies]
-serde_json = "1.0"
+tauri = { version = "1.5", features = [ "system-tray", "shell-open"] }
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "1.0.0-beta.5", features = ["api-all"] }
-midir = "0.7.0"
-tokio = { version = "1.8.2", features = ["full"] }
-app_dirs2 = "2.3.2"
-hex = "0.4.3"
-notify-rust = "4.5.4"
+crossbeam-channel = "0.5.11"
+serde_json = "1.0"
+async-std = "1.12.0"
+midir = { version = "0.9.1" }
+thiserror = "1.0.56"
+ts-rs = "7.1.1"
 
 [features]
-default = [ "custom-protocol" ]
-custom-protocol = [ "tauri/custom-protocol" ]
+# this feature is used for production builds or when `devPath` points to the filesystem
+# DO NOT REMOVE!!
+custom-protocol = ["tauri/custom-protocol"]

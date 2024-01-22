@@ -1,0 +1,67 @@
+@import '@fontsource/exo-2';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+/*    --width: ${() => document.documentElement.clientWidth}px;
+    --height: ${() => document.documentElement.clientHeight}px;*/
+    --color-white: 255 255 255;
+
+    --color-dark-50: 244 245 245;
+    --color-dark-100: 234 234 235;
+    --color-dark-200: 202 203 204;
+    --color-dark-300: 171 172 173;
+    --color-dark-400: 107 109 112;
+    --color-dark-500: 44 47 51;
+    --color-dark-600: 40 42 46;
+    --color-dark-700: 26 28 31;
+    --color-dark-800: 20 21 23;
+    --color-dark-900: 13 14 15;
+
+    --color-redish-50: 254 246 246;
+    --color-redish-100: 253 236 236;
+    --color-redish-200: 250 208 208;
+    --color-redish-300: 247 180 180;
+    --color-redish-400: 242 123 123;
+    --color-redish-500: 236 67 67;
+    --color-redish-600: 212 60 60;
+    --color-redish-700: 142 40 40;
+    --color-redish-800: 106 30 30;
+    --color-redish-900: 71 20 20;
+
+    --color-blurple-50: 248 249 253;
+    --color-blurple-100: 241 243 251;
+    --color-blurple-200: 220 226 246;
+    --color-blurple-300: 199 208 240;
+    --color-blurple-400: 156 172 229;
+    --color-blurple-500: 114 137 218;
+    --color-blurple-600: 103 123 196;
+    --color-blurple-700: 68 82 131;
+    --color-blurple-800: 51 62 98;
+    --color-blurple-900: 34 41 65;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    user-select: none;
+}
+
+img {
+    user-select: none;
+}
+
+body {
+    @apply text-white;
+    @apply bg-dark-700;
+}
+
+svg {
+    fill: currentColor !important;
+}

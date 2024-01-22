@@ -1,66 +1,51 @@
 {
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devPath": "http://localhost:1420",
+    "distDir": "../dist"
+  },
   "package": {
     "productName": "lunchpad",
-    "version": "0.1.0"
-  },
-  "build": {
-    "distDir": "../dist",
-    "devPath": "http://localhost:1234",
-    "beforeDevCommand": "parcel src-web/index.html",
-    "beforeBuildCommand": ""
+    "version": "0.0.0"
   },
   "tauri": {
+    "allowlist": {
+      "all": false,
+      "shell": {
+        "all": false,
+        "open": true
+      }
+    },
     "bundle": {
       "active": true,
       "targets": "all",
-      "identifier": "com.ruohki.lunchpad",
+      "identifier": "com.lunchpad.dev",
       "icon": [
-        "icons/icon.png",
-        "icons/icon.ico"
-      ],
-      "resources": [],
-      "externalBin": [],
-      "copyright": "",
-      "category": "DeveloperTool",
-      "shortDescription": "",
-      "longDescription": "",
-      "deb": {
-        "depends": [],
-        "useBootstrapper": false
-      },
-      "macOS": {
-        "frameworks": [],
-        "minimumSystemVersion": "",
-        "useBootstrapper": false,
-        "exceptionDomain": "",
-        "signingIdentity": null,
-        "entitlements": null
-      },
-      "windows": {
-        "certificateThumbprint": null,
-        "digestAlgorithm": "sha256",
-        "timestampUrl": ""
-      }
+        "icons/icon@512.png",
+        "icons/logo.ico",
+        "icons/logo.png"
+      ]
     },
-    "updater": {
-      "active": false
-    },
-    "allowlist": {
-      "all": true
+    "security": {
+      "csp": null
     },
     "windows": [
       {
+        "fileDropEnabled": true,
+        "center": true,
+        "fullscreen": false,
+        "resizable": true,
         "title": "Lunchpad",
-        "width": 756,
-        "height": 756,
         "minWidth": 756,
         "minHeight": 756,
-        "resizable": true,
-        "fullscreen": false
+        "width": 756,
+        "height": 756
       }
     ],
-    "security": {
-      "csp": "default-src blob: data: filesystem: ws: wss: http: https: tauri: 'unsafe-eval' 'unsafe-inline' 'self' img-src: 'self'"
+    "systemTray": {
+      "iconPath": "icons/logo.ico",
+      "iconAsTemplate": true
     }
   }
 }

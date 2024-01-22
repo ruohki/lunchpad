@@ -1,7 +1,2 @@
-node_modules/
-.vs/
-.vscode/
-.idea/
-.cache/
-.parcel-cache/
-dist/
+node_modules
+dist
