@@ -33,7 +33,6 @@
     "windows": [
       {
         "fileDropEnabled": true,
-        "center": true,
         "fullscreen": false,
         "resizable": true,
         "title": "Lunchpad",
