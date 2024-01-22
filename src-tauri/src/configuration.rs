@@ -2,7 +2,6 @@ use std::error::Error;
 use std::sync::Mutex;
 use serde::{Serialize, Deserialize};
 use app_dirs2::*;
-use tauri::State;
 use std::fs::{self, create_dir_all};
 use std::path::PathBuf;
 
@@ -50,10 +49,10 @@ impl ApplicationConfiguration {
   }
 }
 
-#[tauri::command]
+/* #[tauri::command]
 pub fn get_configuration(
   config: State<ApplicationConfigurationState>
 ) -> ApplicationConfiguration {
   let config = &*config.0.lock().unwrap();
   config.clone()
-}
+} */

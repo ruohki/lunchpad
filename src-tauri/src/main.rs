@@ -5,12 +5,12 @@ mod launchpad;
 mod midi;
 mod configuration;
 
-use std::sync::{Arc, Mutex};
+use std::sync::{Mutex};
 
 use configuration::{ApplicationConfiguration, ApplicationConfigurationState};
 use midi::commands::enumerate_devices;
 use tauri::{api::shell, CustomMenuItem, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem};
-use tauri_plugin_window_state::{StateFlags, WindowExt};
+use tauri_plugin_window_state;
 
 fn main() {
   // Load Saved appl3ication configuration or create a new one from scratch
@@ -25,7 +25,7 @@ fn main() {
   minimize_to_tray_item.selected = config.minimize_to_tray;
   run_at_statup_item.selected = config.run_on_startup;
   run_at_statup_item.enabled = false;
-  
+
   // Construct System Tray Menu
   let tray_menu = SystemTrayMenu::new()
     .add_item(CustomMenuItem::new("discord".to_string(),"Join the Discord!"))
@@ -53,7 +53,6 @@ fn main() {
             event.window().set_skip_taskbar(true).unwrap();
             event.window().hide().unwrap();
           }
-          println!("Minimized!");
         }
       }
       _ => {}
