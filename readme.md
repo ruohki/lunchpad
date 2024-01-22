@@ -1,4 +1,4 @@
-![Lunchpad Logo](https://github.com/ruohki/lunchpad/raw/master/.github/logo.png)
+![Lunchpad Logo](https://github.com/ruohki/lunchpad/raw/main/.github/logo.png)
 
 [![Discord Shield](https://discordapp.com/api/guilds/658127965183541255/widget.png?style=shield)](https://discord.com/invite/4Ys9TRR)
 [![ko-fi](https://www.ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/X8X71UNDO)
