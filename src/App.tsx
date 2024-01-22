@@ -1,9 +1,5 @@
 import {useModal} from "./components/modal";
-import {createSignal, createEffect, createResource, onMount, For} from "solid-js";
-import {invoke} from "@tauri-apps/api";
 import Dropdown, {DropboxItem} from "./components/primitives/dropdown.tsx";
-import { Select } from '@thisbeyond/solid-select';
-import "@thisbeyond/solid-select/style.css";
 import type { LaunchpadType } from '../src-tauri/bindings/LaunchpadType.ts';
 import Button from "./components/primitives/button.tsx";
 import Input from "./components/primitives/input.tsx";
