@@ -4,6 +4,7 @@ import type { LaunchpadType } from '../src-tauri/bindings/LaunchpadType.ts';
 import Button from "./components/primitives/button.tsx";
 import Input from "./components/primitives/input.tsx";
 import Switch from "./components/primitives/switch.tsx";
+import { Divider } from "./components/primitives/divider.tsx";
 
 const NameMappings: Record<LaunchpadType, string> = {
   Legacy: "Launchpad Legacy", MarkTwo: "Launchpad MK2", ProMarkThree: "Launchpad Pro MK3", S: "Launchpad S", Unknown: "Unknown Device",
@@ -66,11 +67,12 @@ function App() {
   //open!(<div>Ich bin ein Testmodal</div>)
 
   return (
-    <div className="w-full p-5 space-y-2 flex flex-col">
+    <div className="w-full p-5 space-y-3 flex flex-col">
       <label>Select:</label>
       <div className="relative">
         <Dropdown<number> items={items} />
       </div>
+      <Divider />
       <label>Buttons:</label>
       <div className="space-x-2">
         <Button onClick={() => open!(<div>Ich bin ein Testmodal</div>)} label="Default"  type="Default" />
@@ -78,11 +80,13 @@ function App() {
         <Button onClick={() => open!(<div>Ich bin ein Testmodal</div>)} label="Danger"  type="Danger" />
         <Button onClick={() => open!(<div>Ich bin ein Testmodal</div>)} label="Light"  type="Light" />
       </div>
+      <Divider />
       <label>Input:</label>
       <div className="flex flex-row space-x-2">
         <Input />
         <Input placeholder="Please input!"/>
       </div>
+      <Divider />
       <label>Toggle / Switch:</label>
       <div className="flex flex-row space-x-2">
         <Switch label="Default" />
