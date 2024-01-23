@@ -6,7 +6,7 @@ export type ModalProps = {
 export const Modal = (props: PropsWithChildren<ModalProps>) => {
   return (
     <div
-      className="bg-dark-700 rounded-md w-[600px] h-[600px] shadow-md overflow-hidden p-3"
+      className="bg-dark-700  w-[600px] h-[600px] shadow-xl overflow-hidden border-2 border-dark-500/[.45] rounded-lg outline-0"
     >
       {props.children}
     </div>
