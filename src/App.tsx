@@ -1,10 +1,12 @@
-import {useModal} from "./components/modal";
-import Dropdown, {DropboxItem} from "./components/primitives/dropdown.tsx";
+import { useModal } from "./components/modal";
+import Dropdown, { DropboxItem } from "./components/primitives/dropdown.tsx";
 import type { LaunchpadType } from '../src-tauri/bindings/LaunchpadType.ts';
 import Button from "./components/primitives/button.tsx";
 import Input from "./components/primitives/input.tsx";
 import Switch from "./components/primitives/switch.tsx";
 import { Divider } from "./components/primitives/divider.tsx";
+import ModalTabbar from "./components/specific/modal-tabs/index.tsx";
+import AboutPage from "./components/specific/modal-tabs/settings-pages/about.tsx";
 
 const NameMappings: Record<LaunchpadType, string> = {
   Legacy: "Launchpad Legacy", MarkTwo: "Launchpad MK2", ProMarkThree: "Launchpad Pro MK3", S: "Launchpad S", Unknown: "Unknown Device",
@@ -57,14 +59,32 @@ const items: Array<DropboxItem<number>> = [{
   value: 2,
 }]
 
-function App() {
-  const [ open, close ] = useModal();
+const Testmodal = (props) => {
+  return (
+    <div className="h-full flex flex-col">
+      <ModalTabbar tabs={[{
+        title: "Settings",
+        content: <div />
+      }, {
+        title: "Pages",
+        content: <div />
+      }, {
+        title: "About",
+        content: <AboutPage />
+      }]}></ModalTabbar>
+      <div className="p-2">
 
-  const acceptModal = (data) => {
-    console.log(data);
-    close();
-  }
-  //open!(<div>Ich bin ein Testmodal</div>)
+        <Divider />
+        <div className="w-full flex justify-end">
+          <Button onClick={props.close} type="Primary" label="Close" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function App() {
+  const [ open, close] = useModal();
 
   return (
     <div className="w-full p-5 space-y-3 flex flex-col">
@@ -75,16 +95,16 @@ function App() {
       <Divider />
       <label>Buttons:</label>
       <div className="space-x-2">
-        <Button onClick={() => open!(<div>Ich bin ein Testmodal</div>)} label="Default"  type="Default" />
-        <Button onClick={() => open!(<div>Ich bin ein Testmodal</div>)} label="Primary"  type="Primary" />
-        <Button onClick={() => open!(<div>Ich bin ein Testmodal</div>)} label="Danger"  type="Danger" />
-        <Button onClick={() => open!(<div>Ich bin ein Testmodal</div>)} label="Light"  type="Light" />
+        <Button onClick={() => open!(<Testmodal close={close} />)} label="Default" type="Default" />
+        <Button label="Primary" type="Primary" />
+        <Button label="Danger" type="Danger" />
+        <Button label="Light" type="Light" />
       </div>
       <Divider />
       <label>Input:</label>
       <div className="flex flex-row space-x-2">
         <Input />
-        <Input placeholder="Please input!"/>
+        <Input placeholder="Please input!" />
       </div>
       <Divider />
       <label>Toggle / Switch:</label>
