@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+    tags-ignore: ["v*"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          # A failed job still saves its compiled dependencies, so a fix does not start cold.
+          cache-on-failure: true
+      - run: bun install --frozen-lockfile
+      - name: Type check and build the interface
+        run: bun run build
+      - name: Build the Rust tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml --no-run
+      - name: Give the Windows test binaries an application manifest
+        if: runner.os == 'Windows'
+        shell: pwsh
+        # tauri-build embeds the manifest that enables Common Controls v6 into the app binary
+        # only. A test binary without it binds Common Controls v5, cannot resolve
+        # TaskDialogIndirect and dies with STATUS_ENTRYPOINT_NOT_FOUND before any test runs.
+        # Windows reads a "<name>.exe.manifest" file next to an executable that has none
+        # embedded, so one is written beside every test binary.
+        run: |
+          $manifest = @'
+          <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+          <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+            <dependency>
+              <dependentAssembly>
+                <assemblyIdentity type="win32" name="Microsoft.Windows.Common-Controls" version="6.0.0.0" processorArchitecture="*" publicKeyToken="6595b64144ccf1df" language="*" />
+              </dependentAssembly>
+            </dependency>
+          </assembly>
+          '@
+          $count = 0
+          Get-ChildItem src-tauri/target/debug/deps -Filter "*.exe" | ForEach-Object {
+            Set-Content -Path "$($_.FullName).manifest" -Value $manifest -Encoding utf8
+            $count++
+          }
+          Write-Host "wrote $count manifest files"
+      - name: Rust tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml

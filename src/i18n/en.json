@@ -1,0 +1,876 @@
+{
+  "app": {
+    "name": "Lunchpad"
+  },
+  "status": {
+    "connecting": "Connecting",
+    "disconnected": "No Launchpad connected",
+    "virtual": "On-screen {{model}}"
+  },
+  "models": {
+    "LaunchpadMk2": "Launchpad MK2",
+    "LaunchpadX": "Launchpad X",
+    "LaunchpadMiniMk3": "Launchpad Mini MK3",
+    "LaunchpadProMk2": "Launchpad Pro MK2",
+    "LaunchpadProMk3": "Launchpad Pro MK3",
+    "LaunchpadLegacy": "Launchpad (first generation)"
+  },
+  "integrations": {
+    "obs": "OBS Studio",
+    "slobs": "Streamlabs Desktop"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "close": "Close",
+    "clear": "Clear",
+    "dismiss": "Dismiss",
+    "settings": "Settings",
+    "tryAgain": "Try again",
+    "reload": "Reload interface",
+    "button_one": "{{count}} button",
+    "button_other": "{{count}} buttons",
+    "action_one": "{{count}} action",
+    "action_other": "{{count}} actions",
+    "page_one": "{{count}} page",
+    "page_other": "{{count}} pages"
+  },
+  "picker": {
+    "title": "Choose your Launchpad",
+    "intro": "Lunchpad asks every MIDI device to identify itself, so the list below only shows Launchpads it can actually drive.",
+    "scanning": "Looking for devices",
+    "foundNone": "No Launchpad found",
+    "found_one": "{{count}} Launchpad found",
+    "found_other": "{{count}} Launchpads found",
+    "scanAgain": "Scan again",
+    "connect": "Connect",
+    "remembered": "remembered",
+    "identifiedByInquiry": "Identified by device inquiry",
+    "identifiedByInquiryFirmware": "Identified by device inquiry, firmware {{firmware}}",
+    "identifiedByName": "Identified by port name only",
+    "emptyTitle": "Plug in a Launchpad and it will appear here on its own.",
+    "emptyHint": "Supported: Launchpad MK2, X, Mini MK3, Pro MK2, Pro MK3, and the first generation (Launchpad, S, Mini). On Windows, close other apps that may hold the MIDI ports.",
+    "virtualTitle": "No Launchpad? Use the pads on screen.",
+    "virtualHint": "Pick a layout. The pads in the window then run your macros with the mouse, and you can switch to a real Launchpad any time.",
+    "virtualLayout": "Layout",
+    "virtualStart": "Start without a Launchpad",
+    "autoConnect": "Reconnect automatically",
+    "autoConnectHintSaved": "Connects to the {{model}} on “{{port}}” when it is plugged in.",
+    "autoConnectHintVirtual": "Starts the on-screen {{model}} layout when Lunchpad opens.",
+    "autoConnectHintNew": "The Launchpad you connect will be remembered and reconnected on start."
+  },
+  "side": {
+    "previewNote": "On-screen pads: clicks run the macros. Connect a real Launchpad from the device list any time.",
+    "backToDevices": "Back to device list",
+    "firmware": "Firmware",
+    "unknown": "unknown",
+    "ports": "Ports",
+    "buttons": "Buttons",
+    "gridSummary": "{{count}} on a {{width}} × {{height}} grid",
+    "rgbLeds": "RGB LEDs",
+    "redGreenLeds": "red and green LEDs",
+    "thisPage": "This page",
+    "configured": "{{buttons}} configured",
+    "hintEdit": "Right-click a pad to add or edit a button.",
+    "hintDrag": "Drag with {{move}} to move a button, with {{copy}} to copy it.",
+    "lastPress": "Last press",
+    "down": "Down",
+    "up": "Up",
+    "atPosition": "{{state}} at column {{column}}, row {{row}}",
+    "pressHint": "Press a button on the Launchpad.",
+    "midiMonitor": "MIDI monitor",
+    "nothingReceived": "Nothing received yet.",
+    "velocity": "vel {{value}}",
+    "variables": "Shared variables",
+    "pressure": "pressure {{value}}"
+  },
+  "settings": {
+    "title": "Settings",
+    "launchpad": "Launchpad",
+    "autoConnect": "Reconnect automatically",
+    "autoConnectHint": "Reconnects the remembered Launchpad on start and when it is plugged in.",
+    "pressFeedback": "Light empty pads while held",
+    "pressFeedbackHint": "Pads without a button glow while pressed, so the connection is easy to check.",
+    "repaint": "Repaint LEDs",
+    "disconnect": "Disconnect",
+    "forget": "Forget this Launchpad",
+    "pages": "Pages",
+    "exportPage": "Export current page…",
+    "importPage": "Import page…",
+    "restore": "Restore previous profile",
+    "restoreHint": "Restoring brings back the profile as it was before the last change.",
+    "legacyTitle": "Import from the old Lunchpad",
+    "legacyHint": "In the old app, open the crash screen or Settings → Pages and copy the configuration to a file, then choose it here. Sounds keep their paths; hotkeys, colours and OBS actions carry over.",
+    "legacyAppend": "Add to my pages",
+    "legacyReplace": "Replace my pages",
+    "legacyChoose": "Choose configuration file…",
+    "fileJson": "JSON",
+    "filePage": "Lunchpad page",
+    "fileImages": "Images",
+    "pushToTalk": "Push-to-talk",
+    "pttEnable": "Hold a key while push-to-talk sections run",
+    "pttHint": "Macros can wrap actions in “Push-to-talk on / off”. While such a section runs, Lunchpad holds this key combination for you. A mouse button works too: the middle button or the side buttons.",
+    "pttKey": "Key",
+    "pttModifiers": "With",
+    "checkKeyboard": "Check keyboard access",
+    "checkKeyboardHint": "On macOS, Lunchpad needs the Accessibility permission to press keys. This opens the system prompt if it is missing.",
+    "audio": "Sound",
+    "audioDevice": "Default output device",
+    "audioDeviceHint": "Sounds play here unless an action picks another device.",
+    "systemDefaultDevice": "System default",
+    "refreshDevices": "Refresh",
+    "obs": "OBS Studio",
+    "obsEnable": "Connect to OBS Studio",
+    "obsEnableHint": "Needs OBS 28 or newer with the WebSocket server enabled (Tools → WebSocket Server Settings).",
+    "obsHost": "Host",
+    "obsPort": "Port",
+    "obsPassword": "Password",
+    "obsAutoConnect": "Connect automatically",
+    "obsConnect": "Connect now",
+    "obsDisconnect": "Disconnect",
+    "obsStatusConnected": "Connected",
+    "obsStatusDisconnected": "Not connected",
+    "obsStatusError": "Not connected: {{error}}",
+    "slobs": "Streamlabs Desktop",
+    "slobsEnable": "Connect to Streamlabs Desktop",
+    "slobsEnableHint": "Streamlabs Desktop accepts connections from this computer while it is running; there is nothing to switch on. For another computer, turn on Remote Control in Streamlabs (Settings → Remote Control) and enter its token.",
+    "slobsToken": "API token",
+    "slobsTokenHint": "Only needed when the host is another computer.",
+    "slobsSummary": "{{scenes}} scenes and {{sources}} sources in “{{collection}}”.",
+    "slobsStatusLine": "Stream {{streaming}} · recording {{recording}} · replay buffer {{replay}} · studio mode {{studio}}",
+    "groups": {
+      "general": "General",
+      "integrations": "Integrations",
+      "data": "Data",
+      "about": "About"
+    },
+    "tabs": {
+      "launchpad": "Launchpad",
+      "sound": "Sound",
+      "keyboard": "Keyboard",
+      "obs": "OBS Studio",
+      "slobs": "Streamlabs Desktop",
+      "pages": "Pages & backup",
+      "interface": "Interface",
+      "about": "About Lunchpad",
+      "diagnostics": "Diagnostics"
+    },
+    "deviceTitle": "Connected device",
+    "rememberedOnly": "Remembered: {{model}} on “{{port}}”. Not connected right now.",
+    "rememberedVirtual": "Remembered: on-screen {{model}} layout.",
+    "virtualDevice": "On-screen pads with the {{model}} layout. No hardware connected.",
+    "behaviourTitle": "Behaviour",
+    "obsConnection": "Connection",
+    "obsStatus": "Status",
+    "obsSummary": "{{scenes}} scenes and {{inputs}} sources in “{{collection}}”.",
+    "pagesHint": "Every page is a full layout for the Launchpad. Click a page to show it, double-click to rename, drag to reorder, or share it as a file.",
+    "developerTitle": "Developer mode",
+    "developerHint": "Shows the connection status, device facts, the MIDI monitor and shared variables next to the pads. Off by default so the window is just your pages.",
+    "developerMode": "Show diagnostics in the main window",
+    "windowTitle": "Window",
+    "windowHint": "The same switches live in the tray menu.",
+    "stayOnTop": "Keep the window above other windows",
+    "minimizeToTray": "Close to the tray",
+    "minimizeToTrayHint": "Closing the window hides it; macros keep running and the tray icon brings it back.",
+    "runAtStartup": "Start Lunchpad with the system",
+    "runAtStartupHint": "Registers Lunchpad as a login item.",
+    "startHidden": "Start hidden in the tray",
+    "startHiddenHint": "Lunchpad opens without a window; the tray icon shows it.",
+    "pressThreshold": "Custom press threshold",
+    "pressThresholdHint": "On velocity-sensitive pads, a press lighter than this velocity is ignored (model default 25). Lower it if soft presses are missed, raise it if pads trigger too easily."
+  },
+  "pages": {
+    "label": "Pages",
+    "add": "Add page",
+    "rename": "Rename",
+    "duplicate": "Duplicate",
+    "moveLeft": "Move left",
+    "moveRight": "Move right",
+    "remove": "Remove page",
+    "copySuffix": "copy",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "export": "Export page…",
+    "removeDefault": "The first page cannot be removed",
+    "all": "All pages ({{count}})",
+    "dragHandle": "Drag to reorder",
+    "outside": "{{count}} outside the grid"
+  },
+  "grid": {
+    "editButton": "Edit button…",
+    "addButton": "Add button…",
+    "copy": "Copy",
+    "cut": "Cut",
+    "paste": "Paste",
+    "clearButton": "Clear button",
+    "padLabel": "Pad {{column}}, {{row}}",
+    "namedButton": "{{name}} button",
+    "newFader": "New fader here…",
+    "editFader": "Edit fader…",
+    "removeFader": "Remove fader",
+    "undo": "Undo",
+    "redo": "Redo"
+  },
+  "editor": {
+    "titleEdit": "Edit button",
+    "titleNew": "New button",
+    "position": "column {{column}}, row {{row}}",
+    "previewHint": "Hold the preview to see the active colour.",
+    "label": "Label",
+    "text": "Text",
+    "image": "Image",
+    "caption": "Caption",
+    "textColour": "Text colour",
+    "font": "Font",
+    "size": "Size {{size}}",
+    "chooseImage": "Choose image…",
+    "removeImage": "Remove image",
+    "imageHint": "PNG, JPG, GIF, WebP or SVG up to 2 MB.",
+    "colour": "Colour",
+    "colourWhileActive": "While active",
+    "activeToggle": "Different colour while active",
+    "activeHint": "Shown while the pad is held or its macro is running.",
+    "linkTitle": "Active while",
+    "linkHint": "Show the active colour while a streaming app is in a state, for example while this button's scene is live. Follows the app, so buttons stay right when you switch in OBS itself.",
+    "linkApp": "App",
+    "linkNone": "Nothing",
+    "linkKind": "State",
+    "linkCurrentScene": "Live scene",
+    "linkKinds": {
+      "scene": "Scene is live",
+      "sourceVisible": "Source is visible",
+      "sourceMuted": "Source is muted",
+      "streaming": "Streaming",
+      "recording": "Recording",
+      "replayBuffer": "Replay buffer running"
+    },
+    "removeButton": "Remove button",
+    "tabAppearance": "Appearance",
+    "tabActions": "Actions",
+    "test": "Run saved macro",
+    "testHint": "Runs the button as it is saved. Save first to test your changes.",
+    "sizeLabel": "Size"
+  },
+  "faces": {
+    "sans": "Sans",
+    "condensed": "Condensed",
+    "serif": "Serif",
+    "mono": "Mono",
+    "rounded": "Rounded"
+  },
+  "colour": {
+    "solid": "Solid",
+    "flashing": "Flashing",
+    "pulsing": "Pulsing",
+    "custom": "Custom",
+    "off": "Off",
+    "solidLabel": "{{hue}} · {{index}}",
+    "flashingLabel": "Flashing · {{a}} / {{b}}",
+    "pulsingLabel": "Pulsing · {{hue}}",
+    "customLabel": "Custom · {{hex}}",
+    "limitedLabel": "Colour {{hex}}",
+    "first": "First colour",
+    "second": "Second colour",
+    "palette": "Palette",
+    "pick": "Pick colour",
+    "hex": "Hex colour",
+    "customHint": "Any colour; the LED shows the closest it can.",
+    "flashingHint": "Alternates between the two colours in time with the Launchpad's clock.",
+    "pulsingHint": "Breathes between bright and dim.",
+    "orderHint": "Greys first, then colours by hue, brightest shade first.",
+    "limitedHint": "This Launchpad has red and green LEDs only.",
+    "swatchTitle": "{{hue}} ({{index}})",
+    "hue": "Hue"
+  },
+  "hue": {
+    "off": "Off",
+    "grey": "Grey",
+    "white": "White",
+    "red": "Red",
+    "orange": "Orange",
+    "yellow": "Yellow",
+    "lime": "Lime",
+    "green": "Green",
+    "mint": "Mint",
+    "cyan": "Cyan",
+    "azure": "Azure",
+    "blue": "Blue",
+    "violet": "Violet",
+    "magenta": "Magenta",
+    "pink": "Pink"
+  },
+  "notices": {
+    "errorTitle": "That did not work",
+    "importTitle": "Imported {{pages}}",
+    "importSummary": "{{buttons}}, {{actions}}.",
+    "moreNotes": "and {{count}} more notes",
+    "launchpad": "Launchpad",
+    "inputTitle": "Lunchpad cannot press keys",
+    "inputPermission": "Allow Lunchpad under System Settings → Privacy & Security → Accessibility, then check again.",
+    "inputReason": "Reason: {{reason}}",
+    "checkAgain": "Check again",
+    "undoTitle": "Changed",
+    "undoHint": "Removed or cleared. Undo brings it back; ⌘Z / Ctrl+Z and ⇧⌘Z / Ctrl+Y work too, and both are in the right-click menu.",
+    "undo": "Undo",
+    "missingTitle_one": "{{count}} sound file is missing",
+    "missingTitle_other": "{{count}} sound files are missing",
+    "missingHint": "Buttons with a missing file show a dot; open them and choose the sound again.",
+    "outsideTitle_one": "{{count}} button on this page has no pad on the {{model}}",
+    "outsideTitle_other": "{{count}} buttons on this page have no pad on the {{model}}",
+    "outsideHint": "They are kept and show up again on a Launchpad with a bigger grid. Settings → Pages lists how many each page has."
+  },
+  "crash": {
+    "title": "Something went wrong",
+    "intro": "The interface hit an unexpected error. You can try to recover, or restart the application. The details below help when reporting the problem."
+  },
+  "topbar": {
+    "stopAll": "Stop all macros",
+    "running_one": "Stop the running macro",
+    "running_other": "Stop {{count}} running macros"
+  },
+  "tray": {
+    "discord": "Join the Discord!",
+    "show": "Show Lunchpad",
+    "stayOnTop": "Stay on top",
+    "minimizeToTray": "Minimize to tray",
+    "runAtStartup": "Run at startup",
+    "stopAll": "Stop all running macros",
+    "quit": "Quit"
+  },
+  "about": {
+    "copyright": "© {{years}} {{author}}",
+    "source": "Source code on GitHub",
+    "releases": "Releases",
+    "updatesTitle": "Updates",
+    "updatesHint": "Lunchpad looks for a new release on GitHub when it starts.",
+    "checkUpdates": "Check for updates",
+    "legalTitle": "Legal",
+    "license": "This software is free under the GNU General Public License v3. Anyone who passes it on has to keep the credits and share the source. If you paid money for it, you got ripped off.",
+    "trademarks": "All product and company names are trademarks™ or registered® trademarks of their respective holders. Use of them does not imply any affiliation with or endorsement by them.",
+    "specs": "All specifications are subject to change without notice.",
+    "novation": "Launchpad is a trademark of Focusrite-Novation.",
+    "communityTitle": "Community",
+    "communityHint": "Get the latest builds and help on Discord."
+  },
+  "updater": {
+    "checking": "Checking…",
+    "upToDate": "You have the latest version.",
+    "available": "Version {{version}} is available.",
+    "installing": "Downloading the update…",
+    "installingPercent": "Downloading the update… {{percent}} %",
+    "ready": "Restarting…",
+    "error": "Update check failed: {{error}}",
+    "install": "Install and restart",
+    "noticeTitle": "Update available",
+    "later": "Later"
+  },
+  "diagnostics": {
+    "title": "Report",
+    "hint": "Copy this into a bug report. It lists versions, your system, MIDI ports, audio devices and the integrations, nothing personal beyond device names.",
+    "refresh": "Refresh",
+    "copy": "Copy report",
+    "copied": "Copied",
+    "loading": "Collecting…",
+    "failed": "Diagnostics failed: {{error}}",
+    "openLogs": "Open log folder"
+  },
+  "actions": {
+    "pressed": "When pressed",
+    "released": "When released",
+    "held": "When held",
+    "holdTime": "Counts as held after",
+    "heldHint": "Runs once the pad has been held for {{ms}} ms.",
+    "tapHint": "With held actions set, these wait and run when a shorter press is released, so a tap and a hold do different things.",
+    "loop": "Repeat while held",
+    "loopHint": "Runs the pressed actions again and again until the button is released.",
+    "add": "Add action",
+    "empty": "Nothing happens yet. Add an action.",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "remove": "Remove",
+    "wait": "Wait",
+    "waitHint": "Wait for this action to finish before the next one starts.",
+    "notAvailable": "Not available in this version yet. The action is kept and will run once the feature ships.",
+    "groups": {
+      "general": "General",
+      "flow": "Flow",
+      "stop": "Stop",
+      "media": "Media",
+      "system": "System",
+      "obs": "OBS Studio",
+      "slobs": "Streamlabs"
+    },
+    "fields": {
+      "ms": "Milliseconds",
+      "page": "Page",
+      "thisButton": "This button",
+      "anotherButton": "Another button",
+      "samePage": "Same page",
+      "column": "Column",
+      "row": "Row",
+      "trigger": "Run",
+      "triggerPress": "pressed actions",
+      "triggerRelease": "released actions",
+      "triggerTap": "pressed, then released",
+      "triggerHold": "held actions",
+      "colour": "Colour"
+    },
+    "types": {
+      "delay": {
+        "name": "Delay",
+        "desc": "Pause before the next action."
+      },
+      "switchPage": {
+        "name": "Switch page",
+        "desc": "Show another page on the Launchpad."
+      },
+      "setColor": {
+        "name": "Set colour",
+        "desc": "Change and remember the colour of this or any other button."
+      },
+      "runButton": {
+        "name": "Run another button",
+        "desc": "Run the actions of another button as part of this one."
+      },
+      "stopAllMacros": {
+        "name": "Stop all macros",
+        "desc": "Stops every running macro, including this one."
+      },
+      "stopThisMacro": {
+        "name": "Stop this macro",
+        "desc": "Stops every macro running on this button, including this one."
+      },
+      "restartThisMacro": {
+        "name": "Restart this macro",
+        "desc": "Stops older runs of this button so only the newest continues."
+      },
+      "pushToTalkStart": {
+        "name": "Push-to-talk on",
+        "desc": "Holds the push-to-talk key until the matching “off” marker."
+      },
+      "pushToTalkEnd": {
+        "name": "Push-to-talk off",
+        "desc": "Releases the push-to-talk key held by the “on” marker."
+      },
+      "flipFlopStart": {
+        "name": "Flip flop: A",
+        "desc": "Actions up to the B marker run on every other press."
+      },
+      "flipFlopMiddle": {
+        "name": "Flip flop: B",
+        "desc": "Actions up to the end marker run on the presses in between."
+      },
+      "flipFlopEnd": {
+        "name": "Flip flop: end",
+        "desc": "Everything after this runs on every press."
+      },
+      "playSound": {
+        "name": "Play sound",
+        "desc": "Play an audio file."
+      },
+      "textToSpeech": {
+        "name": "Text to speech",
+        "desc": "Speak a text."
+      },
+      "setSystemVolume": {
+        "name": "System audio",
+        "desc": "Set, nudge or mute the volume of the speakers or the microphone, fixed or from a fader."
+      },
+      "launchApplication": {
+        "name": "Launch application",
+        "desc": "Start a program or script."
+      },
+      "hotkey": {
+        "name": "Hotkey sequence",
+        "desc": "Press keys."
+      },
+      "obsSwitchScene": {
+        "name": "OBS: switch scene",
+        "desc": ""
+      },
+      "obsToggleSource": {
+        "name": "OBS: show or hide source",
+        "desc": ""
+      },
+      "obsSetAudio": {
+        "name": "OBS: set audio",
+        "desc": ""
+      },
+      "obsToggleFilter": {
+        "name": "OBS: toggle filter",
+        "desc": ""
+      },
+      "obsStream": {
+        "name": "OBS: stream, record, replay",
+        "desc": ""
+      },
+      "obsSaveReplay": {
+        "name": "OBS: save replay",
+        "desc": ""
+      },
+      "obsStudioMode": {
+        "name": "OBS: studio mode",
+        "desc": "Turn studio mode on or off, or transition the preview scene to the program."
+      },
+      "slobsSwitchScene": {
+        "name": "Streamlabs: switch scene",
+        "desc": "Make a scene live, optionally in another scene collection."
+      },
+      "slobsToggleSource": {
+        "name": "Streamlabs: show or hide source",
+        "desc": "Show or hide a source in a scene."
+      },
+      "slobsSetAudio": {
+        "name": "Streamlabs: set audio",
+        "desc": "Mute or unmute a mixer source and set its fader."
+      },
+      "slobsToggleFilter": {
+        "name": "Streamlabs: toggle filter",
+        "desc": "Turn a filter of a source on or off."
+      },
+      "slobsStream": {
+        "name": "Streamlabs: stream, record, replay",
+        "desc": "Start, stop or toggle the stream, the recording or the replay buffer."
+      },
+      "slobsSaveReplay": {
+        "name": "Streamlabs: save replay",
+        "desc": "Save the replay buffer to a file."
+      },
+      "slobsStudioMode": {
+        "name": "Streamlabs: studio mode",
+        "desc": "Turn studio mode on or off, or push the preview scene live."
+      },
+      "httpRequest": {
+        "name": "HTTP request",
+        "desc": "Call a web address with any method, headers, body and login."
+      },
+      "setVariable": {
+        "name": "Set variable",
+        "desc": "Remember a value for later actions."
+      },
+      "runScript": {
+        "name": "Run script",
+        "desc": "Run a small JavaScript snippet that can read and change variables."
+      },
+      "ifStart": {
+        "name": "Condition",
+        "desc": "Actions up to “Otherwise” run when the check holds."
+      },
+      "ifElse": {
+        "name": "Otherwise",
+        "desc": "Actions up to “End condition” run when the check does not hold."
+      },
+      "ifEnd": {
+        "name": "End condition",
+        "desc": "Everything after this runs either way."
+      },
+      "stopAllSounds": {
+        "name": "Stop all sounds",
+        "desc": "Silences every sound Lunchpad is playing."
+      },
+      "addToVariable": {
+        "name": "Add to variable",
+        "desc": "Count up or down: add a number to a variable."
+      },
+      "setFader": {
+        "name": "Set fader",
+        "desc": "Move a fader to a value, as if its pad had been pressed."
+      },
+      "setAudioDevice": {
+        "name": "Switch audio device",
+        "desc": "Make a device the system default, so all sound plays (or records) through it."
+      }
+    },
+    "summary": {
+      "delay": "{{ms}} ms",
+      "switchPage": "→ {{page}}",
+      "unknownPage": "missing page",
+      "thisButton": "this button",
+      "button": "column {{column}}, row {{row}}",
+      "onPage": "{{button}} on {{page}}"
+    },
+    "flipFlop": "Flip flop",
+    "pushToTalk": "Push-to-talk",
+    "dragHandle": "Drag to reorder",
+    "heldEmptyHint": "Add actions here for a long press. A press longer than {{ms}} ms counts as holding.",
+    "tapHintImmediate": "These run right away on every press; the held actions come on top after the hold time.",
+    "holdWait": "Pressed actions wait until it is clear this is a tap",
+    "holdWaitHint": "Off: the pressed actions run at once and the held actions are added after the hold time."
+  },
+  "keys": {
+    "capturing": "Press a key or a mouse button…",
+    "none": "Not set"
+  },
+  "sound": {
+    "files": "Audio files",
+    "choose": "Choose sound…",
+    "noFile": "No file chosen",
+    "preview": "Preview",
+    "stop": "Stop",
+    "device": "Output device",
+    "defaultDevice": "Default from settings",
+    "systemDefault": "{{name}} (system default)",
+    "missingDevice": "{{name}} (not found)",
+    "volume": "Volume",
+    "velocity": "Volume follows velocity",
+    "velocityHint": "On velocity-sensitive pads a soft press plays quieter than a hard one.",
+    "analyzing": "Reading the file…",
+    "length": "{{seconds}} s total",
+    "missing": "File not found"
+  },
+  "speech": {
+    "placeholder": "Text to speak",
+    "voice": "Voice",
+    "defaultVoice": "System default voice"
+  },
+  "launch": {
+    "executable": "Program or script",
+    "executablePlaceholder": "/path/to/program or an app name on the PATH",
+    "choose": "Choose…",
+    "arguments": "Arguments",
+    "argumentsPlaceholder": "--flag \"value with spaces\"",
+    "killOnStop": "Stop the program when the macro stops",
+    "killOnStopHint": "Otherwise it keeps running on its own.",
+    "hidden": "Start without a window",
+    "saveOutput": "Save output to variable"
+  },
+  "hotkey": {
+    "kinds": {
+      "tap": "Press key",
+      "down": "Hold key",
+      "up": "Release key",
+      "delay": "Wait",
+      "text": "Type text"
+    },
+    "textPlaceholder": "Text to type",
+    "perChar": "per character",
+    "restore": "Release held keys at the end",
+    "restoreHint": "Keys that are still held when the sequence ends are released."
+  },
+  "volume": {
+    "target": "Device",
+    "targets": {
+      "output": "Speakers",
+      "input": "Microphone"
+    },
+    "level": "Volume",
+    "fromVariable": "From variable",
+    "fromPlaceholder": "e.g. value",
+    "hint": "Sets the system's default device to this level. With a variable set, its number (0–100) replaces the slider.",
+    "mode": "Do",
+    "modes": {
+      "set": "Set the volume",
+      "adjust": "Change the volume by",
+      "mute": "Mute",
+      "unmute": "Unmute",
+      "toggleMute": "Toggle mute"
+    },
+    "step": "Step",
+    "adjustHint": "Adds the step to the current volume of the system's default device; negative steps turn it down. A variable replaces the step.",
+    "muteHint": "Mutes the system's default device. On macOS the microphone has no mute switch, so Lunchpad parks its level at 0 and brings it back on unmute."
+  },
+  "fader": {
+    "titleNew": "New fader",
+    "titleEdit": "Edit fader",
+    "position": "Starts at column {{column}}, row {{row}}",
+    "name": "Name",
+    "namePlaceholder": "e.g. mic",
+    "direction": "Direction",
+    "directions": {
+      "up": "Up",
+      "right": "Right",
+      "down": "Down",
+      "left": "Left"
+    },
+    "length": "Pads (up to {{max}})",
+    "preview": "Preview",
+    "colorA": "Colour at the minimum",
+    "colorB": "Colour at the maximum",
+    "dim": "Brightness above the level",
+    "min": "Minimum",
+    "max": "Maximum",
+    "unit": "Unit",
+    "decimals": "Decimals",
+    "onChange": "When the level changes",
+    "variablesHint": "The actions receive the level as value, percent, fraction, step, steps and display: pick “value” in a volume action's “from variable” field and set that action's unit to match the fader (a 0–100 fader → %, a −60–0 fader → dB). Every macro can read it as fader.<name>.",
+    "coverHint": "Pads inside the fader belong to it: buttons there and colour actions aimed at them are ignored while the fader exists.",
+    "overlap": "This fader would overlap another fader.",
+    "covered_one": "{{count}} button lies under this fader and will be hidden.",
+    "covered_other": "{{count}} buttons lie under this fader and will be hidden.",
+    "remove": "Remove fader",
+    "moveHint": "Move the whole fader with Ctrl or ⌘ and drag; it only lands where every pad is free.",
+    "displayToggle": "Show the level on another scale",
+    "displayHint": "For example a −100 to 26 dB range shown as 0 to 100 %. The actions still get the real value; the shown one is available as “display”.",
+    "displayMin": "Shown at the minimum",
+    "displayMax": "Shown at the maximum",
+    "pick": "Fader",
+    "pickPlaceholder": "Choose a fader…",
+    "value": "Value",
+    "runActions": "Run the fader's actions",
+    "runActionsHint": "Off: only the level and the LEDs change.",
+    "setHint": "Writing to fader.<name> with “Set variable” or “Add to variable” moves the fader too, so a button can nudge a level with “Add to variable: fader.mic, −5”.",
+    "silent": "silent"
+  },
+  "obs": {
+    "collection": "Scene collection",
+    "currentCollection": "Current collection",
+    "scene": "Scene",
+    "source": "Source",
+    "filter": "Filter",
+    "visible": "Visible",
+    "muted": "Mute",
+    "volumeDb": "Volume",
+    "filterEnabled": "Filter enabled",
+    "target": "What",
+    "mode": "Action",
+    "targets": {
+      "stream": "Stream",
+      "record": "Recording",
+      "replay": "Replay buffer"
+    },
+    "modes": {
+      "start": "Start",
+      "stop": "Stop",
+      "toggle": "Toggle"
+    },
+    "connected": "{{app}} connected",
+    "notConnected": "{{app}} not connected. Names can be typed until it is.",
+    "reload": "Reload lists",
+    "pick": "Choose…",
+    "missing": "{{name}} (not in {{app}})",
+    "offlinePlaceholder": "Name in {{app}}",
+    "studio": {
+      "label": "Studio mode",
+      "enable": "Turn on",
+      "disable": "Turn off",
+      "toggle": "Toggle",
+      "transition": "Transition: push preview live",
+      "hint": "“Transition” makes the preview scene the live scene; it needs studio mode to be on."
+    },
+    "volumeFrom": "Volume from variable ({{unit}})",
+    "volumeUnit": "Unit",
+    "units": {
+      "db": "dB",
+      "percent": "%"
+    },
+    "unitHintObs": "Percent is OBS's own volume scale from the advanced audio properties: 100 % is 0 dB. A 0–100 fader fits it directly.",
+    "unitHintSlobs": "Percent is the position of the mixer fader: 100 % is the top. A 0–100 fader fits it directly.",
+    "visibility": "Do",
+    "visibilityModes": {
+      "show": "Show",
+      "hide": "Hide",
+      "toggle": "Toggle"
+    },
+    "muteModes": {
+      "keep": "Leave as is",
+      "mute": "Mute",
+      "unmute": "Unmute",
+      "toggle": "Toggle"
+    },
+    "setVolume": "Also set the volume"
+  },
+  "slobs": {
+    "status": {
+      "offline": "off",
+      "starting": "starting",
+      "live": "live",
+      "ending": "stopping",
+      "reconnecting": "reconnecting",
+      "recording": "recording",
+      "stopping": "stopping",
+      "running": "running",
+      "saving": "saving",
+      "on": "on",
+      "off": "off"
+    }
+  },
+  "vars": {
+    "saveTo": "Save to variable",
+    "name": "Name",
+    "value": "Value",
+    "namePlaceholder": "name",
+    "scope": "Scope",
+    "local": "This run",
+    "localHint": "Only this macro and the buttons it calls",
+    "global": "Everywhere",
+    "globalHint": "Shared by all macros until the app quits",
+    "placeholderHint": "Type {{ to pick a variable; velocity, pressure (aftertouch while held), x, y, pageId or a variable of yours are replaced when the action runs.",
+    "insertVariable": "Insert a variable",
+    "amount": "Add",
+    "amountHint": "Adds the number to the variable (negative subtracts); a missing or non-numeric variable counts as 0. Shared variables are kept across restarts."
+  },
+  "http": {
+    "test": "Send test",
+    "auth": "Login",
+    "authNone": "None",
+    "authBasic": "Username and password",
+    "authBearer": "Bearer token",
+    "username": "Username",
+    "password": "Password",
+    "token": "Token",
+    "headers": "Headers",
+    "addHeader": "Header",
+    "headerValue": "Value",
+    "body": "Body",
+    "form": "Form (urlencoded)",
+    "text": "Plain text",
+    "customType": "Custom content type",
+    "noType": "No content type",
+    "saveTo": "Save response to",
+    "timeout": "Timeout (ms)",
+    "ignoreTls": "Ignore certificate errors",
+    "result": "Status {{status}} in {{ms}} ms",
+    "emptyBody": "(empty body)",
+    "multipart": "Form with files",
+    "multipartHint": "multipart/form-data: text fields as name=value lines, plus file parts",
+    "fileBody": "File contents",
+    "fileBodyHint": "Send the bytes of one file as the body",
+    "guessedType": "Content type (guessed from the file when empty)",
+    "filePath": "Path to the file",
+    "files": "Files",
+    "addFile": "File",
+    "fieldName": "Field name"
+  },
+  "script": {
+    "hint": "Read variables as vars.name, shared ones as globals.name; assign to them to change them. velocity, x, y and pageId are available. The last expression (or return) is the result.",
+    "saveTo": "Save result to",
+    "test": "Run test",
+    "result": "Ran in {{ms}} ms",
+    "globalsChanged": "Changed shared variables: {{names}}"
+  },
+  "branch": {
+    "variable": "Variable",
+    "op": "Check",
+    "value": "Value",
+    "hint": "Numbers compare as numbers when both sides are numeric; placeholders work in the value.",
+    "ops": {
+      "equals": "equals",
+      "notEquals": "does not equal",
+      "contains": "contains",
+      "startsWith": "starts with",
+      "endsWith": "ends with",
+      "greaterThan": "is greater than",
+      "lessThan": "is less than",
+      "isEmpty": "is empty",
+      "isNotEmpty": "is not empty",
+      "matches": "matches regex"
+    },
+    "opsShort": {
+      "equals": "=",
+      "notEquals": "≠",
+      "contains": "∋",
+      "startsWith": "starts with",
+      "endsWith": "ends with",
+      "greaterThan": ">",
+      "lessThan": "<",
+      "isEmpty": "is empty",
+      "isNotEmpty": "is not empty",
+      "matches": "~"
+    }
+  },
+  "audioDevice": {
+    "device": "Device",
+    "pick": "Choose a device…",
+    "hint": "Changes the system's default device, the one everything plays or records through. Names come from the system; a name that only partly matches still works."
+  }
+}

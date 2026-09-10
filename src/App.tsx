@@ -1,123 +1,150 @@
-import { useModal } from "./components/modal";
-import Dropdown, { DropboxItem } from "./components/primitives/dropdown.tsx";
-import type { LaunchpadType } from '../src-tauri/bindings/LaunchpadType.ts';
-import Button from "./components/primitives/button.tsx";
-import Input from "./components/primitives/input.tsx";
-import Switch from "./components/primitives/switch.tsx";
-import { Divider } from "./components/primitives/divider.tsx";
-import ModalTabbar from "./components/specific/modal-tabs/index.tsx";
-import AboutPage from "./components/specific/modal-tabs/settings-pages/about.tsx";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect } from "react";
+import { ButtonEditor } from "./components/ButtonEditor";
+import { DevicePicker } from "./components/DevicePicker";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { LaunchpadGrid } from "./components/LaunchpadGrid";
+import { Notices } from "./components/Notices";
+import { HeaderBar } from "./components/HeaderBar";
+import { PageTabs } from "./components/PageBar";
+import { SettingsDialog } from "./components/settings/SettingsDialog";
+import { SidePanel } from "./components/SidePanel";
+import { Spinner } from "./components/ui";
+import { useDeviceStore } from "./store/device";
+import { useMacroStore } from "./store/macros";
+import { useMediaStore } from "./store/media";
+import { useProfileStore } from "./store/profile";
+import { useSettingsStore } from "./store/settings";
+import { useUiStore } from "./store/ui";
+import { useUpdateStore } from "./store/update";
+import { api } from "./lib/api";
+import i18n from "./i18n";
+import { useVariablesStore } from "./store/variables";
+import { FaderEditor } from "./components/FaderEditor";
 
-const NameMappings: Record<LaunchpadType, string> = {
-  Legacy: "Launchpad Legacy", MarkTwo: "Launchpad MK2", ProMarkThree: "Launchpad Pro MK3", S: "Launchpad S", Unknown: "Unknown Device",
-  MiniMarkThree: "Launchpad Mini MK3",
-  ProMarkTwo: "Launchpad Pro MK2",
-  X: "Launchpad X"
-};
+export default function App() {
+  const initDevice = useDeviceStore((s) => s.init);
+  const initProfile = useProfileStore((s) => s.init);
+  const initMacros = useMacroStore((s) => s.init);
+  const initSettings = useSettingsStore((s) => s.init);
+  const initMedia = useMediaStore((s) => s.init);
+  const initVariables = useVariablesStore((s) => s.init);
+  const ready = useDeviceStore((s) => s.ready);
+  const status = useDeviceStore((s) => s.status);
+  const layout = useDeviceStore((s) => s.layout);
+  const profile = useProfileStore((s) => s.profile);
+  const settingsOpen = useUiStore((s) => s.settingsOpen);
+  const closeSettings = useUiStore((s) => s.closeSettings);
+  const developerMode = useSettingsStore((s) => s.settings?.developerMode ?? false);
 
-/*
-function Test(props) {
-  const [devices, setDevices] = createSignal([]);
+  useEffect(() => {
+    let disposeDevice: (() => void) | undefined;
+    let disposeProfile: (() => void) | undefined;
+    let disposeMacros: (() => void) | undefined;
+    let disposeSettings: (() => void) | undefined;
+    let disposeMedia: (() => void) | undefined;
+    let disposeVariables: (() => void) | undefined;
+    void initDevice().then((fn) => (disposeDevice = fn));
+    void initProfile().then((fn) => (disposeProfile = fn));
+    void initMacros().then((fn) => (disposeMacros = fn));
+    void initSettings().then((fn) => (disposeSettings = fn));
+    void initMedia().then((fn) => (disposeMedia = fn));
+    void initVariables().then((fn) => (disposeVariables = fn));
+    void api.setTrayLabels({
+      discord: i18n.t("tray.discord"),
+      show: i18n.t("tray.show"),
+      stayOnTop: i18n.t("tray.stayOnTop"),
+      minimizeToTray: i18n.t("tray.minimizeToTray"),
+      runAtStartup: i18n.t("tray.runAtStartup"),
+      stopAll: i18n.t("tray.stopAll"),
+      quit: i18n.t("tray.quit"),
+    });
+    // Look for a new release once the window is up; failures stay silent here.
+    const updateTimer = window.setTimeout(() => void useUpdateStore.getState().check(false), 4000);
+    return () => {
+      window.clearTimeout(updateTimer);
+      disposeDevice?.();
+      disposeProfile?.();
+      disposeMacros?.();
+      disposeSettings?.();
+      disposeMedia?.();
+      disposeVariables?.();
+    };
+  }, [initDevice, initProfile, initMacros, initSettings, initMedia, initVariables]);
 
-  createEffect(async () => {
-    const results = await invoke("enumerate_devices");
-  console.log(results);
-    setDevices(results.map(d => ({
-      id: d[0],
-      inputIdx: d[1].idx,
-      inputName: d[1].name,
-      outputIdx: d[2].idx,
-      outputName: d[2].name,
-    })))
-  });
+  const undo = useProfileStore((s) => s.undo);
+  const redo = useProfileStore((s) => s.redo);
+  const editing = useProfileStore((s) => s.editor !== null || s.faderEditor !== null);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeSettings();
+      // Undo / redo the edits to the pages while no editor or text field has the focus.
+      const key = e.key.toLowerCase();
+      const isUndo = (e.metaKey || e.ctrlKey) && !e.shiftKey && key === "z";
+      const isRedo = ((e.metaKey || e.ctrlKey) && e.shiftKey && key === "z") || (e.ctrlKey && !e.metaKey && key === "y");
+      if (isUndo || isRedo) {
+        const tag = (e.target as HTMLElement | null)?.tagName;
+        if (editing || settingsOpen || tag === "INPUT" || tag === "TEXTAREA") return;
+        e.preventDefault();
+        void (isRedo ? redo() : undo());
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [closeSettings, undo, redo, editing, settingsOpen]);
 
-  const finishModal = () => {
-    props.close(test());
-  }
-
-  const format = (item, type) => <><span class="text-md">{NameMappings[item.id]}</span><br /><span class="text-sm">{item.inputName} / {item.outputName}</span></>
+  const connected = status === "connected" && !!layout;
+  const activeLayout = connected ? layout : null;
+  const view = !ready || !profile ? "loading" : activeLayout ? "workspace" : "picker";
 
   return (
-    <div>
+    <ErrorBoundary>
+      <div className="relative flex h-full flex-col bg-stage-950">
+        <HeaderBar>{view === "workspace" && <PageTabs />}</HeaderBar>
+        <SettingsDialog open={settingsOpen} onClose={closeSettings} />
 
-      <Select options={devices} format={format} class="custom" placeholder={"Please select a Launchpad"}>
-        <select></select>
-      </Select>
-
-      <button onClick={finishModal}>Close</button>
-    </div>
-  )
-}*/
-
-const items: Array<DropboxItem<number>> = [{
-  label: "Launchpad Mini MK3",
-  list: <span>Launchpad Mini MK3<span className="block text-xs text-white/[.85]">MIDIIN 2 / MIDIOUT 2</span></span>,
-  value: 1,
-}, {
-  label: "Launchpad Mini MK3",
-  list: <span>Launchpad Mini MK3<span className="block text-xs text-white/[.85]">Launchpad Mini MK3 / Launchpad Mini MK3</span></span>,
-  value: 2,
-}]
-
-const Testmodal = (props) => {
-  return (
-    <div className="h-full flex flex-col">
-      <ModalTabbar tabs={[{
-        title: "Settings",
-        content: <div />
-      }, {
-        title: "Pages",
-        content: <div />
-      }, {
-        title: "About",
-        content: <AboutPage />
-      }]}></ModalTabbar>
-      <div className="p-2">
-
-        <Divider />
-        <div className="w-full flex justify-end">
-          <Button onClick={props.close} type="Primary" label="Close" />
-        </div>
+        <main className="relative flex min-h-0 flex-1 flex-col">
+          <AnimatePresence mode="wait" initial={false}>
+            {view === "loading" && (
+              <motion.div key="loading" className="flex h-full items-center justify-center" exit={{ opacity: 0 }}>
+                <Spinner />
+              </motion.div>
+            )}
+            {view === "picker" && (
+              <motion.div
+                key="picker"
+                className="h-full"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.2 }}
+              >
+                <DevicePicker />
+              </motion.div>
+            )}
+            {view === "workspace" && activeLayout && (
+              <motion.div
+                key="workspace"
+                className="flex h-full flex-col"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="flex min-h-0 flex-1">
+                  <div className="min-w-0 flex-1 p-2">
+                    <LaunchpadGrid layout={activeLayout} />
+                  </div>
+                  {developerMode && <SidePanel layout={activeLayout} />}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <ButtonEditor />
+          <FaderEditor />
+          <Notices />
+        </main>
       </div>
-    </div>
-  )
-}
-
-function App() {
-  const [ open, close] = useModal();
-
-  return (
-    <div className="w-full p-5 space-y-3 flex flex-col">
-      <label>Select:</label>
-      <div className="relative">
-        <Dropdown<number> items={items} />
-      </div>
-      <Divider />
-      <label>Buttons:</label>
-      <div className="space-x-2">
-        <Button onClick={() => open!(<Testmodal close={close} />)} label="Default" type="Default" />
-        <Button label="Primary" type="Primary" />
-        <Button label="Danger" type="Danger" />
-        <Button label="Light" type="Light" />
-      </div>
-      <Divider />
-      <label>Input:</label>
-      <div className="flex flex-row space-x-2">
-        <Input />
-        <Input placeholder="Please input!" />
-      </div>
-      <Divider />
-      <label>Toggle / Switch:</label>
-      <div className="flex flex-row space-x-2">
-        <Switch label="Default" />
-        <Switch label="Default" />
-        <Switch label="Primary" type="Primary" />
-        <Switch label="Primary" type="Primary" />
-        <Switch label="Danger" type="Danger" />
-        <Switch label="Danger" type="Danger" />
-      </div>
-    </div>
+    </ErrorBoundary>
   );
 }
-
-export default App;

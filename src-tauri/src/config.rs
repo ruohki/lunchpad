@@ -1,0 +1,213 @@
+//! Persisted application settings (`settings.json` in the app config dir).
+
+use crate::midi::types::{LaunchpadModel, MidiError, MidiResult};
+use parking_lot::Mutex;
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+
+pub type SharedSettings = Arc<Mutex<SettingsStore>>;
+
+pub const SETTINGS_VERSION: u32 = 1;
+
+/// The Launchpad the user chose last. Ports are stored by name because OS
+/// port indices change whenever devices are plugged in or out.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SavedDevice {
+    pub input_name: String,
+    pub output_name: String,
+    pub model: LaunchpadModel,
+    #[serde(default)]
+    pub firmware: Option<String>,
+    /// A Launchpad-less session: the on-screen pads stand in for the device.
+    #[serde(default, rename = "virtual")]
+    pub is_virtual: bool,
+}
+
+/// Key held while a push-to-talk section of a macro runs.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PushToTalkSettings {
+    #[serde(default)]
+    pub enabled: bool,
+    /// Key name in the app's key vocabulary (see `input::keys`), e.g. "f9", "v"
+    #[serde(default)]
+    pub key: String,
+    /// "control", "alt", "shift", "command"
+    #[serde(default)]
+    pub modifiers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AudioSettings {
+    /// Default output device for sounds (`None` = the system default device)
+    #[serde(default)]
+    pub output_device: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ObsSettings {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default = "default_obs_host")]
+    pub host: String,
+    #[serde(default = "default_obs_port")]
+    pub port: u16,
+    #[serde(default)]
+    pub password: String,
+    #[serde(default = "default_true")]
+    pub auto_connect: bool,
+}
+
+fn default_obs_host() -> String {
+    "localhost".into()
+}
+fn default_obs_port() -> u16 {
+    4455
+}
+
+impl Default for ObsSettings {
+    fn default() -> Self {
+        ObsSettings { enabled: false, host: default_obs_host(), port: default_obs_port(), password: String::new(), auto_connect: true }
+    }
+}
+
+/// Streamlabs Desktop's JSON-RPC server: plain TCP on 127.0.0.1:28194 whenever
+/// the app runs; local clients need no token.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SlobsSettings {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default = "default_slobs_host")]
+    pub host: String,
+    #[serde(default = "default_slobs_port")]
+    pub port: u16,
+    /// API token (Settings → Remote Control); only checked for remote hosts
+    #[serde(default)]
+    pub token: String,
+    #[serde(default = "default_true")]
+    pub auto_connect: bool,
+}
+
+fn default_slobs_host() -> String {
+    "127.0.0.1".into()
+}
+fn default_slobs_port() -> u16 {
+    28194
+}
+
+impl Default for SlobsSettings {
+    fn default() -> Self {
+        SlobsSettings { enabled: false, host: default_slobs_host(), port: default_slobs_port(), token: String::new(), auto_connect: true }
+    }
+}
+
+/// Window behaviour, also reachable from the tray menu.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WindowSettings {
+    #[serde(default)]
+    pub stay_on_top: bool,
+    /// Closing the window hides it; the tray icon brings it back.
+    #[serde(default)]
+    pub minimize_to_tray: bool,
+    /// Registered with the OS through the autostart plugin on every start.
+    #[serde(default)]
+    pub run_at_startup: bool,
+    /// Open in the tray only; the window appears on demand.
+    #[serde(default)]
+    pub start_hidden: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Settings {
+    #[serde(default = "default_version")]
+    pub version: u32,
+    #[serde(default)]
+    pub device: Option<SavedDevice>,
+    /// Reconnect to `device` automatically on start-up and when it is plugged in.
+    #[serde(default = "default_true")]
+    pub auto_connect: bool,
+    /// Light a pad while it is held (useful before pages/macros exist).
+    #[serde(default = "default_true")]
+    pub press_feedback: bool,
+    /// Lowest velocity that counts as a press on velocity-sensitive pads;
+    /// `None` keeps the model's default (25).
+    #[serde(default)]
+    pub press_threshold: Option<u8>,
+    #[serde(default)]
+    pub push_to_talk: PushToTalkSettings,
+    #[serde(default)]
+    pub audio: AudioSettings,
+    #[serde(default)]
+    pub obs: ObsSettings,
+    #[serde(default)]
+    pub slobs: SlobsSettings,
+    #[serde(default)]
+    pub window: WindowSettings,
+    /// Show diagnostics in the main window (device facts, MIDI monitor, variables).
+    #[serde(default)]
+    pub developer_mode: bool,
+}
+
+fn default_version() -> u32 {
+    SETTINGS_VERSION
+}
+fn default_true() -> bool {
+    true
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Settings {
+            version: SETTINGS_VERSION,
+            device: None,
+            auto_connect: true,
+            press_feedback: true,
+            press_threshold: None,
+            push_to_talk: PushToTalkSettings::default(),
+            audio: AudioSettings::default(),
+            obs: ObsSettings::default(),
+            slobs: SlobsSettings::default(),
+            window: WindowSettings::default(),
+            developer_mode: false,
+        }
+    }
+}
+
+pub struct SettingsStore {
+    path: PathBuf,
+    pub settings: Settings,
+}
+
+impl SettingsStore {
+    pub fn load(config_dir: &Path) -> Self {
+        let path = config_dir.join("settings.json");
+        let settings = match fs::read_to_string(&path) {
+            Ok(contents) => match serde_json::from_str::<Settings>(&contents) {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::warn!(path = %path.display(), error = %e, "settings unreadable, using defaults");
+                    Settings::default()
+                }
+            },
+            Err(_) => Settings::default(),
+        };
+        tracing::info!(path = %path.display(), "settings loaded");
+        SettingsStore { path, settings }
+    }
+
+    pub fn save(&self) -> MidiResult<()> {
+        if let Some(parent) = self.path.parent() {
+            fs::create_dir_all(parent).map_err(|e| MidiError::Settings(e.to_string()))?;
+        }
+        let json = serde_json::to_string_pretty(&self.settings).map_err(|e| MidiError::Settings(e.to_string()))?;
+        fs::write(&self.path, json).map_err(|e| MidiError::Settings(e.to_string()))
+    }
+}

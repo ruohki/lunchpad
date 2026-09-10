@@ -1,50 +1,51 @@
 {
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Lunchpad",
+  "version": "1.0.0-rc.0",
+  "identifier": "com.lunchpad.app",
   "build": {
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build",
-    "devPath": "http://localhost:1420",
-    "distDir": "../dist"
+    "beforeDevCommand": "bun run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "bun run build",
+    "frontendDist": "../dist"
   },
-  "package": {
-    "productName": "lunchpad",
-    "version": "0.0.0"
-  },
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "shell": {
-        "all": false,
-        "open": true
-      }
-    },
-    "bundle": {
-      "active": true,
-      "targets": "all",
-      "identifier": "com.lunchpad.dev",
-      "icon": [
-        "icons/icon@512.png",
-        "icons/logo.ico",
-        "icons/logo.png"
-      ]
-    },
-    "security": {
-      "csp": null
-    },
+  "app": {
     "windows": [
       {
-        "fileDropEnabled": true,
-        "fullscreen": false,
-        "resizable": true,
         "title": "Lunchpad",
-        "minWidth": 756,
-        "minHeight": 756,
-        "width": 756,
-        "height": 756
+        "width": 780,
+        "height": 820,
+        "minWidth": 660,
+        "minHeight": 600,
+        "backgroundColor": "#0b0b0f",
+        "visible": false
       }
     ],
-    "systemTray": {
-      "iconPath": "icons/logo.ico",
-      "iconAsTemplate": true
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU1QzhGNjdBNjJDODZGMUUKUldRZWI4aGlldmJJNVhLU0QrM0VvSGdFQjZFV2pZRThQRU14WTFZRkw5KzZyM01KVEZjeitoaDcK",
+      "endpoints": [
+        "https://github.com/ruohki/lunchpad/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }

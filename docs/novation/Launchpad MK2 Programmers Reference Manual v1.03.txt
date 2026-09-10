@@ -1,0 +1,405 @@
+MK2 Programmer’s Reference Manual
+Version 1.03
+Written by Lottie Thomas
+Edited by Ed Fry
+FFFA001298-03
+© Focusrite Audio Engineering LTD
+Table of Contents
+About this Guide 3
+Number Systems and MIDI conventions 3
+For Max Users 3
+Bootloader 4
+Basic Features 5
+Basic Communication 5
+Colours 5
+Layouts 6
+Channels 8
+Flashing 9
+Pulsing 10
+Device Inquiry 10
+Advanced Features 11
+Lighting LEDs Using SysEx Messages 11
+RGB Mode 12
+MIDI Clock 12
+Virtual Faders 13
+Text scrolling 14
+System Exclusive Messages 15
+Other SysEx Messages 16
+© Focusrite Audio Engineering LTD 2
+About this Guide
+Launchpad MK2 communicates using MIDI over USB in both directions. This manual, describing the MIDI
+communication format, is all the information you need to be able to write software that is customised for
+Launchpad MK2.
+This is not an exhaustive document. Certain extra System Exclusive messages are used for authentication, and
+remote firmware upgrade. These are beyond the scope of this document; however, it is worth knowing that
+they exist in case you encounter them while you are playing with Launchpad MK2.
+Number Systems and MIDI conventions
+There are three ways of expressing MIDI data in this manual. The first, where appropriate, is a plain English
+description of the message. When we describe a musical note, middle C is deemed to be ‘C3’ or note 60. MIDI
+channel 1 is the lowest-numbered MIDI channel and channels range from 1 - 16.
+MIDI messages are also expressed in plain data, with decimal and hexadecimal equivalents. The hexadecimal
+number will always be followed by an ‘h’ and the decimal equivalent given in brackets. For example, a note
+on message on channel 1 is signified by the status byte 90h (144).
+For Max Users
+For the benefit of those who use Cycling 74’s Max software to process and manipulate MIDI data, a series of
+tutorial patches are available. These demonstrate many of Launchpad MK2’s features and capabilities within
+the Max environment.
+A runtime version of Max is available from www.cycling74.com.
+© Focusrite Audio Engineering LTD 3
+Bootloader
+Launchpad MK2 has a bootloader mode that allows the user to configure and save certain settings. The
+bootloader is accessed by holding the Session, User 1, User 2, and Mixer buttons while plugging the device in.
+Figure 1 shows the functions of the bootloader.
+The top two rows of square buttons can be used to set the device ID of Launchpad MK2. The device ID ranges
+from 1 – 16 and the selected ID is represented by an orange button. This also sets the USB identity, which
+ranges from 69h to 78h.
+The next two rows can be used to set the communications channel for User 1 and User 2 layouts. Row 3
+represents User 1 (channels 1 – 8) and row 4 represents User 2 (channels 9 – 16). Certain channels are reserved
+and cannot be selected – these are represented by a dimly lit red button. Available channels (6 – 8 for User 1,
+14 – 16 for User 2) are represented by a dimly lit blue button. Selected channels are represented by a bright
+blue button.
+Figure 1: The functions of the bootloader
+© Focusrite Audio Engineering LTD
+Basic Features
+Basic Communication
+The central grid of 64 square buttons and the 8 right-hand round buttons send note data to the host. A note-
+on message with maximum velocity is sent when the button is pressed, and a note-on message with velocity
+0 when released.
+Note-on messages can also be used to light the LED behind each button. The velocity of the note-on message
+determines the colour of the LED.
+A note-on message with velocity 0, or a note-off message of any velocity will turn the LED off.
+The top row of round buttons sends control change messages to the host, where the controller number is the
+address of the button. Pressing the button sends a control change message with a value of 7Fh (127) and
+releasing sends the value as 0. Similarly, they will light when a control change message is received with the
+controller value determining the colour of the LED.
+Max patch: LPMK2_Basic_Communication.maxpat
+This patch introduces basic messages to and from Launchpad MK2,
+decomposing each message and displaying it in the console window. It also
+shows Session, User 1 and User 2 layouts.
+Colours
+Launchpad MK2 has a colour palette of 128 colours shown in figure 2. Colour 0 turns the LED off.
+Figure 2: Launchpad MK2 colour table
+Max patch: LPMK2_Colours.maxpat
+© Focusrite Audio Engineering LTD
+This patch provides two methods of lighting the whole
+of Launchpad MK2 in a variety of colours.
+Layouts
+Launchpad MK2 has three layouts that respond to note messages – Session, User 1 (Drum) and User 2. Volume
+and Pan layouts are discussed in the “Advanced Features” section of this guide.
+§ Change the button layout
+Host >> Launchpad MK2: F0h 00h 20h 29h 02h 18h 22h <Layout> F7h
+(240,0, 32, 41, 2, 24, 34, <Layout>,247)
+Where the layout byte is:
+00h – Session
+01h – User 1 (drum rack)
+02h – User 2
+03h – (reserved for Ableton Live)
+04h – Volume
+05h – Pan
+The layout determines the MIDI note number that the buttons send and receive. Layout 0 is Session layout.
+This is best for writing software that uses Launchpad MK2 as a grid as it is easy to navigate by adding and
+subtracting - adding 1 moves to the right 1 button, adding 10 moves up one button.
+Layout 1 is User 1 or Drum layout. This is ideal for situations where Launchpad MK2 must launch samples or
+deal with musical MIDI.
+Layout 2 is User 2 and is the same as Session.
+Figure 3 shows these layouts in hexadecimal, figure 4 in decimal and figure 5 in note names. In each of these
+images Cs are coloured red, and Fs are coloured blue.
+Figure 3: Session (L) and Drum (R) Layouts in hexadecimal
+© Focusrite Audio Engineering LTD 6
+Figure 4: Session (L) and Drum (R) layouts in decimal
+Figure 5: Session (L) and Drum (R) layouts note names
+The controller numbers for the top row of round buttons does not change with layout and is always as 68h to
+6Fh (104 – 111), as shown in figure 6.
+© Focusrite Audio Engineering LTD 7
+Figure 6: Controller numbers for the top row in hexadecimal (top) and decimal (bottom)
+Channels
+To prevent messages intended for one layout from interfering with the others, each layout sends and receives
+messages on a different channel. Session layout uses channel 1.
+§ Example: light top-left grid LED blue in Session layout
+Host >> Launchpad MK2: Channel 1: note-on A5/51h (81), velocity 2Dh (45)
+90h 51h 2Dh (144, 81, 45)
+§ Example: light the cursor left LED pink in Session layout
+Host >> Launchpad MK2: Channel 1: set controller 6Ah (106) to 35h (53)
+B0h 6Ah 35h (176, 106, 53)
+User 1 and User 2 layouts use the channel selected in the bootloader.
+§ Example: light second-from-bottom left LED orange in User 1 layout with the channel set to 8
+Host >> Launchpad MK2: Channel 8: note-on E2/28h (40), velocity 09h (9)
+97h 28h 09h (151, 40, 9)
+§ Example: light Mixer LED yellow in User 2 layout with the channel set to 14
+Host >> Launchpad MK2: Channel 14: set controller 6Fh (111) to 0Dh (13)
+BDh 6Fh 0Dh (189, 111, 13)
+© Focusrite Audio Engineering LTD 8
+Flashing
+Launchpad MK2 supports flashing between two colours on all three layouts. The flash colour is set by sending
+a note-on message (or CC for the top 8 round buttons) to the device on channel 2. When a message is received
+on channel 2, Launchpad MK2 will then begin to flash between the flash colour (B) and the current colour of
+the LED (A), with a 50% duty cycle (shown in figure 7). Flashing (and pulsing) happens in time with MIDI beat
+clock (see ‘MIDI Clock’ below), the last known tempo or will default to 120 bpm.
+Flashing can be stopped by sending the LED a message on channel 1.
+Figure 7: The flashing waveform
+§ Example: set a single pad to flash between red and off (Session layout)
+The LEDs are all off. Set the bottom left LED to flash between red and off.
+Host >> Launchpad MK2: Channel 2: note-on B-1/0Bh (11), velocity 05h (5)
+91h 0Bh 05h (145, 11, 5)
+The LED will flash between red and off. The sequence will start with red.
+To stop flashing and turn the LED off:
+Host >> Launchpad MK2: Channel 1: note-on B-1/0Bh (11), velocity 00h (0)
+90h 0Bh 00h (144, 11, 0)
+§ Example: set a single pad to flash between red and green (Session layout)
+The LEDs are all off. Set the bottom left LED to light green.
+Host >> Launchpad MK2: Channel 1: note-on B-1/0Bh (11), velocity 15h (21)
+90h 0Bh 15h (144, 11, 21)
+Set the flash colour to red, start flashing.
+Host >> Launchpad MK2: Channel 2: note-on B-1/0Bh (11), velocity 05h (5)
+91h 0Bh 05h (145, 11, 5)
+The LED will flash between red and green. The sequence will start with red.
+To stop flashing and turn the LED blue:
+Host >> Launchpad MK2: Channel 1: note-on B-1/0Bh (11), velocity 2Dh (45)
+90h 0Bh 2Dh (144, 11, 45)
+© Focusrite Audio Engineering LTD
+Pulsing
+Launchpad MK2 also supports pulsing, where the colour of the LED rhythmically increases and decreases in
+brightness (as shown in figure 8). Pulsing is started by sending the LED a note-on message (or CC for the top 8
+round buttons) on channel 3 and can be stopped by sending a message to the LED on channel 1.
+Figure 8: The pulsing waveform
+§ Example: set a single pad to pulse purple (Session layout)
+The LEDs are all off. Set the top right grid LED to pulse purple.
+Host >> Launchpad MK2: Channel 3: note-on E6/58h (88), velocity 51h (81)
+92h 58h 51h (146, 88, 81)
+To stop pulsing and turn the LED off:
+Host >> Launchpad MK2: Channel 1: note-on E6/58h (88), velocity 00h (0)
+90h 58h 00h (144, 88, 00)
+Max patch: LPMK2_Flashing.maxpat
+This patch introduces flashing and pulsing. The mode can be set to static,
+flash or pulse. Pads will then do the selected action in a random colour
+when pressed. The tempo can also be altered.
+Device Inquiry
+Launchpad MK2 responds to the MIDI specification’s Device Inquiry message.
+§ Device Inquiry
+Host >> Launchpad MK2: F0h 7Eh 7Fh 06h 01h F7h
+(240,126,127, 6, 1, 247)
+Launchpad MK2 will respond:
+Launchpad MK2 >> Host:
+F0h 7Eh <device ID> 06h 02h 00h 20h 29h 69h 00h 00h 00h <firmware revision 4 Bytes> F7h
+(240,126,<device ID>, 6, 2, 0, 32, 41,105, 0, 0, 0,<firmware revision 4 Bytes>, 247)
+The firmware revision number is represented by four bytes, where revision 138 would be given as 00h, 01h,
+03h, 08h.
+© Focusrite Audio Engineering LTD 10
+Advanced Features
+Lighting LEDs Using SysEx Messages
+It is possible to control Launchpad MK2’s LEDs using SysEx messages. This allows several LEDs to be updated
+quickly with one message. The index of the LED is taken to be the same as Session layout, regardless of the
+layout Launchpad MK2 is currently in, with the top 8 round buttons indexed as 68h to 6Fh (104 – 111).
+§ Light LED using SysEx
+Host >> Launchpad MK2: F0h 00h 20h 29h 02h 18h 0Ah <LED> <Colour> F7h
+(240, 0, 32, 41, 2, 24, 10, <LED> <Colour> 247)
+Message can be repeated up to 80 times.
+§ Light a column of LEDs using SysEx
+Columns are numbered left to right, 0 - 8.
+Host >> Launchpad MK2: (240, 0, F0h 00h 20h 29h 02h 18h 0Ch <Column> <Colour> F7h
+32, 41, 2, 24, 12, <Column> <Colour> 247)
+Message can be repeated up to 9 times.
+§ Light a row of LEDs using SysEx
+Rows are numbered bottom to top, 0 - 8.
+Host >> Launchpad MK2: F0h 00h 20h 29h 02h 18h 0Dh <Row> <Colour> F7h
+(240, 0, 32, 41, 2, 24, 13, <Row> <Colour> 247)
+Message can be repeated up to 9 times.
+§ Light all LEDs using SysEx
+Host >> Launchpad MK2: F0h 00h 20h 29h 02h 18h 0Eh <Colour> F7h
+(240, 0, 32, 41, 2, 24, 14, <Colour> 247)
+Message cannot be repeated.
+© Focusrite Audio Engineering LTD 11
+§ Flash LED using SysEx
+The LED will flash between the chosen colour and its current colour.
+Host >> Launchpad MK2: F0h 00h 20h 29h 02h 18h 23h <LED> <Colour> F7h
+(240, 0, 32, 41, 2, 24, 35, 0, <LED> <Colour> 247)
+Message can be repeated up to 80 times.
+§ Pulse LED using SysEx
+Host >> Launchpad MK2: F0h 00h 20h 29h 02h 18h 28h <LED> <Colour> F7h
+(240, 0, 32, 41, 2, 24, 40, 0 <LED> <Colour> 247)
+Message can be repeated up to 80 times.
+RGB Mode
+The brightness of the individual red, green and blue elements of the LED can be controlled to create any colour.
+Each element has a brightness value from 00h – 3Fh (0 – 63), where 0 is off and 3Fh is full brightness.
+§ Light LED using SysEx (RGB mode)
+Host >> Launchpad MK2: F0h 00h 20h 29h 02h 18h 0Bh <LED>, <Red> <Green> <Blue> F7h
+(240, 0, 32, 41, 2, 24, 11, <LED>, <Red> <Green> <Blue> 247)
+Message can be repeated up to 80 times.
+MIDI Clock
+By default, Launchpad MK2 will flash and pulse at 120 BPM. This can be altered by sending Launchpad MK2
+F8h (248) messages (MIDI clock), which should be sent at a rate of 24 per beat. To set a tempo of 100 BPM,
+2400 MIDI clock messages should be sent each minute, or with a time interval of 25ms.
+Launchpad MK2 supports tempos between 40 and 240 BPM.
+© Focusrite Audio Engineering LTD 12
+Virtual Faders
+Launchpad MK2 has two virtual fader modes, one with volume style faders and one with pan style (the two
+styles cannot be mixed). In fader mode, the grid becomes 8 faders controlled by CC messages.
+To enter fader mode, use the layout change SysEx message with the layout byte set to 04h (4) for volume
+faders and 05h (5) for pan faders.
+§ Change the button layout
+Host >> Launchpad MK2: F0h 00h 20h 29h 02h 18h 22h <Layout> F7h
+(240, 0, 32, 41, 2, 24, 34, <Layout> 247)
+After one of the fader layouts have been selected the faders must be initialised.
+§ Initialise a fader
+Host >> Launchpad MK2: F0h 00h 20h 29h 02h 18h 2Bh <Number> <Type> <Colour> <Value> F7h
+(240, 0, 32, 41, 2, 24, 43, <Number> <Type> <Colour> <Value> 247)
+Message can be repeated up to 8 times.
+Number Type – Index of the fader, numbered left to right, 00h – 07h (0 – 7)
+- Fader (00h) or Pan (01h). This must match the selected layout
+Colour - 00h – 7Fh (0 – 127)
+Value - Initial value for the fader 00h – 7Fh (0 – 127)
+The fader will light up according to its current value with volume faders lighting from the bottom up, and pan
+faders lighting from the centre out.
+The level of a fader can be set by sending Launchpad MK2 control change messages. The controller numbers
+of the faders (in both layouts) are, left to right, 15h – 1Ch (21 – 28) and the controller value sets the level of
+the fader. Each LED will light when the level is greater than or equal to the LEDs threshold value.
+When a button is pressed to change the level of a fader, Launchpad MK2 will move the fader to that position
+and send interim values to smooth the transition.
+Max patch: LPMK2_Faders.maxpat
+This patch uses fader mode to create a spectrum analyser. Load in a piece
+of music and the faders will move according to the level in 8 frequency
+bands.
+© Focusrite Audio Engineering LTD 13
+Text scrolling
+Launchpad MK2 natively supports scrolling text. ASCII text can be embedded in a System Exclusive message.
+Additional bytes are reserved the change the colour, looping and speed.
+§ Start text scrolling
+Host >> Launchpad MK2: F0h 00h 20h 29h 02h 18h 14h <Colour> <Loop> <Text> F7h
+(240, 0, 32, 41, 2, 24, 20, <Colour> <Loop> <Text> 247)
+Colour - Loop Scroll text colour 00h – 7Fh (0 – 127)
+- Set to 01h (1) to loop the message
+In addition to the standard ASCII characters, Launchpad MK2 recognises plain values 1 – 7 as speed commands
+(where 1 is the slowest and 7 is the fastest). This allows the scrolling speed to be manipulated mid-text. The
+default speed is 4.
+When the text ends, Launchpad MK2 restores the LEDs to their previous settings. As the text either ends or
+loops, a SysEx message will be sent back to the host.
+Launchpad MK2 >> Host: F0h 00h 20h 29h 02h 18h 15h F7h
+(240, 0, 32, 41, 2, 24, 21, 247)
+§ Example: hello world
+Start the text scrolling.
+Host >> Launchpad MK2:
+F0h 00h 20h 29h 02h 18h 14h 7Ch 01h 05h 48h 65h 6Ch 6Ch 6Fh 20h 02h 77h 6Fh 72h 6Ch 64h 21h
+F7h
+(240, 0, 32, 41, 2, 4, 20, 124, 1, 5, 72, 101, 108, 108, 111, 32, 2, 119, 111, 114, 108,
+100, 33, 247)
+This loops the text in yellow, playing “Hello” quickly and “world!” slowly. To stop it, send an empty scroll
+command.
+Host >> Launchpad MK2: F0h 00h 20h 29h 02h 18h 14h F7h
+(240, 0, 32, 41, 2, 24, 20, 247)
+Max patch: LPMK2_Scrolling.maxpat
+This patch introduces text scrolling. Set the colour, the loop byte and the
+message, then trigger the scrolling.
+© Focusrite Audio Engineering LTD 14
+System Exclusive Messages
+Each of the following SysEx messages has the same header
+F0h 00h 20h 29h 02h 18h
+(240, 00, 32, 41, 2, 24)
+Following this is the 6th byte and then further values depending on the message. All SysEx messages are terminated by:
+F7h (247)
+Parameter Name 6th Byte Value 1 Value 2 Value 3 Value 4 Repeatable? LED
+Colour
+Set LEDs (standard
+colour mode) 0Ah (10)
+0Bh - 6Fh (11-
+00h - 7Fh
+-- -- Yes, up to 80 times
+111)
+(0-127)
+Set LEDs (RGB mode) 0Bh (11)
+LED
+0Bh - 6Fh (11-
+111)
+Red
+00h - 3Fh
+(0-63)
+Green
+00h - 3Fh
+(0-63)
+Blue
+00h - 3Fh (0-
+63)
+Yes, up to 80 times
+Column
+Colour
+Set LEDs by column 0Ch (12)
+number
+00h - 7Fh
+-- -- Yes, up to 9 times (0-8)
+(0-127)
+Set LEDs by row 0Dh (13) Row number
+(0-8)
+Colour
+00h - 7Fh
+(0-127)
+-- -- Yes, up to 9 times Set all LEDs 0Eh (14) Colour 00h
+- 7Fh (0-127)
+-- -- -- No Flash LED 23h (35) Mode
+(unused, 0)
+LED
+0Bh - 6Fh (11-
+111)
+Colour
+00h - 7Fh
+(0-127)
+-- Yes, up to 80 times
+© Focusrite Audio Engineering LTD Notes
+Columns are numbered from left to right
+Rows are numbered from bottom to top
+A colour value of 0 switches off all LEDs
+Selected LED flashes between current lit
+colour and colour specified in value 3. If
+the selected LED is currently not lit, then it
+will flash between off and the colour
+specified in value 3.
+15
+LED
+Pulse LED 28h (40) Mode
+(unused, 0)
+0Bh - 6Fh (11-
+111)
+Scroll text across pads 14h (20)
+Colour
+00h - 7Fh (0-
+127)
+Loop
+0 = loop off
+1 = loop on
+Layout selection 22h (34) Layout (0-5) -- Fader Setup 2Bh (43) Fader number
+(0-7)
+Fader type
+0=volume
+1=pan
+Other SysEx Messages
+Launchpad MK2 responds to 3 further SysEx messages.
+Device Inquiry F0h 7Eh <device ID> 06h 01h F7h
+(240, 126, <device ID>, 6, 1, 247)
+Version Inquiry F0h 00h 20h 29h 00h 70h F7h
+(240, 0, 32, 41, 0, 112, 247)
+Set to bootloader F0h 00h 20h 29h 00h 71h 00h 69h F7h
+(240, 0, 32, 41, 0, 113, 0, 105, 247)
+© Focusrite Audio Engineering LTD Colour
+00h - 7Fh
+-- Yes, up to 80 times Selected LED pulses with the colour
+specified in value 3.
+(0-127)
+Text -- No Text can be standard ASCII characters or
+plain values 1 - 7 to change speed
+00 - Session
+01 - User 1 (Drum Rack)
+-- -- No
+02 - User 2
+04 - Fader
+05 - Pan
+Colour
+00h - 7Fh
+(0-127)
+Initial Value
+00h - 7Fh
+(0-127)
+Yes, up to 8 times
+Read information about the connected device. The device ID is from 00h to 0Fh and
+must match the value chosen in the bootloader. When the Device ID is 7F, all
+Launchpad MK2s will respond, regardless of the device ID.
+Returns the current bootloader and firmware versions and size of the bootloader in KB
+Force the Launchpad MK2 into bootloader mode
+16

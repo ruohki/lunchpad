@@ -1,0 +1,504 @@
+Launchpad Mini [MK3]
+Programmer’s reference manual
+1
+Table of Contents
+About this Guide ...................................................................................................................................... 4
+Bootloader ............................................................................................................................................... 5
+MIDI on Launchpad Mini [MK3]............................................................................................................... 6
+Device Inquiry message ....................................................................................................................... 6
+SysEx message format used by the device .......................................................................................... 6
+Selecting layouts .................................................................................................................................. 7
+Programmer / Live mode switch ......................................................................................................... 7
+Controlling the Surface ............................................................................................................................ 9
+Switching to Lighting modes ................................................................................................................ 9
+Programmer mode layout .................................................................................................................10
+Factory default Lighting Custom Mode layouts.................................................................................10
+Colour palette ....................................................................................................................................11
+Sending colours by MIDI events ........................................................................................................12
+Flashing colour ...................................................................................................................................12
+Pulsing colour.....................................................................................................................................12
+Examples ............................................................................................................................................13
+LED lighting SysEx message ...............................................................................................................14
+Software Interaction ..............................................................................................................................15
+Enabling / disabling DAW mode ........................................................................................................15
+The DAW In/Out interface .................................................................................................................15
+DAW state clear .................................................................................................................................16
+Session mode .....................................................................................................................................17
+DAW Faders .......................................................................................................................................17
+DAW Fader bank set-up .................................................................................................................18
+DAW Session button colour set .........................................................................................................19
+Miscellaneous surface control ...............................................................................................................20
+Text scrolling ......................................................................................................................................20
+Power management ..............................................................................................................................21
+Sleep SysEx message ..........................................................................................................................21
+Configuration messages.........................................................................................................................22
+Brightness level ..................................................................................................................................22
+LED Feedbacks ...................................................................................................................................22
+SysEx command summary .....................................................................................................................23
+2
+3
+About this Guide
+This document provides all the information you need to be able to control Launchpad Mini [MK3].
+Launchpad Mini [MK3] communicates using MIDI over USB. This document describes the MIDI
+implementation for the device, which can be used to control LEDs and access Launchpad Mini [MK3]’s
+various features.
+MIDI data is expressed in this manual in several different ways:
+- A plain English description of the message.
+- When we describe a musical note, middle C is deemed to be ‘C3’ or note 60. MIDI channel 1
+is the lowest-numbered MIDI channel: channels range from 1 - 16.
+- MIDI messages are also expressed in plain data, with decimal and hexadecimal equivalents.
+The hexadecimal number will always be followed by an ‘h’ and the decimal equivalent given
+in brackets. For example, a note on message on channel 1 is signified by the status byte 90h
+(144).
+4
+Bootloader
+Launchpad Mini [MK3] has a bootloader mode that allows the user to configure and save certain
+settings. The bootloader is accessed by holding the Capture MIDI button whilst plugging the device in.
+The top two rows of pads can be used to set the USB device ID of the Launchpad Mini [MK3]. The
+device ID ranges from 1 to 16, the selected ID is represented by a brightly lit pad. The default ID from
+factory is 1. If more than one Launchpad Mini [MK3] is used on the same USB, each should have a
+different device ID selected.
+The single yellow pad on the middle right can be used to toggle Onboarding. When Onboarding is ON,
+the Launchpad Mini [MK3] shows up as a Mass Storage Device to provide a more convenient first-time
+experience. You can turn this off once you are familiar with the device to disable this Mass Storage
+Device.
+The blue row of pads can be used to adjust the Launchpad Mini [MK3]’s brightness level to something
+comfortable for the environment the device is used in. This control is also available on the Setup
+display when starting the Launchpad Mini [MK3] normally. Note that low brightness levels may be
+required for Launchpad Mini [MK3] to be powered on by certain devices.
+The green pads on the bottom left can be used to display the version number of the Bootloader and
+the Application respectively.
+The single green pad on the bottom right can be used to start the Application.
+5
+MIDI on Launchpad Mini [MK3]
+The Launchpad Mini [MK3] has two MIDI interfaces providing two pairs of MIDI inputs and outputs
+over USB. They are as follows:
+- LPMiniMK3 DAW In / Out (or first interface on Windows): This interface is used by DAWs and
+similar software to interact with the Launchpad Mini [MK3]’s Session mode.
+- LPMiniMK3 MIDI In / Out (or second interface on Windows): This interface is used to receive
+MIDI from Custom modes; and is used to provide external MIDI input or Light controls in
+Lighting Custom Modes and Programmer mode.
+If you wish to use Launchpad Mini [MK3] as a control surface for a DAW (Digital Audio Workstation),
+you will likely want to use the DAW interface (See Software Interaction chapter).
+Otherwise, you may interact with the device using the MIDI interface.
+The Launchpad Mini [MK3] sends Note On (90h – 9Fh) with velocity zero for Note Offs. It accepts either
+Note Offs (80h – 8Fh) or Note Ons (90h – 9Fh) with velocity zero for Note Off.
+Device Inquiry message
+The Launchpad Mini [MK3] responds to the Universal Device Inquiry Sysex message, which can be
+used to identify the device. This exchange is as follows:
+Host => Launchpad Mini [MK3]:
+Hex: F0h 7Eh 7Fh 06h 01h F7h
+Dec: 240 126 127 6 1 247
+Launchpad Mini [MK3] => Host (Application):
+Hex: F0h 7Eh 00h 06h 02h 00h 20h 29h 13h 01h 00h 00h <app_version> F7h
+Dec: 240 126 0 6 2 0 32 41 19 1 0 0 <app_version> 247
+Launchpad Mini [MK3] => Host (Bootloader):
+Hex: F0h 7Eh 00h 06h 02h 00h 20h 29h 13h 11h 00h 00h <boot_version> F7h
+Dec: 240 126 0 6 2 0 32 41 19 17 0 0 <boot_version> 247
+The <app_version> or <boot_version> field is 4 bytes long, providing the Application or the Bootloader
+version respectively. The version is the same version which can be viewed using the lower left green
+pads on the Bootloader’s surface, provided as four bytes, each byte corresponding to one digit,
+ranging from 0 – 9.
+SysEx message format used by the device
+All SysEx messages begin with the following header regardless of direction (Host => Launchpad Mini
+[MK3] or Launchpad Mini [MK3] => Host):
+Hex: F0h 00h 20h 29h 02h 0Dh
+Dec: 240 0 32 41 2 13
+After the header, a command byte follows, selecting the function to use.
+Several of the messages have a readback variant which can be accessed in the following manner:
+6
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh <command> F7h
+Dec: 240 0 32 41 2 13 <command> 247
+Launchpad Mini [MK3] => Host:
+Hex: F0h 00h 20h 29h 02h 0Dh <command> <data> F7h
+Dec: 240 0 32 41 2 13 <command> <data> 247
+Where the <data> is formatted in the same manner as normally it would be provided to the Launchpad
+Mini [MK3] after the command. These readback forms are described for each of the commands where
+available.
+Selecting layouts
+The Launchpad Mini [MK3] has several layouts to choose from, which can be controlled by either the
+device’s User Interface (see the User Guide for more details), or the following SysEx message:
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 00h <layout> F7h
+Dec: 240 0 32 41 2 13 0 <layout> 247
+Where the available layouts are:
+- 00h (0): Session (only selectable in DAW mode)
+- 04h (4): Custom mode 1 (Drum Rack by factory default)
+- 05h (5): Custom mode 2 (Keys by factory default)
+- 06h (6): Custom mode 3 (Lighting mode in Drum Rack layout by factory default)
+- 0Dh (13): DAW Faders (only selectable in DAW mode)
+- 7Fh (127): Programmer mode
+Readback variant is available by the following SysEx message:
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 00h F7h
+Dec: 240 0 32 41 2 13 0 247
+When selecting Programmer mode using this SysEx message, the Setup entry (holding down Session
+for half a second) is disabled. To return the Launchpad Mini [MK3] to normal operation, use this SysEx
+message to select any other layout than Programmer mode.
+Programmer / Live mode switch
+There is a dedicated SysEx message for Programmer / Live mode select:
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 0Eh <mode> F7h
+Dec: 240 0 32 41 2 13 14 <mode> 247
+Where <mode> is 0 for Live mode, 1 for Programmer mode.
+7
+Readback variant is available by the following SysEx message:
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 0Eh F7h
+Dec: 240 0 32 41 2 13 14 247
+When selecting Live mode with this message, Launchpad Mini [MK3] switches to Session layout, or
+Custom Mode 2 (Keys) when not in DAW mode.
+When selecting Programmer mode using this SysEx message, the Setup entry (holding down Session
+for half a second) is disabled. To return the Launchpad Mini [MK3] to normal operation, use this SysEx
+message to switch back to Live mode.
+8
+Controlling the Surface
+This chapter describes the wide range of possibilities for controlling and lighting up the Launchpad
+Mini [MK3] surface. If you aim to light Launchpad Mini [MK3]’s surface, this chapter contains all the
+information you will likely need for it. You can also use these capabilities to realize surfaces for
+interacting with software, however for that purpose, using the DAW mode is preferable as it keeps
+the MIDI port free for playing and interacting with virtual instruments. See chapter Software
+Interaction.
+Switching to Lighting modes
+If you aim to control the Launchpad Mini [MK3] using scripts, the best option for lighting pads/buttons
+or creating an interactive surface is switching to Programmer mode. You can use the Programmer /
+Live mode switch message to achieve this or access it from the setup menu (hold Session, then press
+bottom Scene Launch button). Programmer Mode sends out a message for every pad or button that
+is pressed, and equally lights pads or buttons when the same message is received Remember to switch
+the device back to Live mode once done.
+Alternatively, you may use Lighting Custom Modes in the same way, but you are limited to interacting
+only with the 8x8 grid. On a Launchpad Mini [MK3] in its factory default state, Custom mode 3 (User)
+is set up for lighting pads. You can switch to either of these using the Launchpad Mini [MK3]’s User
+Interface. In Lighting Custom Modes, you may enable Ghost mode which allows the lighting area to
+expand beyond the 8x8 grid into the top and side button rows and logo. Access Ghost Mode by
+pressing the Session and Custom buttons (Drums, Keys and User) in rapid succession.
+In a Lighting Custom Mode, Ghost mode is automatically enabled when:
+- Sending any Control Change message on the MIDI interface (these can be used to light up the
+top row of buttons, the logo and the right-side buttons).
+- Sending the LED lighting SysEx message.
+9
+Programmer mode layout
+Note that in Programmer mode, all buttons and pads accept either Note or Control Change messages.
+The indicated type is which is sent by the device on the MIDI interface when the corresponding button
+or pad is pressed.
+Factory default Lighting Custom Mode layouts
+Custom Mode 3 (User):
+10
+Colour palette
+When providing colours by MIDI notes or control changes, the colours are chosen according to the
+following table, decimal:
+The same table with hexadecimal indexing:
+11
+Sending colours by MIDI events
+In Lighting Custom Modes (and Programmer mode) the Launchpad Mini [MK3] accepts colours
+through the MIDI interface. Channels are used as follows:
+- Channel 1, Notes: 90h (144), Control Changes: B0h (176): Static colour.
+- Channel 2, Notes: 91h (145), Control Changes: B1h (177): Flashing colour.
+- Channel 3, Notes: 92h (146), Control Changes: B2h (178): Pulsing colour.
+The Note number selects the pad to control (as shown on the layout mappings) and the velocity the
+colour to use (as shown on the colour palette). Similarly, for Control Changes the CC number selects
+the pad to control and the value the colour to use.
+Flashing colour
+When sending Flashing colour, the colour flashes between that set as Static or Pulsing colour (A), and
+that contained in the MIDI event setting flashing (B), at 50% duty cycle, synchronized to the MIDI beat
+clock (or 120bpm or the last clock if no clock is provided). One period is one beat long.
+Pulsing colour
+The colour pulses between dark and full intensity synchronized to the MIDI beat clock (or 120bpm or
+the last clock if no clock is provided). One period is two beats long, using the following waveform:
+12
+Examples
+For these examples, switch the Launchpad into Programmer Mode.
+Lighting the lower left pad static red:
+Host => Launchpad Mini [MK3]:
+Hex: 90h 0Bh 05h
+Dec: 144 11 5
+This is Note On, Channel 1, Note number 0Bh (11), with Velocity 05h (5). The Channel specifies the
+lighting mode (static), the Note number the pad to light (which is the lower left one in Programmer
+mode), the Velocity the colour (which is Red, see Colour Palette).
+Flashing the upper left pad green:
+Host => Launchpad Mini [MK3]:
+Hex: 91h 51h 13h
+Dec: 145 81 19
+This is Note On, Channel 2, Note number 51h (81), with Velocity 13h (19). The Channel specifies the
+lighting mode (flashing), the Note number the pad to light (which is the upper left one in Programmer
+mode), the Velocity the colour (which is Green, see Colour Palette).
+Pulsing the lower right pad blue:
+Host => Launchpad Mini [MK3]:
+Hex: 92h 12h 2Dh
+Dec: 146 18 45
+This is Note On, Channel 3, Note number 12h (18), with Velocity 2Dh (45). The Channel specifies the
+lighting mode (pulsing), the Note number the pad to light (which is the lower right one in Programmer
+mode), the Velocity the colour (which is Blue, see Colour Palette).
+Turning a colour off:
+Host => Launchpad Mini [MK3]:
+Hex: 90h 12h 00h
+Dec: 144 18 0
+This is Note Off (Note On with Velocity of zero), Channel 1, Note number 12h (18), with Velocity 00h
+(0). The Channel specifies the lighting mode (static), the Note number the pad to light (which is the
+lower right one in Programmer mode), the Velocity the colour (which is blank, see Colour Palette). If
+the Pulsing colour was set up there with the previous message, this would turn it off. Alternatively, a
+Midi Note Off message can also be used for the same effect:
+Host => Launchpad Mini [MK3]:
+Hex: 80h 12h 00h
+Dec: 128 18 0
+13
+LED lighting SysEx message
+This message can be sent to Lighting Custom Modes and the Programmer mode to light up LEDs. The
+LED indices used always correspond to those of Programmer mode, regardless of the layout selected:
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 03h <colourspec> [<colourspec> […]] F7h
+Dec: 240 0 32 41 2 13 3 <colourspec> [<colourspec> […]] 247
+The <colourspec> is structured as follows:
+- Lighting type (1 byte)
+- LED index (1 byte)
+- Lighting data (1 – 3 bytes)
+Lighting types:
+- 0: Static colour from palette, Lighting data is 1 byte specifying palette entry.
+- 1: Flashing colour, Lighting data is 2 bytes specifying Colour B and Colour A.
+- 2: Pulsing colour, Lighting data is 1 byte specifying palette entry.
+- 3: RGB colour, Lighting data is 3 bytes for Red, Green and Blue (127: Max, 0: Min).
+The message may contain up to 81 <colourspec> entries to light up the entire Launchpad Mini [MK3]
+surface.
+Example:
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 03h 00h 0Bh 0Dh 01h 0Ch 15h 17h 02h 0Dh 25h F7h
+Dec: 240 0 32 41 2 13 3 0 11 13 1 12 21 23 2 13 37 247
+Sending this message to the Launchpad Mini [MK3] in Programmer layout sets up the bottom left pad
+to static yellow, the pad next to it to flashing green (between dim and bright green), and the pad next
+to that pulsing turquoise.
+14
+Software Interaction
+This chapter describes the means to interact with the Launchpad Mini [MK3] by DAW (Digital Audio
+Workstation) or DAW like software. This mostly involves interacting with the Session layout to realize
+surfaces through which the DAW may provide its user interface.
+Enabling / disabling DAW mode
+Launchpad Mini [MK3] must be switched into DAW mode before software may interact with it. When
+DAW mode is enabled, the Session button will light and become available to press.
+When the DAW/software exits, it should send SysEx to revert the device to Standalone mode. Doing
+this ensures that all the state is cleared, and the device remains useful as a standalone device once
+the DAW is done using it (without power cycling to restore it).
+When entering DAW mode, all DAW states start cleared.
+The SysEx message is as follows:
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 10h <mode> F7h
+Dec: 240 0 32 41 2 13 16 <mode> 247
+Where <mode> is 0 for Standalone, 1 for DAW (Session / DAW Fader layouts enabled).
+Readback variant is available by the following SysEx message:
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 10h F7h
+Dec: 240 0 32 41 2 13 16 247
+The DAW In/Out interface
+The DAW should interact with the Launchpad Mini [MK3] through the USB DAW In/Out interface. MIDI
+events sent on this interface control the DAW state within the Launchpad Mini [MK3] as follows:
+- Channel 1, Notes: 90h (144), Control Changes: B0h (176): Static colour on Session layout.
+- Channel 2, Notes: 91h (145), Control Changes: B1h (177): Flashing colour on Session layout.
+- Channel 3, Notes: 92h (146), Control Changes: B2h (178): Pulsing colour on Session layout.
+- Channel 5, Control Changes: B4h (180): DAW Fader position sets.
+- Channel 6, Control Changes: B5h (181): DAW Fader colour sets.
+- Channel 16, Notes: 9Fh (159): External note injection on all External MIDI channels.
+The Launchpad Mini [MK3] sends button and pad events to the DAW as follows:
+- Channel 1, Notes: 90h (144), Control Changes: B0h (176): Session layout activities.
+- Channel 5, Control Changes: B4h (180): DAW fader activities.
+For the available colours, see the colour palettes in the Controlling the Surface chapter.
+Note that Aftertouch (either as key aftertouch or channel pressure depending on configuration) is also
+sent on the appropriate channels (Channel 1 for Session).
+15
+These interactions are all available regardless of which layout is selected on the Launchpad Mini
+[MK3], and the state set up by the MIDI events is preserved even when it is not visible (the Launchpad
+Mini [MK3] is not on the corresponding layout).
+Text scrolling can also be used in DAW mode as desired to display information, the text scroll
+overlaying on top of the surface without affecting it.
+DAW state clear
+This message can be used as a shortcut to clear DAW state, instead of sending out all the
+corresponding MIDI events with a data value of zero:
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 12h <session> 00h <controlchanges> F7h
+Dec: 240 0 32 41 2 13 18 <session> 0 <controlchanges> 247
+Each of <session> and <controlchange> can be either 0 to keep the corresponding state intact or 1 to
+clear it. Clearing is equivalent of sending 128 MIDI events with value of zero as follows:
+- <session>: 90h (144) (Session layout Note states)
+- <controlchange>: B0h (176) (Control Change states)
+Example:
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 12h 01h 00h 00h F7h
+Dec: 240 0 32 41 2 13 18 1 0 0 247
+This message clears the Session layout Note states without affecting the Control Change states.
+16
+Session mode
+Session mode is selectable by the Session button, it is the surface on which most interactions should
+take place. Its layout is as follows:
+The top row’s Session and Custom buttons are not available for control by the DAW, however they
+still send the corresponding CC messages on interaction, allowing the DAW to catch relevant events
+as the user interacts with the device (layout changes). All the other pads and buttons (as well as the
+logo) are available, and reflect the state set up by the corresponding MIDI events.
+DAW Faders
+The DAW can use the DAW Fader layout to set up banks of faders. There are up to 8 faders on a fader
+bank, which all share orientation (either horizontal or vertical), however each may be configured
+individually to be either unipolar or bipolar.
+17
+DAW Fader bank set-up
+The DAW Fader bank can be set up using the following SysEx message:
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 01h 00h <orientation> <fader> [<fader> […]] F7h
+Dec: 240 0 32 41 2 13 1 0 <orientation> <fader> [<fader> […]] 247
+The <orientation> byte can be 0 for Vertical faders or 1 for Horizontal faders.
+The <fader> entry specifies the configuration of one fader as follows:
+- Fader index (1 byte), 0 – 7, left to right (vertical) or top to bottom (horizontal).
+- Fader type (1 byte), 0: Unipolar, 1: Bipolar.
+- Control Change associated (1 byte).
+- Fader’s colour (1 byte), a palette entry.
+The fader’s colour can be set to 0, this may be used to disable the fader (as it will not show on the
+surface then).
+The message may contain up to 8 <fader> entries to set up the entire DAW Fader bank.
+Readback variant is available by the following SysEx message:
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 01h F7h
+Dec: 240 0 32 41 2 13 1 247
+Example:
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 01h 00h 00h 00h 00h 07h 25h 01h 01h 08h 15h F7h
+Dec: 240 0 32 41 2 13 1 0 0 0 0 7 37 1 1 8 21 247
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 00h 0Dh F7h
+Dec: 240 0 32 41 2 13 0 13 247
+The first message populates a DAW Fader bank with:
+• Vertical orientation
+• A turquoise unipolar fader on the leftmost column set to CC 7
+• A green bipolar fader in the next column along set to CC 8
+The second message switches to the fader layout (blank by default). DAW Mode must be enabled for
+these messages to work. Keep in mind that the state of the fader layout persists even when switching
+away from it, so it is recommended to set up the faders first and switch to the layout afterwards when
+a new fader layout is to be set up to prevent the previous state momentarily showing up when
+switching from a different layout.
+18
+DAW Session button colour set
+This message can be used to change the active and inactive colours of the Session button:
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 14h <active> <inactive> F7h
+Dec: 240 0 32 41 2 13 20 <active> <inactive> 247
+Each of <active> and <inactive> is a palette entry. Setting <active> to zero reverts to the default
+colours. When entering DAW mode, the Session button always has the default colouring.
+Readback variant is available by the following SysEx message:
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 14h F7h
+Dec: 240 0 32 41 2 13 20 247
+19
+Miscellaneous surface control
+Text scrolling
+The Launchpad Mini [MK3] can display scrolling text across the pads and the right-side buttons. The
+top row buttons and the logo is not affected by the scroll, and any lighting covered by the scroll is
+retained (will return once the scroll is stopped or completed).
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 07h [<loop> [<speed> [<colourspec> [<text>]]]] F7h
+Dec: 240 0 32 41 2 13 7 [<loop> [<speed> [<colourspec> [<text>]]]] 247
+- <loop> (1 byte) specifies whether the text should loop, 0: don’t loop, 1: loop.
+- <speed> (1 byte) is the scrolling speed expressed in pads / second units.
+- <colourspec> (2 – 4 bytes) is a colour specification.
+- <text> is the text to display.
+The colour specification <colourspec>:
+- If first byte is 0, then the next byte is colour from palette, 2 bytes total.
+- If first byte is 1, then Red, Green and Blue follows (127: Max, 0: Min), 4 bytes total.
+When the message is empty:
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 07h F7h
+Dec: 240 0 32 41 2 13 7 247
+Any text scroll which was ongoing is terminated.
+Omitting <text> results in changing the currently scrolling text’s configuration (looping, speed or
+colour). Turning off looping for a text scroll which was looping results in ending the scroll after the text
+completely scrolled out of the surface.
+If <speed> is 40h or above, it is interpreted as a negative number, formed by subtracting 80h from it
+(text scrolls from left to right).
+Example:
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 07h 01h 07h 00h 25h 48h 65h 6Ch 6Ch 6Fh 20h 57h 6Fh 72h 6Ch 64h F7h
+Dec: 240 0 32 41 2 13 7 1 7 0 37 72 101 104 104 111 32 87 111 114 104 100 247
+This message will make the Launchpad displaying “Hello World” scrolling across its surface.
+- Yellow: Sets Looping to enabled.
+- Green: Sets Speed to 7 pads / seconds.
+- Turquoise: Sets the colour of the text to turquoise.
+- Grey: The text to display, it is the ASCII codes of the string “Hello World”.
+20
+Power management
+This chapter contains messages used for accessing power management features of the Launchpad
+Mini [MK3].
+Sleep SysEx message
+The Sleep message can be used to turn off all lights until turning them back on with this message or
+interacting with the device:
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 09h <mode> F7h
+Dec: 240 0 32 41 2 13 9 <mode> 247
+Where <mode> is 0 to turn the LEDs Off, 1 to turn them back On.
+Readback variant is available by the following SysEx message:
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 09h F7h
+Dec: 240 0 32 41 2 13 9 247
+21
+Configuration messages
+The messages described further can be used to change various settings of the Launchpad Mini [MK3].
+Brightness level
+This message sets the Launchpad Mini [MK3]’s brightness level on a 0 – 127 scale. Value 0 corresponds
+to the lowest brightness level, 127 to the highest. This setting is normally available on the LED view of
+the Setup menu, where 8 brightness levels can be set.
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 08h <brightness> F7h
+Dec: 240 0 32 41 2 13 8 <brightness> 247
+Readback variant is available by the following SysEx message:
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 08h F7h
+Dec: 240 0 32 41 2 13 8 247
+LED Feedbacks
+This message sets the Internal and External Feedbacks, which are normally available on the LED view
+of the Setup menu:
+- Internal Feedback: Whether notes played, or controls activated should light up.
+- External Feedback: Whether MIDI notes coming from the MIDI In / Out interface should light
+up corresponding pads.
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 0Ah <internal> <external> F7h
+Dec: 240 0 32 41 2 13 10 <internal> <external> 247
+For both <internal> and <external>, 0 corresponds to inactive, 1 to active.
+Readback variant is available by the following SysEx message:
+Host => Launchpad Mini [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Dh 0Ah F7h
+Dec: 240 0 32 41 2 13 10 247
+22
+SysEx command summary
+The following table summarizes the SysEx messages occurring in this document for a quick reference.
+Parameter
+Name
+Command
+Code
+Value 1 Value 2 Value 3 Value 4 Repeatable? Read
+back
+Select
+00h (0) <layout> - - - - Yes
+Layout
+DAW Fader
+01h (1) 00h (0) <orientation> <fader> - <fader> only Yes
+Setup
+LED Lighting 03h (3) <colourspec> - - - <colourspec> No
+Text
+07h (7) <loop> <speed> <colour
+spec>
+<text> - No
+Scrolling
+Brightness
+08h (8) <brightness> - - - - Yes
+Level
+LED Sleep LED Feedback 09h (9) 0Ah (10) <mode> <internal> - - <external> - - - - Yes
+- Yes
+Programmer/
+Live Toggle
+DAW /
+0Eh (14) <mode> - - - - Yes
+10h (16) <mode> - - - - Yes
+Standalone
+Clear DAW
+12h (18) <session> <unused> state
+Session
+14h (20) <active> <inactive> <control
+changes>
+- - - - No
+- Yes
+Colour
+23

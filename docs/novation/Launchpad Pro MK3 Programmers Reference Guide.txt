@@ -1,0 +1,499 @@
+Launchpad Pro [MK3]
+Programmer’s reference manual
+1
+Table of Contents
+About this Guide ....................................................................................................................................... 3
+Bootloader ................................................................................................................................................ 4
+MIDI on Launchpad Pro [MK3] .................................................................................................................. 6
+Device Inquiry message ........................................................................................................................ 6
+SysEx message format used by the device........................................................................................... 6
+Selecting layouts ................................................................................................................................... 6
+Controlling the Surface ............................................................................................................................. 7
+Lighting LEDs via MIDI ........................................................................................................................... 8
+Colour palette ...................................................................................................................................... 9
+Flashing colour ....................................................................................................................................11
+Pulsing colour ......................................................................................................................................11
+Examples ............................................................................................................................................11
+LED lighting SysEx message ................................................................................................................12
+Integrating Launchpad Pro [MK3] with Software ...................................................................................14
+Accessing Session Mode (Enabling / disabling DAW mode) ..............................................................14
+The DAW In/Out interface .................................................................................................................14
+DAW Faders .......................................................................................................................................15
+DAW Fader bank set-up ....................................................................................................................16
+DAW Stop Fader for Bank .................................................................................................................17
+DAW Drumrack ..................................................................................................................................17
+DAW Note / Drumrack mode select...................................................................................................18
+DAW Note mode Active colour set .....................................................................................................18
+DAW Note/Chord mode Buttons ........................................................................................................18
+Programmer Mode .............................................................................................................................18
+Programmer mode layout ...................................................................................................................19
+Factory default Custom Mode layouts (for lighting pads) ..................................................................20
+SysEx command summary .......................................................................................................................21
+Mode Hierarchy Table ...........................................................................................................................21
+2
+About this Guide
+This document provides all the information you need to be able to control Launchpad Pro [MK3].
+Launchpad Pro [MK3] communicates using MIDI over USB. This document describes the MIDI
+implementation for the device, which can be used to control LEDs and access Launchpad Pro [MK3]’s
+various features.
+MIDI data is expressed in this manual in several different ways:
+1. A plain English description of the message.
+2. When we describe a musical note, middle C is deemed to be ‘C3’ or note 60. MIDI channel 1
+is the lowest-numbered MIDI channel: channels range from 1 - 16.
+3. MIDI messages are also expressed in plain data, with decimal and hexadecimal equivalents.
+The hexadecimal number will always be followed by an ‘h’ and the decimal equivalent given
+in brackets. For example, a note on message on channel 1 is signified by the status byte 90h
+(144).
+3
+Bootloader
+Launchpad Pro [MK3] has a bootloader mode that allows the user to configure and save certain
+settings. The bootloader is accessed by holding the SETUP button whilst plugging the device in.
+The top two rows of pads can be used to set the USB device ID of the Launchpad Pro [MK3]. The
+device ID ranges from 1 to 16, the selected ID is represented by a brightly lit pad. The default ID from
+factory is 1. If more than one Launchpad Pro [MK3] is used on the same USB, each should have a
+different device ID selected.
+The single yellow pad on the middle right can be used to toggle Onboarding. When Onboarding is
+ON, the Launchpad Pro [MK3] shows up as a Mass Storage Device to provide a more convenient first-
+time experience. You can turn this off once you are familiar with the device to disable this Mass
+Storage Device.
+4
+The blue row of pads can be used to adjust the Launchpad Pro [MK3]’s brightness level to something
+comfortable for the environment the device is used in. This control is also available on the Setup
+display when starting the Launchpad Pro [MK3] normally.
+The green pads on the bottom left can be used to display the version number of the Bootloader and
+the Application respectively.
+The single green pad on the bottom right can be used to start the Application.
+5
+MIDI on Launchpad Pro [MK3]
+The Launchpad Pro [MK3] has three MIDI interfaces:
+LPProMK3 MIDI In / Out (or first interface on Windows)
+This interface is used to receive MIDI from Note/Chord mode and Custom modes; and is used to
+provide external MIDI input or light LEDs in Custom Modes and Programmer Mode.
+LPProMK3 DIN In / Out (or second interface on Windows)
+This interface is used to receive MIDI sent/received via MIDI DIN.
+LPProMK3 DAW In / Out (or third interface on Windows)
+This interface is used by DAWs and similar software to interact with the Launchpad Pro [MK3]’s
+Session mode.
+The Launchpad Pro [MK3] sends Note On (90h – 9Fh) with velocity zero for Note Offs. It accepts either
+Note Offs (80h – 8Fh) or Note Ons (90h – 9Fh) with velocity zero for Note Off.
+Device Inquiry message
+The Launchpad Pro [MK3] responds to the Universal Device Inquiry Sysex message, which can be used
+to identify the device. This exchange is as follows:
+Host => Launchpad Pro [MK3]:
+Hex: F0h 7Eh 7Fh 06h 01h F7h
+Dec: 240 126 127 6 1 247
+Launchpad Pro [MK3] => Host (Application):
+Hex: F0h 7Eh 00h 06h 02h 00h 20h 29h 13h 01h 00h 00h <app_version> F7h
+Dec: 240 126 0 6 2 0 32 41 19 1 0 0 <app_version> 247
+Launchpad Pro [MK3] => Host (Bootloader):
+Hex: F0h 7Eh 00h 06h 02h 00h 20h 29h 13h 11h 00h 00h <boot_version> F7h
+Dec: 240 126 0 6 2 0 32 41 19 17 0 0 <boot_version> 247
+The <app_version> or <boot_version> field is 4 bytes long, providing the Application or the Bootloader
+version respectively. The version is the same version which can be viewed using the lower left green pads
+on the Bootloader’s surface, provided as four bytes, each byte corresponding to one digit, ranging from
+0 – 9.
+SysEx message format used by the device
+All SysEx messages begin with the following header regardless of direction (Host => Launchpad Pro
+[MK3] or Launchpad Pro [MK3] => Host):
+Hex Version: F0h 00h 20h 29h 02h 0Eh
+Decimal Version: 240 0 32 41 2 14
+After the header, a command byte follows, selecting the function to use.
+Selecting layouts
+The Launchpad Pro [MK3] has several layouts to choose from, which can be controlled by either the
+device’s User Interface (see the User Guide for more details), or the following SysEx message:
+6
+Host => Launchpad Pro [MK3]:
+Hex Version: F0h 00h 20h 29h 02h 0Eh 00h <layout> <page> 00h F7h
+Decimal Version: 240 0 32 41 2 14 0 <layout> <page> 0 247
+Where the available layouts are:
+Hex: 00h / Decimal: 0 --- Session (only selectable in DAW mode)
+Hex: 01h / Decimal: 1 --- Fader
+Hex: 02h / Decimal: 2 --- Chord
+Hex: 03h / Decimal: 3 --- Custom Mode
+Hex: 04h / Decimal: 4 --- Note / Drum
+Hex: 05h / Decimal: 5 --- Scale Settings
+Hex: 06h / Decimal: 6 --- Sequencer Settings
+Hex: 07h / Decimal: 7 --- Sequencer Steps
+Hex: 08h / Decimal: 8 --- Sequencer Velocity
+Hex: 09h / Decimal: 9 --- Sequencer Pattern Settings
+Hex: 0Ah / Decimal: 10 --- Sequencer Probability
+Hex: 0Bh / Decimal: 11 --- Sequencer Mutation
+Hex: 0Ch / Decimal: 12 --- Sequencer Micro Step
+Hex: 0Dh / Decimal: 13 --- Sequencer Projects
+Hex: 0Eh / Decimal: 14 --- Sequencer Patterns
+Hex: 0Fh / Decimal: 15 --- Sequencer Tempo
+Hex: 10h / Decimal: 16 --- Sequencer Swing
+Hex: 11h / Decimal: 17 --- Programmer Mode
+Hex: 12h / Decimal: 18 --- Settings Menu
+Hex: 13h / Decimal: 19 --- Custom mode Settings
+Where the available pages are:
+Hex: 00h-07h / Decimal: 0-7 --- for Custom Mode Views
+Hex: 00h-03h / Decimal: 0-3 --- for any Sequencer View
+Hex: 00h-03h / Decimal: 0-3 --- for Fader view
+Hex: 00h-04h / Decimal: 0-4 --- for Settings Menu
+Hex: 00h / Decimal: 0 --- for any other view
+Request the current layout with the following SysEx message:
+Host => Launchpad Pro [MK3]:
+Hex Version: F0h 00h 20h 29h 02h 0Eh 00h F7h
+Decimal Version: 240 0 32 41 2 14 0 247
+The device will also send out a select layout message whenever the view changes.
+7
+Controlling the Surface
+This chapter describes the wide range of possibilities for controlling and lighting Launchpad Pro [MK3].
+There are three main options to light Launchpad Pro [MK3]’s pads:
+Live Mode + Session (DAW Mode)
+This is the typical place to start when writing a script to take control of Launchpad Pro [MK3]’s LEDs. In
+Session, MIDI messages may be sent to light up the 8x8 grid, all the buttons and the logo. Additional
+features may also be accessed within DAW Mode, including Drum Rack layout & faders.
+In Live Mode, all Launchpad Pro [MK3] functionality is maintained, such as having access to Note Mode,
+Chord Mode and Custom Modes.
+Live Mode + Custom
+When a Custom Mode is set to have no On Colour (ie pads will not light when triggered from the
+hardware itself), pads may be lit via MIDI messages. The MIDI mapping of Custom Modes may be
+edited using Novation Components.
+In Live Mode, all Launchpad Pro [MK3] functionality is maintained, such as having access to Note Mode
+and Custom Modes.
+Programmer Mode
+Programmer Mode provides an alternative to Session Mode for creating scripts. In Programmer Mode,
+every pad and button sends out a MIDI message and may be lit with the same message.
+In Programmer Mode, access to all Launchpad Pro [MK3] functionality is disabled. Therefore, pressing
+the Mode buttons will not cause Launchpad Pro [MK3] to change modes when in Programmer Mode.
+Lighting LEDs via MIDI
+In Session Mode, Launchpad Pro [MK3] accepts colours through the DAW interface.
+In Custom Modes and Programmer Mode Launchpad Pro [MK3] accepts colours through the MIDI
+interface.
+Channels are used as follows:
+Channel Behaviour Notes CCs
+1 Static Colour Hex: 90h
+Hex: B0h
+Decimal: 144
+Decimal: 176
+2 Flashing Colour Hex: 91h
+Decimal: 145
+Hex: B1h
+Decimal: 177
+3 Pulsing Colour Hex: 92h
+Hex: B2h
+Decimal: 146
+Decimal: 178
+When a Note On message is used to light an LED, the Note Number determines the index of the pad
+lit, while the velocity determines the colour that the pad is lit.
+8
+When a CC message is used to light an LED, the CC number determines the index of the pad lit, while
+the CC value determines the colour that the pad is lit.
+See the Session Mode layout below in Decimal (left) and Hex (right):
+Numbers are notes except where stated as CCs.
+Colour palette
+When providing colours by MIDI notes or control changes, the colours are chosen according to the
+following table, decimal:
+The same table with hexadecimal indexing:
+9
+10
+Flashing colour
+When sending Flashing colour, the colour flashes between that set as Static or Pulsing colour (A), and
+that contained in the MIDI event setting flashing (B), at 50% duty cycle, synchronized to the MIDI beat
+clock (or 120bpm or the last clock if no clock is provided). One period is one beat long.
+Pulsing colour
+The colour pulses between dark and full intensity synchronized to the MIDI beat clock (or 120bpm or
+the last clock if no clock is provided). One period is two beats long, using the following waveform:
+Examples
+For these examples, switch the Launchpad into Programmer Mode.
+1. Lighting the lower left pad static red:
+Host => Launchpad Pro [MK3]:
+Hex: 90h 0Bh 05h
+Dec: 144 11 5
+This is Note On, Channel 1, Note number 0Bh (11), with Velocity 05h (5). The Channel specifies the
+lighting mode (static), the Note number the pad to light (which is the lower left one in Programmer Mode),
+the Velocity the colour (which is Red, see Colour Palette).
+2. Flashing the upper left pad green:
+Host => Launchpad Pro [MK3]:
+Hex: 91h 51h 13h
+Dec: 145 81 19
+11
+This is Note On, Channel 2, Note number 51h (81), with Velocity 13h (19). The Channel specifies the
+lighting mode (flashing), the Note number the pad to light (which is the upper left one in Programmer
+mode), the Velocity the colour (which is Green, see Colour Palette).
+3. Pulsing the lower right pad blue:
+Host => Launchpad Pro [MK3]:
+Hex: 92h 12h 2Dh
+Dec: 146 18 45
+This is Note On, Channel 3, Note number 12h (18), with Velocity 2Dh (45). The Channel specifies the
+Lighting mode (pulsing), the Note number the pad to light (which is the lower right one in Programmer
+mode), the Velocity the colour (which is Blue, see Colour Palette).
+4. Turning a colour off:
+Host => Launchpad Pro [MK3]:
+Hex: 90h 12h 00h
+Dec: 144 18 0
+This is Note Off (Note On with Velocity of zero), Channel 1, Note number 12h (18), with Velocity 00h
+(0). The Channel specifies the lighting mode (static), the Note number the pad to light (which is the lower
+right one in Programmer mode), the Velocity the colour (which is blank, see Colour Palette). If the Pulsing
+colour was set up there with the previous message, this would turn it off. Alternatively, a Midi Note Off
+message can also be used for the same effect:
+Host => Launchpad Pro [MK3]:
+Hex: 80h 12h 00h
+Dec: 128 18 0
+LED lighting SysEx message
+This message can be sent to Programmer Mode to light up LEDs. The LED indices used always
+correspond to those of Programmer mode, regardless of the layout selected:
+Host => Launchpad Pro [MK3]:
+Hex Version: F0h 00h 20h 29h 02h 0Eh 03h <Colour Spec> [ <Colour Spec> [_] ] F7h
+Decimal Version: 240 0 32 41 2 14 3 <Colour Spec> [ <Colour Spec> [_] ] 247
+The <Colour Spec> is structured as follows:
+- Lighting type (1 byte)
+- LED index (1 byte)
+- Lighting data (1 – 3 bytes)
+Lighting types:
+Hex: 00h / Decimal: 0 --- Static colour from palette, Lighting data is 1 byte specifying
+palette entry.
+Colour A.
+Hex: 01h / Decimal: 1 --- Flashing colour, Lighting data is 2 bytes specifying Colour B and
+Hex: 02h / Decimal: 2 --- Pulsing colour, Lighting data is 1 byte specifying palette entry.
+12
+Hex: 03h / Decimal: 3 --- RGB colour, Lighting data is 3 bytes for Red, Green and Blue (127:
+Max, 0: Min).
+The message may contain up to 106 <Colour Spec> entries to light up the entire Launchpad Pro [MK3]
+surface.
+Example:
+Host => Launchpad Pro [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Eh 03h 00h 0Bh 0Dh 01h 0Ch 15h 17h 02h 0Dh 25h F7h
+Dec: 240 0 32 41 2 14 3 0 11 13 1 12 21 23 2 13 37 247
+Sending this message to the Launchpad Pro [MK3] in Programmer layout sets up the bottom left pad to
+static yellow, the pad next to it to flashing green (between dim and bright green), and the pad next to
+that pulsing turquoise
+13
+Integrating Launchpad Pro [MK3] with Software
+This chapter describes the means to interact with the Launchpad Pro [MK3] with a DAW (Digital Audio
+Workstation) or DAW like software/hardware. This mostly involves lighting and interacting with the
+Session layout to realize surfaces through which the DAW may provide its user interface, such as
+faders for track volumes.
+Accessing Session Mode (Enabling / disabling DAW mode)
+The device must be in DAW Mode before Session Mode can be selected. The following message enters
+Launchpad Pro [MK3] into DAW Mode. When DAW Mode is enabled, the Session Button will become
+lit.
+Host => Launchpad Pro [MK3]:
+Hex Version: F0h 00h 20h 29h 02h 0Eh 10h <Mode> F7h
+Decimal Version: 240 0 32 41 2 14 16 <Mode> 247
+Where <Mode> is 0 for Standalone, 1 for DAW (Session / DAW Fader layouts enabled).
+The SysEx message is as follows:
+Host => Launchpad Pro [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Eh 10h <mode> F7h
+Dec: 240 0 32 41 2 14 16 <mode> 247
+When the software exits, it should revert the device to Standalone mode. Doing this ensures that the
+state is cleared, and that Launchpad Pro [MK3] remains usable in Standalone Mode once the software
+is finished using the device.
+The DAW In/Out interface
+The DAW should interact with Launchpad Pro [MK3] through the USB DAW In/Out interface. MIDI
+events sent on this interface control the DAW state within the Launchpad Pro [MK3] as follows:
+Channel Behaviour Notes CCs
+1 Static Colour in
+Session View
+Hex: 90h
+Decimal: 144
+Hex: B0h
+Decimal: 176
+2 Flashing Colour in
+Session View
+Hex: 91h
+Decimal: 145
+Hex: B1h
+Decimal: 177
+3 Pulsing Colour in
+Session View
+Hex: 92h
+Decimal: 146
+Hex: B2h
+Decimal: 178
+5 Set DAW Fader
+Positions
+N/A Hex: B4h
+Decimal: 180
+6 Set DAW Fader Colours N/A Hex: B5h
+Decimal: 181
+9 Static Colour in Drum
+Rack
+Hex: 98h
+Decimal: 152
+N/A
+14
+10 Flashing Colour in
+Drum Rack
+Hex: 99h
+Decimal: 153
+N/A
+11 Pulsing Colour in
+Drum Rack
+Hex: 9Ah
+Decimal: 154
+N/A
+16 External Note
+injection on all
+External MIDI
+Channels
+Hex: 9Fh
+Decimal: 154
+N/A
+The Launchpad Pro [MK3] sends button and pad events to the DAW as follows:
+Channel Behaviour Notes CCs
+1 Session Layout
+activities
+Hex: 90h
+Decimal: 144
+Hex: B0h
+Decimal: 176
+5 DAW Fader activities N/A Hex: B4h
+Decimal: 180
+9 Drum Rack Layout
+activities
+Hex: 98h
+Decimal: 152
+N/A
+Note that Aftertouch (either as polyphonic aftertouch or channel pressure depending on configuration)
+is also sent on the appropriate channels (Channel 1 for Session, Channel 9 for Drum Rack).
+These interactions are all available regardless of which layout is selected on the Launchpad Pro [MK3],
+and the state set up by the MIDI events is preserved even when it is not visible (ie the Launchpad is not
+on the corresponding layout).
+DAW Faders
+The DAW can use the DAW Fader layout to set up banks of faders. There are up to 8 faders on a
+fader bank, which all share the same orientation (either horizontal or vertical), however each may be
+configured individually to be either unipolar or bipolar.
+15
+DAW Fader bank set-up
+The DAW Fader bank can be set up using the following SysEx message:
+Host => Launchpad Pro [MK3]:
+Hex Version: F0h 00h 20h 29h 02h 0Eh 01h <Bank> <Orientation> <Fader> [ <Fader> [ _ ] ] F7h
+Decimal Version: 240 0 32 41 2 14 1 <Bank> <Orientation> <Fader> [ <Fader> [ _ ] ] 247
+The <Bank> byte can be
+Hex: 00h / Decimal: 0 --- Volumes
+Hex: 01h / Decimal: 1 --- Pans
+Hex: 02h / Decimal: 2 --- Sends
+Hex: 03h / Decimal: 3 --- Devices
+The <Orientation> byte can be 0 for Vertical faders or 1 for Horizontal faders.
+The <Fader> entry specifies the configuration of one fader as follows:
+Fader index (1 byte), 0 – 7, left to right (vertical) or top to bottom (horizontal).
+Fader type (1 byte), 0: Unipolar, 1: Bipolar.
+Control Change associated (1 byte).
+Fader’s colour (1 byte), a palette entry.
+The fader’s colour can be set to 0, this may be used to make the fader not visible (as it will not show on
+the surface then).
+The message may contain up to 8 <fader> entries to set up the entire DAW Fader bank.
+Example:
+Host => Launchpad Pro [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Eh 01h 00h 00h 00h 00h 07h 25h 01h 01h 08h 15h F7h
+16
+Dec: 240 0 32 41 2 14 1 0 0 0 0 7 37 1 1 8 21 247
+Host => Launchpad Pro [MK3]:
+Hex: F0h 00h 20h 29h 02h 0Eh 00h 0Dh F7h
+Dec: 240 0 32 41 2 14 0 13 247
+The first message populates a DAW Fader bank with:
+• Vertical orientation
+• A turquoise unipolar fader on the leftmost column set to CC 7
+• A green bipolar fader in the next column along set to CC 8
+DAW Stop Fader for Bank
+The following message can be used to stop the movement of any fader that is currently moving, for a
+specific fader bank.
+Hex Version: F0h 00h 20h 29h 02h 0Eh 19h <Bank> F7h
+Decimal Version: 240 0 32 41 2 14 25 <Bank> 247
+With <Bank> being:
+Hex: 00h / Decimal: 0 --- Volumes
+Hex: 01h / Decimal: 1 --- Pans
+Hex: 02h / Decimal: 2 --- Sends
+Hex: 03h / Decimal: 3 --- Devices
+DAW Drumrack
+The DAW can request the Note mode to show a Drum Rack instead, which it could populate according
+to the available drum samples using the MIDI events described in the DAW In/Out interface chapter.
+The layout of this Drumrack is as follows:
+17
+DAW Note / Drumrack mode select
+This message can be used to select the DAW Drumrack mode. It is only available in DAW mode.
+Changing the mode does not change layout on the Launchpad Pro [MK3], if Note mode is selected, the
+change is immediately visible, otherwise next time selecting Note mode will result in showing the
+selected Drumrack mode instead.
+Host => Launchpad Pro [MK3]:
+Hex Version: F0h 00h 20h 29h 02h 0Eh 0Fh <Mode> F7h
+Decimal Version: 240 0 32 41 2 14 15 <Mode> 247
+Where the <Mode> byte can be one of the followings:
+0: Note mode.
+1: Drumrack.
+DAW Note mode Active colour set
+This message can be used to change the active colour of Note mode (which is normally green):
+Host => Launchpad Pro [MK3]:
+Hex Version: F0h 00h 20h 29h 02h 0Eh 17h <Colour> F7h
+Decimal Version: 240 0 32 41 2 14 23 <Colour> 247
+The <Colour> is a palette entry. Setting it to zero reverts to the default (green) colour.
+DAW Note/Chord mode Buttons
+In Note mode, Drumrack mode and Chord Mode, the following buttons may be lit with their respective
+Session Mode CCs.
+• Left hand buttons*, excluding the up and down buttons (CC 10, 20, …, 60)
+• Track select buttons (CC 101 – 108)
+• Track control buttons (CC 1-8).
+• Shift button (CC 90)
+• Logo (CC 99)
+*(Clear not accessible in Chord Mode)
+Programmer Mode
+Programmer Mode provides an alternative to Session Mode for creating scripts. You can use the
+Programmer / Live mode switch message to achieve this:
+Host => Launchpad Pro [MK3]:
+Hex Version: F0h 00h 20h 29h 02h 0Eh 0Eh <Mode> F7h
+Decimal Version: 240 0 32 41 2 14 14 <Mode> 247
+Where <Mode> is 0 for Live mode, 1 for Programmer mode.
+18
+When selecting Live mode with this message, Launchpad Pro [MK3] switches to Session layout, or Note
+mode when not in DAW mode.
+When selecting Programmer mode using this SysEx message, you may not access the Settings menu.
+(usually accessed by pressing the SETUP button). To return the Launchpad Pro [MK3] to normal
+operation, use this SysEx message to select any other layout than Programmer mode.
+Alternatively, Programmer Mode may be selected manually from the device. Press and hold SETUP to
+enter the settings menu, then press the bottom Scene Launch button (lit orange). Now release the SETUP
+button to enter Programmer Mode. Note that Launchpad Pro [MK3] will always boot into Live Mode.
+Programmer mode layout
+Note that in Programmer mode, all buttons and pads accept either Note or Control Change messages.
+The indicated type is which is sent by the device on the MIDI interface when the corresponding button
+or pad is pressed.
+19
+Factory default Custom Mode layouts (for lighting pads)
+On a Launchpad Pro [MK3] in its factory default state, Custom Mode 7 and Custom Mode 8 are set up
+for lighting pads (each with different layouts). You can switch to either of these using the Launchpad
+Pro [MK3]’s User Interface.
+Custom Mode 7:
+Custom Mode 8:
+20
+SysEx command summary
+Each of the following SysEx messages has the same header:
+Hex Version: F0h 00h 20h 29h 02h 0Eh
+Decimal Version: 240 0 32 41 2 14
+Parameter Name Command
+Code
+Value 1 Value 2 Value 3 Repeatable?
+Select
+00h (0) <layout> - - -
+Layout
+DAW Fader Setup 01h (1) 00h (0) <orientation> <fader> <fader> only
+LED
+03h (3) <colourspec> - - <colourspec>
+Lighting
+Live/Programmer
+Toggle
+0Eh (14) <mode> - - -
+DAW /
+10h (16) <mode> - - -
+Standalone
+Stop Faders for
+Bank
+19h (25) <bank index> - - -
+Mode Hierarchy Table
+Live Mode Programmer Mode
+DAW Mode
+(DAW Mode message sent
+to enable Session Mode)
+Standalone Mode
+(default when turned on)
+Functionality available:
+Only the Programmer Layout
+Functionality available:
+Session Mode, DAW Faders
++ all Standalone Mode
+functionality
+Functionality available:
+Note Mode, Chord Mode,
+Custom Modes, Sequencer
+21

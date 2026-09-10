@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Lunchpad palette: near-black stage, warm accent inspired by the Launchpad LEDs */
+  --color-stage-950: #0b0b0f;
+  --color-stage-900: #121218;
+  --color-stage-800: #1a1a22;
+  --color-stage-700: #24242e;
+  --color-stage-600: #31313d;
+  --color-stage-500: #4a4a58;
+  --color-stage-400: #6b6b7a;
+  --color-stage-300: #9a9aa8;
+  --color-stage-200: #c9c9d3;
+  --color-stage-100: #ececf1;
+
+  --color-accent-500: #ff7a1a;
+  --color-accent-400: #ff9447;
+  --color-accent-300: #ffb27a;
+
+  --color-ok: #3ddc84;
+  --color-warn: #ffc857;
+  --color-danger: #ff5c5c;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--color-stage-950);
+  color: var(--color-stage-100);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+@layer base {
+  /* Scrollbars in the app's palette: a thin rounded thumb, no track, and a
+     slightly brighter thumb under the pointer. The standard properties cover
+     Chromium (Windows) and newer WebKit; the -webkit rules cover older WebKit. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-stage-600) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--color-stage-600);
+    border: 3px solid transparent;
+    border-radius: 9999px;
+    background-clip: padding-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-stage-500);
+  }
+  *:hover {
+    scrollbar-color: var(--color-stage-500) transparent;
+  }
+}
+
+/* Pad colour animations: --pad-a / --pad-b are set inline per pad. */
+/* The second colour is an overlay one pixel larger than the pad, so rounded
+   clipping at fractional sizes cannot leave a seam of the first colour. */
+@keyframes pad-flash {
+  0%, 49.9% { opacity: 0; }
+  50%, 100% { opacity: 1; }
+}
+@keyframes pad-pulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(0.35); }
+}
+.pad-flashing { position: relative; isolation: isolate; }
+.pad-flashing::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  background-color: var(--pad-b);
+  animation: pad-flash 0.9s steps(1) infinite;
+  pointer-events: none;
+}
+.pad-pulsing { animation: pad-pulse 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .pad-flashing::after, .pad-pulsing { animation: none; }
+}

@@ -1,0 +1,295 @@
+//! Commands for the sound, speech, OBS and Streamlabs editors and their settings.
+
+use super::{err, AppState, CmdResult};
+use crate::audio::peaks::{analyze, AudioInfo};
+use crate::audio::{AudioDevices, PlayRequest};
+use crate::config::{AudioSettings, ObsSettings, Settings, SlobsSettings};
+use crate::obs::ObsState;
+use crate::slobs::SlobsState;
+use crate::http::{perform, HttpOutcome, HttpSpec};
+use crate::macros::{HttpAuth, HttpBodyMode, HttpFilePart, HttpHeader, HttpMethod};
+use crate::speech::{SpeakRequest, VoiceInfo};
+use std::collections::HashMap;
+use serde::Deserialize;
+use std::path::{Path, PathBuf};
+use tauri::{AppHandle, Emitter, State};
+
+// ----- audio ----------------------------------------------------------------
+
+#[tauri::command]
+pub async fn list_audio_devices(state: State<'_, AppState>) -> CmdResult<AudioDevices> {
+    Ok(state.audio.devices().await)
+}
+
+/// Output or input devices of the system, for the "switch audio device" action.
+#[tauri::command]
+pub async fn list_system_audio_devices(target: crate::macros::SystemVolumeTarget) -> CmdResult<Vec<String>> {
+    crate::audio_devices::list(target).await
+}
+
+#[tauri::command]
+pub async fn analyze_audio(path: String, buckets: Option<usize>) -> CmdResult<AudioInfo> {
+    let path = PathBuf::from(path);
+    tauri::async_runtime::spawn_blocking(move || analyze(&path, buckets.unwrap_or(160))).await.map_err(err)?
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PreviewSound {
+    pub file: String,
+    pub output_device: Option<String>,
+    pub volume: f32,
+    pub start: f32,
+    pub end: f32,
+}
+
+/// Play a sound with the editor's current settings. Returns the play id.
+#[tauri::command]
+pub async fn preview_sound(request: PreviewSound, state: State<'_, AppState>) -> CmdResult<u64> {
+    let device = request.output_device.or_else(|| state.settings.lock().settings.audio.output_device.clone());
+    let (id, _done) = state.audio.play(PlayRequest {
+        file: PathBuf::from(request.file),
+        device,
+        volume: request.volume,
+        start: request.start,
+        end: request.end,
+    });
+    Ok(id)
+}
+
+#[tauri::command]
+pub async fn stop_sound(id: u64, state: State<'_, AppState>) -> CmdResult<()> {
+    state.audio.stop(id);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn stop_all_sounds(state: State<'_, AppState>) -> CmdResult<()> {
+    state.audio.stop_all();
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn set_audio_settings(config: AudioSettings, app: AppHandle, state: State<'_, AppState>) -> CmdResult<Settings> {
+    let settings = {
+        let mut st = state.settings.lock();
+        st.settings.audio = config;
+        st.save().map_err(err)?;
+        st.settings.clone()
+    };
+    let _ = app.emit(super::settings::EVENT_SETTINGS, &settings);
+    Ok(settings)
+}
+
+/// Basename of a path, for labels.
+#[tauri::command]
+pub async fn file_name(path: String) -> CmdResult<String> {
+    Ok(Path::new(&path).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or(path))
+}
+
+// ----- speech ---------------------------------------------------------------
+
+#[tauri::command]
+pub async fn list_voices(state: State<'_, AppState>) -> CmdResult<Vec<VoiceInfo>> {
+    Ok(state.speech.voices().await)
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PreviewSpeech {
+    pub text: String,
+    pub voice: Option<String>,
+    pub volume: f32,
+}
+
+#[tauri::command]
+pub async fn preview_speech(request: PreviewSpeech, state: State<'_, AppState>) -> CmdResult<()> {
+    let _ = state.speech.speak(SpeakRequest { text: request.text, voice: request.voice, volume: request.volume });
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn stop_speech(state: State<'_, AppState>) -> CmdResult<()> {
+    state.speech.stop();
+    Ok(())
+}
+
+// ----- OBS ------------------------------------------------------------------
+
+#[tauri::command]
+pub async fn obs_state(state: State<'_, AppState>) -> CmdResult<ObsState> {
+    Ok(state.obs.state())
+}
+
+#[tauri::command]
+pub async fn obs_connect(state: State<'_, AppState>) -> CmdResult<ObsState> {
+    let obs = state.obs.clone();
+    obs.connect().await?;
+    Ok(obs.state())
+}
+
+#[tauri::command]
+pub async fn obs_disconnect(state: State<'_, AppState>) -> CmdResult<ObsState> {
+    let obs = state.obs.clone();
+    obs.disconnect().await;
+    Ok(obs.state())
+}
+
+#[tauri::command]
+pub async fn obs_refresh(state: State<'_, AppState>) -> CmdResult<ObsState> {
+    let obs = state.obs.clone();
+    obs.refresh().await?;
+    Ok(obs.state())
+}
+
+#[tauri::command]
+pub async fn obs_filters(source: String, state: State<'_, AppState>) -> CmdResult<Vec<String>> {
+    let obs = state.obs.clone();
+    obs.filters(&source).await
+}
+
+#[tauri::command]
+pub async fn set_obs_settings(config: ObsSettings, app: AppHandle, state: State<'_, AppState>) -> CmdResult<Settings> {
+    let settings = {
+        let mut st = state.settings.lock();
+        st.settings.obs = config;
+        st.save().map_err(err)?;
+        st.settings.clone()
+    };
+    let _ = app.emit(super::settings::EVENT_SETTINGS, &settings);
+    Ok(settings)
+}
+
+// ----- Streamlabs Desktop ---------------------------------------------------
+
+#[tauri::command]
+pub async fn slobs_state(state: State<'_, AppState>) -> CmdResult<SlobsState> {
+    Ok(state.slobs.state())
+}
+
+#[tauri::command]
+pub async fn slobs_connect(state: State<'_, AppState>) -> CmdResult<SlobsState> {
+    let slobs = state.slobs.clone();
+    slobs.connect().await?;
+    Ok(slobs.state())
+}
+
+#[tauri::command]
+pub async fn slobs_disconnect(state: State<'_, AppState>) -> CmdResult<SlobsState> {
+    let slobs = state.slobs.clone();
+    slobs.disconnect().await;
+    Ok(slobs.state())
+}
+
+#[tauri::command]
+pub async fn slobs_refresh(state: State<'_, AppState>) -> CmdResult<SlobsState> {
+    let slobs = state.slobs.clone();
+    slobs.refresh().await?;
+    Ok(slobs.state())
+}
+
+#[tauri::command]
+pub async fn slobs_filters(source: String, state: State<'_, AppState>) -> CmdResult<Vec<String>> {
+    let slobs = state.slobs.clone();
+    slobs.filters(&source).await
+}
+
+#[tauri::command]
+pub async fn set_slobs_settings(config: SlobsSettings, app: AppHandle, state: State<'_, AppState>) -> CmdResult<Settings> {
+    let settings = {
+        let mut st = state.settings.lock();
+        st.settings.slobs = config;
+        st.save().map_err(err)?;
+        st.settings.clone()
+    };
+    let _ = app.emit(super::settings::EVENT_SETTINGS, &settings);
+    Ok(settings)
+}
+
+// ----- HTTP -----------------------------------------------------------------
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HttpTest {
+    pub method: HttpMethod,
+    pub url: String,
+    #[serde(default)]
+    pub headers: Vec<HttpHeader>,
+    #[serde(default)]
+    pub content_type: Option<String>,
+    #[serde(default)]
+    pub body: String,
+    #[serde(default)]
+    pub body_mode: HttpBodyMode,
+    #[serde(default)]
+    pub body_file: Option<String>,
+    #[serde(default)]
+    pub files: Vec<HttpFilePart>,
+    #[serde(default)]
+    pub auth: HttpAuth,
+    #[serde(default)]
+    pub timeout_ms: Option<u64>,
+    #[serde(default)]
+    pub ignore_tls_errors: bool,
+}
+
+/// Send a request from the editor with sample placeholder values.
+#[tauri::command]
+pub async fn test_http_request(request: HttpTest) -> CmdResult<HttpOutcome> {
+    let spec = HttpSpec {
+        method: request.method,
+        url: request.url,
+        headers: request.headers.into_iter().map(|h| (h.name, h.value)).collect(),
+        content_type: request.content_type,
+        body: request.body,
+        body_mode: request.body_mode,
+        body_file: request.body_file,
+        files: request.files,
+        auth: request.auth,
+        timeout_ms: request.timeout_ms.unwrap_or(10_000),
+        ignore_tls_errors: request.ignore_tls_errors,
+    };
+    let mut vars: HashMap<&str, String> = HashMap::new();
+    vars.insert("velocity", "127".into());
+    vars.insert("velocity01", "1.000".into());
+    vars.insert("pressure", "0".into());
+    vars.insert("pressure01", "0.000".into());
+    vars.insert("x", "0".into());
+    vars.insert("y", "0".into());
+    vars.insert("pageId", "default".into());
+    perform(&spec, &vars).await
+}
+
+// ----- scripts & variables --------------------------------------------------
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScriptTest {
+    pub code: String,
+    #[serde(default)]
+    pub locals: HashMap<String, String>,
+}
+
+/// Run a snippet from the editor against the current globals with sample trigger values.
+#[tauri::command]
+pub async fn test_script(request: ScriptTest, state: State<'_, AppState>) -> CmdResult<crate::script::ScriptOutcome> {
+    let globals = state.engine.globals();
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut builtins: HashMap<&'static str, String> = HashMap::new();
+        builtins.insert("velocity", "127".into());
+        builtins.insert("velocity01", "1.000".into());
+        builtins.insert("pressure", "0".into());
+        builtins.insert("pressure01", "0.000".into());
+        builtins.insert("x", "0".into());
+        builtins.insert("y", "0".into());
+        builtins.insert("pageId", "default".into());
+        crate::script::run(crate::script::ScriptInput { code: &request.code, locals: &request.locals, globals: &globals, builtins: &builtins })
+    })
+    .await
+    .map_err(err)?
+}
+
+#[tauri::command]
+pub async fn get_variables(state: State<'_, AppState>) -> CmdResult<HashMap<String, String>> {
+    Ok(state.engine.globals())
+}

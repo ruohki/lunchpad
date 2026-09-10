@@ -1,2 +1,35 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
 node_modules
 dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Local assistant files
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+
+# Written by the release workflow with the code-signing settings
+src-tauri/tauri.windows.conf.json
+
+# The Electron app lives on the legacy branch; the local copy is reference only
+legacy/
