@@ -2,7 +2,6 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { clsx } from "clsx";
 import { api, emptyButton, type Button, type Layout, type Look, type Page } from "../lib/api";
 import { FACES } from "../lib/colors";
 import { useDeviceStore } from "../store/device";
@@ -13,7 +12,7 @@ import { PadFace } from "./PadFace";
 import { RgbField } from "./RgbField";
 import { Select } from "./Select";
 import { Slider } from "./Slider";
-import { Button as UiButton, IconClose, Toggle } from "./ui";
+import { Button as UiButton, IconClose, Segmented, Toggle } from "./ui";
 import { Tooltip } from "./Tooltip";
 import { StateLinkField } from "./StateLinkField";
 
@@ -296,33 +295,6 @@ function EditorForm({ pageId, x, y, initial, limited, pages, layout, onCancel, o
 const inputCls =
   "min-h-[32px] rounded-md bg-stage-800 px-2.5 py-1.5 text-sm text-stage-100 outline-none focus:ring-1 focus:ring-accent-400";
 
-function Segmented<T extends string>({
-  value,
-  options,
-  onChange,
-}: {
-  value: T;
-  options: { value: T; label: string }[];
-  onChange: (v: T) => void;
-}) {
-  return (
-    <div className="flex gap-1 rounded-lg bg-stage-800 p-1">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          onClick={() => onChange(o.value)}
-          className={clsx(
-            "rounded-md px-3 py-1 text-xs font-medium transition-colors",
-            value === o.value ? "bg-stage-600 text-stage-100" : "text-stage-400 hover:text-stage-200",
-          )}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 /** New buttons get a random palette colour, like dropping a file did in legacy. */
 function randomNewButton(): Button {

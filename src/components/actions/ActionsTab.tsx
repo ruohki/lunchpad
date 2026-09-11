@@ -21,6 +21,8 @@ interface Props {
   /** Titles per list, translation keys. */
   labels?: Partial<Record<ListKey, string>>;
   hideLoop?: boolean;
+  /** The list belongs to a fader: value actions start out reading the fader's own level. */
+  faderContext?: boolean;
 }
 
 type ListKey = "down" | "up" | "hold";
@@ -42,15 +44,24 @@ const MENU_GROUPS: { group: string; types: ActionType[]; submenu?: boolean }[] =
   { group: "stop", types: ["stopThisMacro", "restartThisMacro", "stopAllMacros"], submenu: true },
   { group: "obs", types: ["obsSwitchScene", "obsToggleSource", "obsSetAudio", "obsToggleFilter", "obsStream", "obsSaveReplay", "obsStudioMode"], submenu: true },
   { group: "slobs", types: ["slobsSwitchScene", "slobsToggleSource", "slobsSetAudio", "slobsToggleFilter", "slobsStream", "slobsSaveReplay", "slobsStudioMode"], submenu: true },
+  { group: "homeAssistant", types: ["homeAssistantTurn", "homeAssistantSetValue", "homeAssistantCallService"], submenu: true },
 ];
 
+/** Inside a fader, a value action should follow the fader: `value` is its level as a local variable. */
+function readFaderValue(action: Action): Action {
+  if ("valueFrom" in action && action.valueFrom === null) return { ...action, valueFrom: "value" };
+  if ("volumeFrom" in action && action.volumeFrom === null) return { ...action, volumeFrom: "value" };
+  return action;
+}
+
 /** The "Actions" tab of the button editor: pressed and released lists. */
-export function ActionsTab({ button, onChange, pages, layout, lists = ["down", "up", "hold"], labels, hideLoop = false }: Props) {
+export function ActionsTab({ button, onChange, pages, layout, lists = ["down", "up", "hold"], labels, hideLoop = false, faderContext = false }: Props) {
   const { t } = useTranslation();
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   const obsEnabled = useSettingsStore((s) => s.settings?.obs.enabled ?? false);
   const slobsEnabled = useSettingsStore((s) => s.settings?.slobs.enabled ?? false);
+  const haEnabled = useSettingsStore((s) => s.settings?.homeAssistant?.enabled ?? false);
 
   const setList = (key: ListKey, list: Action[]) => onChange({ ...button, [key]: list });
 
@@ -68,7 +79,7 @@ export function ActionsTab({ button, onChange, pages, layout, lists = ["down", "
       label: t(`actions.types.${type}.name`),
       icon: <Icon name={ACTION_ICONS[type]} />,
       onSelect: () => {
-        const created = createActions(type);
+        const created = createActions(type).map((a) => (faderContext ? readFaderValue(a) : a));
         setList(key, [...button[key], ...created]);
         // A new action opens expanded; everything else stays folded.
         setExpanded((prev) => new Set([...prev, ...created.filter((a) => !isMarker(a)).map((a) => a.id)]));
@@ -76,7 +87,7 @@ export function ActionsTab({ button, onChange, pages, layout, lists = ["down", "
     });
     const items: MenuEntry[] = [];
     // Integrations that are switched off in the settings stay out of the menu.
-    const groups = MENU_GROUPS.filter((g) => (g.group === "obs" ? obsEnabled : g.group === "slobs" ? slobsEnabled : true));
+    const groups = MENU_GROUPS.filter((g) => (g.group === "obs" ? obsEnabled : g.group === "slobs" ? slobsEnabled : g.group === "homeAssistant" ? haEnabled : true));
     groups.forEach((g, gi) => {
       const label = t(`actions.groups.${g.group}`);
       if (g.submenu) {

@@ -8,6 +8,7 @@
 //! * a watcher thread (see [`spawn_watcher`]) that polls the OS port list to
 //!   detect unplugging and to auto-connect the remembered device.
 
+use super::inquiry::{is_inquiry_reply, parse_inquiry_reply, DEVICE_INQUIRY};
 use super::models::{driver_for, LaunchpadDriver};
 use super::render::{spawn_renderer, RenderHandle, RenderInputs};
 use crate::live::SharedLive;
@@ -80,6 +81,17 @@ pub struct OutputHandle {
     driver: Arc<dyn LaunchpadDriver>,
 }
 
+impl Active {
+    /// Device facts for the UI, with the firmware filled in once it is known.
+    fn info(&self) -> ConnectedDevice {
+        let mut info = self.info.clone();
+        if info.firmware.is_none() {
+            info.firmware = self.late_firmware.lock().clone();
+        }
+        info
+    }
+}
+
 impl OutputHandle {
     pub fn send_raw(&self, msg: Vec<u8>) -> MidiResult<()> {
         self.tx.send(OutCmd::Send(msg)).map_err(|_| MidiError::Send("output closed".into()))
@@ -110,12 +122,22 @@ impl OutputHandle {
 pub type ButtonListener = Arc<dyn Fn(&ButtonEvent) + Send + Sync>;
 pub type PressureListener = Arc<dyn Fn(&PressureEvent) + Send + Sync>;
 pub const EVENT_PRESSURE: &str = "device:pressure";
+/// Firmware learned after connecting, for a device that did not answer the scan.
+pub const EVENT_FIRMWARE: &str = "device:firmware";
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FirmwareEvent {
+    pub firmware: String,
+}
 
 struct Active {
     /// `None` for a virtual Launchpad.
     _input: Option<MidiInputConnection<()>>,
     output: OutputHandle,
     info: ConnectedDevice,
+    /// Firmware reported over the live connection when the scan got no inquiry reply.
+    late_firmware: Arc<Mutex<Option<String>>>,
     pressed: Arc<Mutex<HashSet<(u8, u8)>>>,
     render: RenderHandle,
     driver: Arc<dyn LaunchpadDriver>,
@@ -229,7 +251,7 @@ impl DeviceManager {
     pub fn state(&self) -> DeviceState {
         let (device, layout, pressed) = match &self.active {
             Some(a) => (
-                Some(a.info.clone()),
+                Some(a.info()),
                 Some(a.output.driver.layout()),
                 a.pressed.lock().iter().copied().collect(),
             ),
@@ -497,7 +519,7 @@ impl DeviceManager {
             is_virtual: true,
         };
         *self.render_slot.lock() = Some(render.clone());
-        self.active = Some(Active { _input: None, output, info, pressed, render, driver });
+        self.active = Some(Active { _input: None, output, info, pressed, render, driver, late_firmware: Arc::new(Mutex::new(None)) });
         self.status = ConnectionStatus::Connected;
         {
             let mut st = self.settings.lock();
@@ -599,6 +621,8 @@ impl DeviceManager {
         let cb_listeners = self.listeners.clone();
         let cb_pressure_listeners = self.pressure_listeners.clone();
         let cb_threshold = self.press_threshold.clone();
+        let late_firmware: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+        let cb_late_firmware = late_firmware.clone();
 
         let input = midi_in
             .connect(
@@ -606,6 +630,15 @@ impl DeviceManager {
                 "lunchpad-in",
                 move |timestamp, msg, _| {
                     let _ = cb_app.emit(EVENT_RAW, RawMidiEvent { timestamp, bytes: msg.to_vec(), hex: hex(msg) });
+                    if is_inquiry_reply(msg) {
+                        // The answer to the inquiry sent after connecting (see below).
+                        if let Some(reply) = parse_inquiry_reply(msg) {
+                            tracing::info!(firmware = %reply.firmware, "device answered the inquiry after connecting");
+                            *cb_late_firmware.lock() = Some(reply.firmware.clone());
+                            let _ = cb_app.emit(EVENT_FIRMWARE, FirmwareEvent { firmware: reply.firmware });
+                        }
+                        return;
+                    }
                     let threshold = cb_threshold.lock().unwrap_or_else(|| cb_driver.press_threshold());
                     let Some(event) = cb_driver.parse_input_with(msg, threshold) else {
                         // Not a press: maybe aftertouch for the pads being held.
@@ -646,6 +679,21 @@ impl DeviceManager {
         }
         wake_up_sweep(output.clone(), driver.layout(), render.clone());
 
+        if firmware.is_none() {
+            // Identified by its port name only: the device did not answer the scan's inquiry
+            // (seen with a MK2 right after a release build started). Ask again over the live
+            // connection once it has settled; the input callback above picks up the answer.
+            let late_output = output.clone();
+            std::thread::spawn(move || {
+                for delay in [1500u64, 3000] {
+                    std::thread::sleep(Duration::from_millis(delay));
+                    if late_output.send_raw(DEVICE_INQUIRY.to_vec()).is_err() {
+                        return;
+                    }
+                }
+            });
+        }
+
         Ok(Active {
             _input: Some(input),
             render,
@@ -657,8 +705,9 @@ impl DeviceManager {
                 input_name: input_name.to_string(),
                 output_name: output_name.to_string(),
                 firmware,
-            is_virtual: false,
-        },
+                is_virtual: false,
+            },
+            late_firmware,
             pressed,
         })
     }

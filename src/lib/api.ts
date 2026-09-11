@@ -171,6 +171,35 @@ export interface SlobsSettings {
   autoConnect: boolean;
 }
 
+export interface HomeAssistantSettings {
+  enabled: boolean;
+  /** Base URL of the instance, e.g. http://homeassistant.local:8123 */
+  url: string;
+  /** Long-lived access token from the profile page */
+  token: string;
+  ignoreTlsErrors: boolean;
+}
+
+export interface HaEntity {
+  entityId: string;
+  name: string;
+  domain: string;
+  state: string;
+}
+
+export interface HaState {
+  connected: boolean;
+  error: string | null;
+  version: string | null;
+  location: string | null;
+  entities: HaEntity[];
+}
+
+export type HaPower = "on" | "off" | "toggle";
+export const HA_POWER_MODES: readonly HaPower[] = ["on", "off", "toggle"];
+export type HaValueKind = "brightness" | "colorTemperature" | "position" | "fanSpeed" | "volume" | "number" | "temperature";
+export const HA_VALUE_KINDS: readonly HaValueKind[] = ["brightness", "colorTemperature", "position", "fanSpeed", "volume", "number", "temperature"];
+
 export interface WindowSettings {
   stayOnTop: boolean;
   /** closing the window hides it; the tray icon brings it back */
@@ -200,6 +229,7 @@ export interface Settings {
   audio: AudioSettings;
   obs: ObsSettings;
   slobs: SlobsSettings;
+  homeAssistant: HomeAssistantSettings;
   window: WindowSettings;
   developerMode: boolean;
 }
@@ -343,6 +373,9 @@ export type ActionKind =
   | { type: "slobsStream"; target: ObsTarget; mode: ObsMode }
   | { type: "slobsSaveReplay" }
   | { type: "slobsStudioMode"; mode: StudioMode }
+  | { type: "homeAssistantTurn"; entity: string; mode: HaPower }
+  | { type: "homeAssistantSetValue"; entity: string; kind: HaValueKind; value: number; valueFrom: string | null }
+  | { type: "homeAssistantCallService"; domain: string; service: string; entity: string; data: string }
   | {
       type: "httpRequest";
       method: HttpMethod;
@@ -439,6 +472,9 @@ export const AVAILABLE_ACTIONS: ReadonlySet<ActionType> = new Set<ActionType>([
   "slobsStream",
   "slobsSaveReplay",
   "slobsStudioMode",
+  "homeAssistantTurn",
+  "homeAssistantSetValue",
+  "homeAssistantCallService",
   "httpRequest",
   "setVariable",
   "runScript",
@@ -499,6 +535,8 @@ export type FaderDirection = "up" | "right" | "down" | "left";
 export interface Fader {
   id: string;
   name: string;
+  /** what macros read the level as (`fader.<variable>`); empty = derived from the name */
+  variable: string;
   /** first pad (the minimum) */
   x: number;
   y: number;
@@ -646,6 +684,9 @@ export const api = {
   slobsRefresh: () => invoke<SlobsState>("slobs_refresh"),
   slobsFilters: (source: string) => invoke<string[]>("slobs_filters", { source }),
   setSlobsSettings: (config: SlobsSettings) => invoke<Settings>("set_slobs_settings", { config }),
+  homeAssistantState: () => invoke<HaState>("home_assistant_state"),
+  homeAssistantRefresh: () => invoke<HaState>("home_assistant_refresh"),
+  setHomeAssistantSettings: (config: HomeAssistantSettings) => invoke<Settings>("set_home_assistant_settings", { config }),
 
   testHttpRequest: (request: Omit<Extract<ActionKind, { type: "httpRequest" }>, "type" | "saveTo" | "saveScope">) =>
     invoke<HttpOutcome>("test_http_request", { request }),
@@ -666,6 +707,9 @@ export const events = {
     listen<ButtonEvent>("device:button", (e) => cb(e.payload)),
   onPressure: (cb: (event: PressureEvent) => void): Promise<UnlistenFn> =>
     listen<PressureEvent>("device:pressure", (e) => cb(e.payload)),
+  /** Firmware learned after connecting, for a device that did not answer the scan. */
+  onFirmware: (cb: (firmware: string) => void): Promise<UnlistenFn> =>
+    listen<{ firmware: string }>("device:firmware", (e) => cb(e.payload.firmware)),
   onRawMidi: (cb: (event: RawMidiEvent) => void): Promise<UnlistenFn> =>
     listen<RawMidiEvent>("midi:raw", (e) => cb(e.payload)),
   onPortsChanged: (cb: () => void): Promise<UnlistenFn> => listen("midi:ports-changed", () => cb()),
@@ -679,6 +723,7 @@ export const events = {
     listen<InputUnavailable>("input:unavailable", (e) => cb(e.payload)),
   onObsState: (cb: (state: ObsState) => void): Promise<UnlistenFn> => listen<ObsState>("obs:state", (e) => cb(e.payload)),
   onSlobsState: (cb: (state: SlobsState) => void): Promise<UnlistenFn> => listen<SlobsState>("slobs:state", (e) => cb(e.payload)),
+  onHomeAssistantState: (cb: (state: HaState) => void): Promise<UnlistenFn> => listen<HaState>("homeassistant:state", (e) => cb(e.payload)),
   onHistory: (cb: (state: HistoryState) => void): Promise<UnlistenFn> => listen<HistoryState>("history:changed", (e) => cb(e.payload)),
   onVariables: (cb: (globals: Record<string, string>) => void): Promise<UnlistenFn> =>
     listen<Record<string, string>>("vars:changed", (e) => cb(e.payload)),

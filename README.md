@@ -39,6 +39,10 @@ Both integrations offer the same controls: switch scenes (also across scene coll
 
 OBS Studio needs its built-in WebSocket server (Tools → WebSocket Server Settings) switched on. Streamlabs Desktop needs nothing: Lunchpad talks to its local API while it runs.
 
+### Home Assistant
+
+Pads can turn any entity on, off or toggle it, set a brightness, colour temperature, cover position, fan speed, volume, number or target temperature, fixed or from a fader, and call any service with JSON data. The editors complete entity ids and names from your instance. Enter the address and a long-lived access token in Settings → Home Assistant; the token, like the OBS password and the Streamlabs token, is kept in the system's credential store rather than in the settings file.
+
 ### Tray and updates
 
 Lunchpad lives in the tray with the same menu as before: show the window, stay on top, minimize to tray, run at startup, stop all running macros. Installed copies check the GitHub releases of this repository and offer new versions inside the app.
@@ -59,6 +63,16 @@ cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
 Settings and pages are stored in the platform config directory (`~/Library/Application Support/com.lunchpad.app` on macOS, `%APPDATA%\com.lunchpad.app` on Windows). Novation's programmer reference manuals are in `docs/novation/`, hardware test tools in `src-tauri/examples/`.
+
+### Documentation
+
+The user documentation lives at [docs.lunchp.ad](https://docs.lunchp.ad). It is an Astro Starlight site ([ruohki/lunchpad-docs](https://github.com/ruohki/lunchpad-docs), checked out as `lunchpad-extra/docs` next to this checkout). It explains every action on its own page with a screenshot of its editor, and it reads this repository to stay current: action names, descriptions, icons and menu groups come from `src/i18n/en.json`, `src/lib/api.ts` and `src/components/actions/`, and the screenshots are taken from this interface running in a browser against a fake backend.
+
+When a change alters what users see, update the docs in the same release:
+
+- **A new action**: follow [docs/ADDING_ACTIONS.md](docs/ADDING_ACTIONS.md). The docs' `npm run actions:check` fails until the action has a page and a screenshot.
+- **A changed editor or settings tab**: run `npm run screenshots` in the docs folder and review the changed images.
+- **New or changed behaviour**: update the matching guide or action page. Pages name the app's labels exactly as `src/i18n/en.json` has them.
 
 ### Releases
 

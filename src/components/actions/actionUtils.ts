@@ -45,6 +45,9 @@ export const ACTION_ICONS: Record<ActionType, IconName> = {
   slobsStream: "Streamlabs",
   slobsSaveReplay: "Streamlabs",
   slobsStudioMode: "Streamlabs",
+  homeAssistantTurn: "Home",
+  homeAssistantSetValue: "Home",
+  homeAssistantCallService: "Home",
 };
 
 export const GROUP_ICONS: Record<string, IconName> = {
@@ -55,6 +58,7 @@ export const GROUP_ICONS: Record<string, IconName> = {
   stop: "Stop",
   obs: "OBS",
   slobs: "Streamlabs",
+  homeAssistant: "Home",
 };
 
 /** Ids of the markers that belong together with `action` (flip flop, push-to-talk). */
@@ -239,6 +243,12 @@ export function createActions(type: ActionType): Action[] {
       return [make({ type: "slobsSaveReplay" })];
     case "slobsStudioMode":
       return [make({ type: "slobsStudioMode", mode: "transition" })];
+    case "homeAssistantTurn":
+      return [make({ type: "homeAssistantTurn", entity: "", mode: "toggle" })];
+    case "homeAssistantSetValue":
+      return [make({ type: "homeAssistantSetValue", entity: "", kind: "brightness", value: 50, valueFrom: null })];
+    case "homeAssistantCallService":
+      return [make({ type: "homeAssistantCallService", domain: "", service: "", entity: "", data: "" })];
     default:
       return [];
   }
@@ -300,6 +310,15 @@ export function summarize(t: TFunction, action: Action, pages: Page[]): string {
       if (action.mode === "adjust") return `${device} · ${action.volumeFrom ? `±{{${action.volumeFrom}}}` : `${action.volume >= 0 ? "+" : ""}${Math.round(action.volume)} %`}`;
       return `${device} · ${t(`volume.modes.${action.mode}`)}`;
     }
+    case "homeAssistantTurn":
+      return `${action.entity || "…"} · ${t(`ha.modes.${action.mode}`)}`;
+    case "homeAssistantSetValue": {
+      const kind = t(`ha.kinds.${action.kind}`);
+      const value = action.valueFrom ? `{{${action.valueFrom}}}` : `${action.value}${action.kind === "number" || action.kind === "temperature" ? "" : action.kind === "colorTemperature" ? " K" : " %"}`;
+      return `${action.entity || "…"} · ${kind} ${value}`;
+    }
+    case "homeAssistantCallService":
+      return `${action.domain || "…"}.${action.service || "…"}${action.entity ? ` · ${action.entity}` : ""}`;
     case "launchApplication":
       return action.executable;
     case "hotkey":

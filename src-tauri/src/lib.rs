@@ -19,6 +19,8 @@ pub mod midi;
 pub mod obs;
 pub mod profile;
 pub mod script;
+pub mod homeassistant;
+pub mod secrets;
 pub mod slobs;
 pub mod speech;
 pub mod system_volume;
@@ -206,6 +208,7 @@ pub fn run() {
             };
             let obs = obs::ObsHandle::spawn(Some(app.handle().clone()), settings.clone(), &runtime, Some(live.clone()));
             let slobs = slobs::SlobsHandle::spawn(Some(app.handle().clone()), settings.clone(), &runtime, Some(live));
+            let home_assistant = homeassistant::HaHandle::spawn(Some(app.handle().clone()), settings.clone(), &runtime);
 
             let sink = Arc::new(TauriSink {
                 app: app.handle().clone(),
@@ -220,6 +223,7 @@ pub fn run() {
                 speech: Some(speech.clone()),
                 obs: Some(obs.clone()),
                 slobs: Some(slobs.clone()),
+                home_assistant: Some(home_assistant.clone()),
                 settings: Some(settings.clone()),
             };
             let engine = MacroEngine::new(profile.clone(), running_pads, sink, services, runtime);
@@ -238,7 +242,7 @@ pub fn run() {
             }
 
             let window_settings = settings.lock().settings.window.clone();
-            app.manage(AppState { manager: manager.clone(), profile, settings, engine, keyboard, audio, speech, obs, slobs, history: Mutex::new(Vec::new()), redo: Mutex::new(Vec::new()) });
+            app.manage(AppState { manager: manager.clone(), profile, settings, engine, keyboard, audio, speech, obs, slobs, home_assistant, history: Mutex::new(Vec::new()), redo: Mutex::new(Vec::new()) });
             if let Err(e) = tray::setup(app.handle(), &window_settings) {
                 tracing::warn!(error = %e, "tray icon could not be created");
             }
@@ -332,6 +336,9 @@ pub fn run() {
             slobs_refresh,
             slobs_filters,
             set_slobs_settings,
+            home_assistant_state,
+            home_assistant_refresh,
+            set_home_assistant_settings,
             test_http_request,
             test_script,
             get_variables,

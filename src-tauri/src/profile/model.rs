@@ -199,6 +199,9 @@ pub struct Fader {
     pub id: String,
     #[serde(default)]
     pub name: String,
+    /// What macros read the level as (`fader.<variable>`); empty = derived from the name.
+    #[serde(default)]
+    pub variable: String,
     /// First pad (the minimum)
     pub x: u8,
     pub y: u8,
@@ -263,6 +266,7 @@ impl Default for Fader {
         Fader {
             id: String::new(),
             name: String::new(),
+            variable: String::new(),
             x: 0,
             y: 0,
             direction: FaderDirection::Up,
@@ -287,6 +291,20 @@ impl Fader {
     }
 
     /// The pads in order from the minimum; stops at the edge of the grid.
+    /// The variable key: the variable name, else the name with spaces as underscores, else the id.
+    pub fn variable_key(&self) -> String {
+        let clean = |raw: &str| -> String { raw.trim().split_whitespace().collect::<Vec<_>>().join("_").chars().filter(|c| *c != '{' && *c != '}').collect() };
+        let explicit = clean(&self.variable);
+        if !explicit.is_empty() {
+            return explicit;
+        }
+        let from_name = clean(&self.name);
+        if !from_name.is_empty() {
+            return from_name;
+        }
+        self.id.clone()
+    }
+
     pub fn pads(&self) -> Vec<(u8, u8)> {
         let (dx, dy): (i16, i16) = match self.direction {
             FaderDirection::Up => (0, 1),
@@ -558,6 +576,22 @@ mod tests {
         assert_eq!(shown.display_text(), "50%");
         shown.value = 26.0;
         assert_eq!(shown.display_text(), "100%");
+        // Counting down: the first pad holds the high end, the last pad the low end.
+        let mut down = Fader { length: 5, min: 100.0, max: 0.0, value: 100.0, display: Some(FaderDisplay { min: 100.0, max: 0.0, unit: "%".into(), decimals: 0 }), ..Fader::default() };
+        assert_eq!(down.value_at_step(0), 100.0);
+        assert_eq!(down.value_at_step(4), 0.0);
+        assert_eq!(down.level_step(), 0);
+        down.value = 25.0;
+        assert_eq!(down.level_step(), 3);
+        assert_eq!(down.display_text(), "25%");
+        // The variable key prefers the explicit name, then the label without spaces, then the id.
+        let mut keyed = Fader { id: "abc".into(), name: "Rolladen 1".into(), ..Fader::default() };
+        assert_eq!(keyed.variable_key(), "Rolladen_1");
+        keyed.variable = " blinds {1} ".into();
+        assert_eq!(keyed.variable_key(), "blinds_1");
+        keyed.variable.clear();
+        keyed.name.clear();
+        assert_eq!(keyed.variable_key(), "abc");
         shown.display = None;
         shown.unit = " dB".into();
         assert_eq!(shown.display_text(), "26 dB");

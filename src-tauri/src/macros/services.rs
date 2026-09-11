@@ -3,6 +3,7 @@
 
 use crate::audio::AudioHandle;
 use crate::config::SharedSettings;
+use crate::homeassistant::HaHandle;
 use crate::input::KeyboardHandle;
 use crate::obs::ObsHandle;
 use crate::slobs::SlobsHandle;
@@ -15,5 +16,6 @@ pub struct Services {
     pub speech: Option<SpeechHandle>,
     pub obs: Option<ObsHandle>,
     pub slobs: Option<SlobsHandle>,
+    pub home_assistant: Option<HaHandle>,
     pub settings: Option<SharedSettings>,
 }

@@ -27,6 +27,12 @@ export function faderAt(page: Page, x: number, y: number): { fader: Fader; step:
   return null;
 }
 
+/** Mirrors `Fader::variable_key` in Rust: the variable name, else the name with spaces as underscores, else the id. */
+export function faderVariable(f: Pick<Fader, "id" | "name" | "variable">): string {
+  const clean = (raw: string) => raw.trim().split(/\s+/).filter(Boolean).join("_").replace(/[{}]/g, "");
+  return clean(f.variable ?? "") || clean(f.name) || f.id;
+}
+
 export function faderFraction(f: Fader): number {
   const span = f.max - f.min;
   if (Math.abs(span) < Number.EPSILON) return 0;
@@ -96,6 +102,7 @@ export function newFader(x: number, y: number, layout: Layout | null): Fader {
   return {
     id: "",
     name: "",
+    variable: "",
     x,
     y,
     direction,

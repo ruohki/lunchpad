@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { api, events, type AudioSettings, type InputUnavailable, type ObsSettings, type PushToTalkSettings, type Settings, type SlobsSettings, type WindowSettings } from "../lib/api";
+import { api, events, type AudioSettings, type InputUnavailable, type ObsSettings, type PushToTalkSettings, type Settings, type SlobsSettings, type WindowSettings, type HomeAssistantSettings } from "../lib/api";
 
 interface SettingsStore {
   settings: Settings | null;
@@ -9,6 +9,7 @@ interface SettingsStore {
   setAudio: (config: AudioSettings) => Promise<void>;
   setObs: (config: ObsSettings) => Promise<void>;
   setSlobs: (config: SlobsSettings) => Promise<void>;
+  setHomeAssistant: (config: HomeAssistantSettings) => Promise<void>;
   setWindow: (config: WindowSettings) => Promise<void>;
   setDeveloperMode: (enabled: boolean) => Promise<void>;
   checkKeyboardAccess: () => Promise<void>;
@@ -45,6 +46,10 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
 
   setSlobs: async (config) => {
     const settings = await api.setSlobsSettings(config);
+    set({ settings });
+  },
+  setHomeAssistant: async (config) => {
+    const settings = await api.setHomeAssistantSettings(config);
     set({ settings });
   },
 

@@ -1,5 +1,6 @@
 import { BUILTIN_VARIABLES, FADER_VARIABLES } from "../../lib/api";
 import { useShallow } from "zustand/react/shallow";
+import { faderVariable } from "../../lib/fader";
 import { useProfileStore } from "../../store/profile";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -18,7 +19,7 @@ export function useVariableSuggestions(button?: { down: Action[]; up: Action[]; 
   const globals = useVariablesStore((s) => s.globals);
   const hints = useVariablesStore((s) => s.hints);
   const faderOpen = useProfileStore((s) => s.faderEditor !== null);
-  const faderNames = useProfileStore(useShallow((s) => (s.profile?.pages ?? []).flatMap((p) => (p.faders ?? []).map((f) => `fader.${f.name.trim() || f.id}`))));
+  const faderNames = useProfileStore(useShallow((s) => (s.profile?.pages ?? []).flatMap((p) => (p.faders ?? []).map((f) => `fader.${faderVariable(f)}`))));
   return useMemo(() => {
     const context = [...hints, ...(faderOpen ? FADER_VARIABLES.filter((v) => !hints.includes(v)) : [])];
     const names = button ? knownVariables(button, globals) : [...BUILTIN_VARIABLES, ...Object.keys(globals)];

@@ -163,7 +163,7 @@ impl MacroEngine {
             let fader = page.fader_at(event.x, event.y).map(|(f, step)| {
                 let mut at = f.clone();
                 at.value = f.value_at_step(step);
-                FaderHit { id: f.id.clone(), name: f.name.clone(), step, steps: f.steps(), value: at.value, min: f.min, max: f.max, decimals: f.decimals, display: at.display_text() }
+                FaderHit { id: f.id.clone(), key: f.variable_key(), step, steps: f.steps(), value: at.value, min: f.min, max: f.max, decimals: f.decimals, display: at.display_text() }
             });
             (page.id.clone(), hold, fader)
         };
@@ -248,7 +248,7 @@ impl MacroEngine {
         let name = name.trim();
         let found = {
             let store = self.inner.profile.lock();
-            store.profile.pages.iter().find_map(|p| p.faders.iter().find(|f| f.name.trim() == name || f.id == name).map(|f| (p.id.clone(), f.clone())))
+            store.profile.pages.iter().find_map(|p| p.faders.iter().find(|f| f.variable_key() == name || f.name.trim() == name || f.id == name).map(|f| (p.id.clone(), f.clone())))
         };
         let Some((page_id, fader)) = found else { return false };
         let (lo, hi) = if fader.min <= fader.max { (fader.min, fader.max) } else { (fader.max, fader.min) };
@@ -260,7 +260,7 @@ impl MacroEngine {
         at.value = value;
         let hit = FaderHit {
             id: fader.id.clone(),
-            name: fader.name.clone(),
+            key: fader.variable_key(),
             step: at.level_step(),
             steps: at.steps(),
             value,
@@ -296,10 +296,13 @@ impl MacroEngine {
         locals.insert("step".into(), hit.step.to_string());
         locals.insert("steps".into(), hit.steps.to_string());
         locals.insert("display".into(), hit.display.clone());
-        let key = if hit.name.trim().is_empty() { format!("fader.{}", hit.id) } else { format!("fader.{}", hit.name.trim()) };
+        // Published under the variable key, and under the id, which never changes.
         let snapshot = {
             let mut globals = self.inner.globals.lock();
-            globals.insert(key, text);
+            globals.insert(format!("fader.{}", hit.id), text.clone());
+            if hit.key != hit.id {
+                globals.insert(format!("fader.{}", hit.key), text);
+            }
             globals.clone()
         };
         self.inner.sink.variables_changed(&snapshot);
@@ -589,7 +592,8 @@ fn snapshot(ctx: &RunContext, list: ActionList) -> Option<(Vec<Action>, bool)> {
 /// What the engine needs from a fader pad press, copied out of the profile lock.
 struct FaderHit {
     id: String,
-    name: String,
+    /// `fader.<key>` is what macros read; see `Fader::variable_key`.
+    key: String,
     step: usize,
     steps: usize,
     value: f64,
@@ -811,6 +815,9 @@ async fn execute(ctx: &RunContext, action: &Action) {
         | ActionKind::SlobsStream { .. }
         | ActionKind::SlobsSaveReplay
         | ActionKind::SlobsStudioMode { .. }
+        | ActionKind::HomeAssistantTurn { .. }
+        | ActionKind::HomeAssistantSetValue { .. }
+        | ActionKind::HomeAssistantCallService { .. }
         | ActionKind::SetSystemVolume { .. }
         | ActionKind::StopAllSounds
         | ActionKind::SetAudioDevice { .. }

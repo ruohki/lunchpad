@@ -110,6 +110,7 @@ export const useDeviceStore = create<DeviceStore>((set, get) => ({
         });
       }),
       events.onPressure((event) => set({ lastPressure: event })),
+      events.onFirmware((firmware) => set((s) => (s.device ? { device: { ...s.device, firmware } } : {}))),
       events.onRawMidi((raw: RawMidiEvent) => {
         set((s) => {
           const entry: MidiLogEntry = {
@@ -138,7 +139,9 @@ export const useDeviceStore = create<DeviceStore>((set, get) => ({
     if (get().scanning) return;
     set({ scanning: true, scanError: null });
     try {
-      const discovered = await api.scanLaunchpads();
+      // With no MIDI ports a scan is over in a millisecond; keep the spinner up briefly so
+      // the button visibly reacts instead of inviting a burst of clicks.
+      const [discovered] = await Promise.all([api.scanLaunchpads(), new Promise((r) => setTimeout(r, 400))]);
       set({ discovered });
     } catch (e) {
       set({ scanError: String(e) });

@@ -7,6 +7,7 @@ import { HotkeyEditor } from "./HotkeyEditor";
 import { HttpEditor } from "./HttpEditor";
 import { AddToVariableEditor, BranchEditor, ScriptEditor, SetVariableEditor } from "./VariableEditors";
 import { LaunchEditor } from "./LaunchEditor";
+import { HomeAssistantServiceEditor, HomeAssistantTurnEditor, HomeAssistantValueEditor } from "./HomeAssistantEditors";
 import { ObsEditor } from "./ObsEditors";
 import { SoundEditor } from "./SoundEditor";
 import { SpeechEditor } from "./SpeechEditor";
@@ -145,6 +146,12 @@ export function ActionEditor({ action, onChange, pages, layout, button }: Props)
     case "slobsStream":
     case "slobsStudioMode":
       return <ObsEditor action={action} onChange={onChange} button={button} />;
+    case "homeAssistantTurn":
+      return <HomeAssistantTurnEditor action={action} onChange={onChange} />;
+    case "homeAssistantSetValue":
+      return <HomeAssistantValueEditor action={action} onChange={onChange} button={button} />;
+    case "homeAssistantCallService":
+      return <HomeAssistantServiceEditor action={action} onChange={onChange} button={button} />;
     default:
       return null;
   }

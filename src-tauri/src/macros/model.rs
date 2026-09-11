@@ -5,6 +5,7 @@
 //! JSON shape: `{ "id": "…", "wait": true, "type": "delay", "ms": 500 }`.
 
 use crate::profile::model::PadColor;
+pub use crate::homeassistant::{HaPower, HaValueKind};
 use serde::{Deserialize, Serialize};
 
 fn default_true() -> bool {
@@ -269,6 +270,34 @@ pub enum ActionKind {
     /// Studio mode on/off, or push the preview live.
     SlobsStudioMode {
         mode: StudioMode,
+    },
+    /// Home Assistant: turn an entity on or off (or toggle it)
+    #[serde(rename_all = "camelCase")]
+    HomeAssistantTurn {
+        entity: String,
+        #[serde(default)]
+        mode: HaPower,
+    },
+    /// Home Assistant: set a numeric property, fixed or from a variable / fader
+    #[serde(rename_all = "camelCase")]
+    HomeAssistantSetValue {
+        entity: String,
+        #[serde(default)]
+        kind: HaValueKind,
+        value: f32,
+        /// Variable or placeholder that overrides `value` when it holds a number
+        #[serde(default)]
+        value_from: Option<String>,
+    },
+    /// Home Assistant: call any service; `data` is JSON and may contain placeholders
+    #[serde(rename_all = "camelCase")]
+    HomeAssistantCallService {
+        domain: String,
+        service: String,
+        #[serde(default)]
+        entity: String,
+        #[serde(default)]
+        data: String,
     },
     /// Any HTTP call. URL, headers, body and auth may contain `{{velocity}}`,
     /// `{{x}}`, `{{y}}` and `{{pageId}}`.

@@ -176,6 +176,32 @@ pub async fn execute_external(ctx: &RunContext, action: &Action) {
             let Some(slobs) = &services.slobs else { return unavailable(action) };
             report(action, "Streamlabs", slobs.studio_mode(*mode).await);
         }
+        ActionKind::HomeAssistantTurn { entity, mode } => {
+            let Some(ha) = &services.home_assistant else { return unavailable(action) };
+            let entity = ctx.expand(entity);
+            report(action, "Home Assistant", ha.call_service("homeassistant", mode.service(), Some(&entity), serde_json::json!({})).await);
+        }
+        ActionKind::HomeAssistantSetValue { entity, kind, value, value_from } => {
+            let Some(ha) = &services.home_assistant else { return unavailable(action) };
+            let amount = number_from(ctx, value_from, *value);
+            let entity = ctx.expand(entity);
+            let (domain, service, data) = crate::homeassistant::value_service(*kind, &entity, amount);
+            report(action, "Home Assistant", ha.call_service(&domain, service, Some(&entity), data).await);
+        }
+        ActionKind::HomeAssistantCallService { domain, service, entity, data } => {
+            let Some(ha) = &services.home_assistant else { return unavailable(action) };
+            let text = ctx.expand(data);
+            let payload = if text.trim().is_empty() {
+                serde_json::json!({})
+            } else {
+                match serde_json::from_str::<serde_json::Value>(&text) {
+                    Ok(v) => v,
+                    Err(e) => return report(action, "Home Assistant", Err(format!("service data is not valid JSON: {e}"))),
+                }
+            };
+            let entity = ctx.expand(entity);
+            report(action, "Home Assistant", ha.call_service(&ctx.expand(domain), &ctx.expand(service), opt(&entity), payload).await);
+        }
 
         ActionKind::HttpRequest { method, url, headers, content_type, body, body_mode, body_file, files, auth, timeout_ms, ignore_tls_errors, save_to, save_scope } => {
             let spec = HttpSpec {
@@ -288,7 +314,14 @@ fn number_text(value: f64) -> String {
 fn number_from(ctx: &RunContext, from: &Option<String>, fallback: f32) -> f32 {
     let Some(raw) = from.as_deref().map(str::trim).filter(|s| !s.is_empty()) else { return fallback };
     let template = if raw.contains("{{") { raw.to_string() } else { format!("{{{{{raw}}}}}") };
-    ctx.expand(&template).trim().parse::<f32>().unwrap_or(fallback)
+    let expanded = ctx.expand(&template);
+    match expanded.trim().parse::<f32>() {
+        Ok(n) => n,
+        Err(_) => {
+            tracing::warn!(reference = raw, expanded = %expanded, fallback, "value reference is not a number, using the fixed value");
+            fallback
+        }
+    }
 }
 
 fn opt(s: &str) -> Option<&str> {

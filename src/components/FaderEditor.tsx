@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { emptyButton, FADER_VARIABLES, type Button, type Fader, type FaderDirection, type Layout, type Page } from "../lib/api";
-import { faderPadRgb, faderPads, formatFaderValue, hexToRgb, maxFaderLength, rgbToHex } from "../lib/fader";
+import { faderVariable, faderPadRgb, faderPads, formatFaderValue, hexToRgb, maxFaderLength, rgbToHex } from "../lib/fader";
 import { useDeviceStore } from "../store/device";
 import { useProfileStore } from "../store/profile";
 import { useVariablesStore } from "../store/variables";
@@ -10,10 +10,13 @@ import { ActionsTab } from "./actions/ActionsTab";
 import { RgbField } from "./RgbField";
 import { Select } from "./Select";
 import { Slider } from "./Slider";
-import { Button as UiButton, IconClose, Toggle } from "./ui";
+import { Button as UiButton, IconClose, Segmented, Toggle } from "./ui";
 
 const NO_PAGES: Page[] = [];
 const inputCls = "h-8 rounded-md bg-stage-800 px-2.5 text-sm text-stage-100 outline-none placeholder:text-stage-500 focus:ring-1 focus:ring-accent-400";
+/** Number fields of the range rows: narrow, growing with the window up to a cap. */
+const rangeFieldCls = "flex min-w-[6.5rem] max-w-[11rem] flex-1 flex-col gap-1 text-xs text-stage-400";
+const unitFieldCls = "flex min-w-[4rem] max-w-[7rem] flex-1 flex-col gap-1 text-xs text-stage-400";
 const DIRECTIONS: FaderDirection[] = ["up", "right", "down", "left"];
 
 /** Modal editor for a fader: where it sits, how it looks, its range and what it does. */
@@ -103,6 +106,7 @@ function FaderForm({
 }) {
   const { t } = useTranslation();
   const [fader, setFader] = useState<Fader>(initial);
+  const [tab, setTab] = useState<"fader" | "actions">("fader");
   const setHints = useVariablesStore((s) => s.setHints);
 
   // Offer the fader's variables in every completion while the editor is open.
@@ -127,20 +131,41 @@ function FaderForm({
   return (
     <>
       <header className="flex items-center justify-between border-b border-stage-800 px-5 py-3">
-        <div>
-          <h2 className="text-sm font-semibold text-stage-100">{isNew ? t("fader.titleNew") : t("fader.titleEdit")}</h2>
-          <p className="text-xs text-stage-400">{t("fader.position", { column: fader.x + 1, row: fader.y + 1 })}</p>
+        <div className="flex items-center gap-4">
+          <h2 className="text-sm font-semibold text-stage-100">
+            {isNew ? t("fader.titleNew") : t("fader.titleEdit")}
+            <span className="ml-2 font-normal text-stage-400">{t("fader.position", { column: fader.x + 1, row: fader.y + 1 })}</span>
+          </h2>
+          <Segmented
+            value={tab}
+            options={[
+              { value: "fader", label: t("fader.tabFader") },
+              { value: "actions", label: `${t("fader.tabActions")}${fader.onChange.length ? ` · ${fader.onChange.length}` : ""}` },
+            ]}
+            onChange={setTab}
+          />
         </div>
         <button onClick={onCancel} aria-label={t("common.close")} className="rounded-md p-1 text-stage-400 hover:bg-stage-800 hover:text-stage-100">
           <IconClose />
         </button>
       </header>
 
+      {tab === "actions" ? (
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-4">
+          <p className="text-xs text-stage-500">{t("fader.variablesHint")}</p>
+          <ActionsTab button={pseudo} onChange={(b) => setFader({ ...fader, onChange: b.down })} pages={pages} layout={layout} lists={["down"]} labels={{ down: "fader.onChange" }} hideLoop faderContext />
+        </div>
+      ) : (
       <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 py-4">
-        <section className="grid grid-cols-[1fr_auto_auto] items-end gap-3">
+        <section className="grid grid-cols-[1fr_1fr_auto_auto] items-start gap-3">
           <label className="flex flex-col gap-1 text-xs text-stage-400">
             {t("fader.name")}
             <input value={fader.name} onChange={(e) => setFader({ ...fader, name: e.target.value })} placeholder={t("fader.namePlaceholder")} className={inputCls} />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-stage-400">
+            {t("fader.variable")}
+            <input value={fader.variable ?? ""} onChange={(e) => setFader({ ...fader, variable: e.target.value.replace(/\s+/g, "_") })} placeholder={faderVariable({ ...fader, variable: "" })} className={inputCls + " font-mono"} spellCheck={false} />
+            <span className="text-stage-500">{t("fader.variableHint", { key: `fader.${faderVariable(fader)}` })}</span>
           </label>
           <div className="flex flex-col gap-1 text-xs text-stage-400">
             {t("fader.direction")}
@@ -174,23 +199,39 @@ function FaderForm({
           </div>
         </section>
 
-        <section className="grid grid-cols-4 items-end gap-3">
-          <label className="flex flex-col gap-1 text-xs text-stage-400">
+        <section className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-end gap-3">
+          <label className={rangeFieldCls}>
             {t("fader.min")}
-            <NumberText value={fader.min} step={0.001} onChange={(min) => setFader({ ...fader, min })} />
+            <NumberText value={fader.min} step={0.001} onChange={(min) => setFader({ ...fader, min })} className="w-full" />
           </label>
-          <label className="flex flex-col gap-1 text-xs text-stage-400">
+          <label className={rangeFieldCls}>
             {t("fader.max")}
-            <NumberText value={fader.max} step={0.001} onChange={(max) => setFader({ ...fader, max })} />
+            <NumberText value={fader.max} step={0.001} onChange={(max) => setFader({ ...fader, max })} className="w-full" />
           </label>
-          <label className="flex flex-col gap-1 text-xs text-stage-400">
+          <label className={unitFieldCls}>
             {t("fader.unit")}
-            <input value={fader.unit} onChange={(e) => setFader({ ...fader, unit: e.target.value })} className={inputCls} />
+            <input value={fader.unit} onChange={(e) => setFader({ ...fader, unit: e.target.value })} className={inputCls + " w-full"} />
           </label>
-          <div className="flex flex-col gap-1 text-xs text-stage-400">
+          <div className="flex w-20 flex-col gap-1 text-xs text-stage-400">
             {t("fader.decimals")}
             <Select<"0" | "1" | "2"> size="sm" value={String(Math.min(2, fader.decimals)) as "0" | "1" | "2"} options={[{ value: "0", label: "0" }, { value: "1", label: "1" }, { value: "2", label: "2" }]} onChange={(v) => setFader({ ...fader, decimals: parseInt(v, 10) })} />
           </div>
+          <UiButton
+            size="sm"
+            onClick={() =>
+              setFader({
+                ...fader,
+                min: fader.max,
+                max: fader.min,
+                display: fader.display ? { ...fader.display, min: fader.display.max, max: fader.display.min } : null,
+              })
+            }
+          >
+            {t("fader.invert")}
+          </UiButton>
+        </div>
+        <p className="text-xs text-stage-500">{fader.min > fader.max ? t("fader.rangeInverted") : t("fader.rangeHint")}</p>
         </section>
 
         <section className="flex flex-col gap-3">
@@ -201,20 +242,20 @@ function FaderForm({
             hint={t("fader.displayHint")}
           />
           {fader.display && (
-            <div className="grid grid-cols-4 items-end gap-3">
-              <label className="flex flex-col gap-1 text-xs text-stage-400">
+            <div className="flex flex-wrap items-end gap-3">
+              <label className={rangeFieldCls}>
                 {t("fader.displayMin")}
-                <NumberText value={fader.display.min} step={0.001} onChange={(min) => setFader({ ...fader, display: { ...fader.display!, min } })} />
+                <NumberText value={fader.display.min} step={0.001} onChange={(min) => setFader({ ...fader, display: { ...fader.display!, min } })} className="w-full" />
               </label>
-              <label className="flex flex-col gap-1 text-xs text-stage-400">
+              <label className={rangeFieldCls}>
                 {t("fader.displayMax")}
-                <NumberText value={fader.display.max} step={0.001} onChange={(max) => setFader({ ...fader, display: { ...fader.display!, max } })} />
+                <NumberText value={fader.display.max} step={0.001} onChange={(max) => setFader({ ...fader, display: { ...fader.display!, max } })} className="w-full" />
               </label>
-              <label className="flex flex-col gap-1 text-xs text-stage-400">
+              <label className={unitFieldCls}>
                 {t("fader.unit")}
-                <input value={fader.display.unit} onChange={(e) => setFader({ ...fader, display: { ...fader.display!, unit: e.target.value } })} className={inputCls} />
+                <input value={fader.display.unit} onChange={(e) => setFader({ ...fader, display: { ...fader.display!, unit: e.target.value } })} className={inputCls + " w-full"} />
               </label>
-              <div className="flex flex-col gap-1 text-xs text-stage-400">
+              <div className="flex w-20 flex-col gap-1 text-xs text-stage-400">
                 {t("fader.decimals")}
                 <Select<"0" | "1" | "2">
                   size="sm"
@@ -227,13 +268,9 @@ function FaderForm({
           )}
         </section>
 
-        <section className="flex flex-col gap-2">
-          <p className="text-xs text-stage-500">{t("fader.variablesHint")}</p>
-          <ActionsTab button={pseudo} onChange={(b) => setFader({ ...fader, onChange: b.down })} pages={pages} layout={layout} lists={["down"]} labels={{ down: "fader.onChange" }} hideLoop />
-        </section>
-
         <p className="text-xs text-stage-500">{t("fader.coverHint")}</p>
       </div>
+      )}
 
       <footer className="flex items-center justify-between border-t border-stage-800 px-5 py-3">
         <div>

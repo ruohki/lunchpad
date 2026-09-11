@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { IconClose } from "../ui";
 import { AboutTab } from "./AboutTab";
 import { DiagnosticsTab } from "./DiagnosticsTab";
+import { HomeAssistantTab } from "./HomeAssistantTab";
 import { InterfaceTab } from "./InterfaceTab";
 import { KeyboardTab } from "./KeyboardTab";
 import { LaunchpadTab } from "./LaunchpadTab";
@@ -13,7 +14,7 @@ import { PagesTab } from "./PagesTab";
 import { SlobsTab } from "./SlobsTab";
 import { SoundTab } from "./SoundTab";
 
-export type SettingsTab = "launchpad" | "sound" | "keyboard" | "interface" | "obs" | "slobs" | "pages" | "about" | "diagnostics";
+export type SettingsTab = "launchpad" | "sound" | "keyboard" | "interface" | "obs" | "slobs" | "homeAssistant" | "pages" | "about" | "diagnostics";
 
 interface NavGroup {
   group: string;
@@ -23,7 +24,7 @@ interface NavGroup {
 /** Add an integration here (and a tab component) and it shows up in the navigation. */
 const NAV: NavGroup[] = [
   { group: "general", tabs: ["launchpad", "sound", "keyboard", "interface"] },
-  { group: "integrations", tabs: ["obs", "slobs"] },
+  { group: "integrations", tabs: ["obs", "slobs", "homeAssistant"] },
   { group: "data", tabs: ["pages"] },
   { group: "about", tabs: ["about", "diagnostics"] },
 ];
@@ -35,6 +36,7 @@ const TABS: Record<SettingsTab, () => React.ReactElement> = {
   interface: InterfaceTab,
   obs: ObsTab,
   slobs: SlobsTab,
+  homeAssistant: HomeAssistantTab,
   pages: PagesTab,
   about: AboutTab,
   diagnostics: DiagnosticsTab,

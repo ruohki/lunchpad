@@ -139,9 +139,21 @@ pub fn scan_launchpads(exclude: &[String]) -> MidiResult<Vec<DiscoveredLaunchpad
         let timeout = if looks_like_launchpad { LAUNCHPAD_TIMEOUT } else { OTHER_TIMEOUT };
         let deadline = Instant::now() + timeout;
 
+        // A device that is busy (another app talking to it, or a scan of its own going on)
+        // can swallow the first inquiry, so it is asked once more halfway through the window.
+        let retry_at = Instant::now() + timeout / 2;
+        let mut retried = false;
         let mut reply: Option<(usize, Vec<u8>)> = None;
         loop {
-            let remaining = deadline.saturating_duration_since(Instant::now());
+            let now = Instant::now();
+            if !retried && now >= retry_at {
+                retried = true;
+                if let Err(e) = conn.send(&DEVICE_INQUIRY) {
+                    tracing::debug!(port = %out_port.name, error = %e, "inquiry retry failed");
+                }
+            }
+            let wait_until = if retried { deadline } else { retry_at.min(deadline) };
+            let remaining = wait_until.saturating_duration_since(now);
             match rx.recv_timeout(remaining) {
                 Ok((input_index, msg)) => {
                     if claimed_inputs.contains(&input_index) {
@@ -150,7 +162,12 @@ pub fn scan_launchpads(exclude: &[String]) -> MidiResult<Vec<DiscoveredLaunchpad
                     reply = Some((input_index, msg));
                     break;
                 }
-                Err(RecvTimeoutError::Timeout) | Err(RecvTimeoutError::Disconnected) => break,
+                Err(RecvTimeoutError::Timeout) => {
+                    if Instant::now() >= deadline {
+                        break;
+                    }
+                }
+                Err(RecvTimeoutError::Disconnected) => break,
             }
         }
         drop(conn);

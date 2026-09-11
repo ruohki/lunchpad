@@ -153,7 +153,8 @@
       "pages": "Pages & backup",
       "interface": "Interface",
       "about": "About Lunchpad",
-      "diagnostics": "Diagnostics"
+      "diagnostics": "Diagnostics",
+      "homeAssistant": "Home Assistant"
     },
     "deviceTitle": "Connected device",
     "rememberedOnly": "Remembered: {{model}} on “{{port}}”. Not connected right now.",
@@ -177,7 +178,15 @@
     "startHidden": "Start hidden in the tray",
     "startHiddenHint": "Lunchpad opens without a window; the tray icon shows it.",
     "pressThreshold": "Custom press threshold",
-    "pressThresholdHint": "On velocity-sensitive pads, a press lighter than this velocity is ignored (model default 25). Lower it if soft presses are missed, raise it if pads trigger too easily."
+    "pressThresholdHint": "On velocity-sensitive pads, a press lighter than this velocity is ignored (model default 25). Lower it if soft presses are missed, raise it if pads trigger too easily.",
+    "haEnable": "Connect to Home Assistant",
+    "haEnableHint": "Lunchpad talks to Home Assistant over its web API. Create a long-lived access token on your Home Assistant profile page (Security section) and paste it here.",
+    "haUrl": "Home Assistant address",
+    "haToken": "Long-lived access token",
+    "haTokenHint": "Profile → Security → Long-lived access tokens → Create token. The token is stored in Lunchpad's settings file.",
+    "haIgnoreTls": "Accept a self-signed certificate",
+    "haStatusConnected": "Connected to Home Assistant {{version}} ({{location}}), {{count}} entities",
+    "haRefresh": "Reload entities"
   },
   "pages": {
     "label": "Pages",
@@ -398,7 +407,8 @@
       "media": "Media",
       "system": "System",
       "obs": "OBS Studio",
-      "slobs": "Streamlabs"
+      "slobs": "Streamlabs",
+      "homeAssistant": "Home Assistant"
     },
     "fields": {
       "ms": "Milliseconds",
@@ -579,6 +589,18 @@
       "setAudioDevice": {
         "name": "Switch audio device",
         "desc": "Make a device the system default, so all sound plays (or records) through it."
+      },
+      "homeAssistantTurn": {
+        "name": "Home Assistant: on / off",
+        "desc": "Turn any entity on or off, or toggle it."
+      },
+      "homeAssistantSetValue": {
+        "name": "Home Assistant: set a value",
+        "desc": "Brightness, colour temperature, cover position, fan speed, volume, a number or a temperature, fixed or from a fader."
+      },
+      "homeAssistantCallService": {
+        "name": "Home Assistant: call a service",
+        "desc": "Any service of any domain, with JSON data and placeholders."
       }
     },
     "summary": {
@@ -687,12 +709,12 @@
     "colorA": "Colour at the minimum",
     "colorB": "Colour at the maximum",
     "dim": "Brightness above the level",
-    "min": "Minimum",
-    "max": "Maximum",
+    "min": "Value at the first pad",
+    "max": "Value at the last pad",
     "unit": "Unit",
     "decimals": "Decimals",
     "onChange": "When the level changes",
-    "variablesHint": "The actions receive the level as value, percent, fraction, step, steps and display: pick “value” in a volume action's “from variable” field and set that action's unit to match the fader (a 0–100 fader → %, a −60–0 fader → dB). Every macro can read it as fader.<name>.",
+    "variablesHint": "These actions run when the level changes and get it as value, percent, fraction, step, steps and display. A value action added here reads “value”, this fader's own level, no matter what the fader is called; match the action's unit to the fader (a 0–100 fader → %, a −60–0 fader → dB). Macros elsewhere read the level as fader.<name>, or fader.<id> for a fader without a name.",
     "coverHint": "Pads inside the fader belong to it: buttons there and colour actions aimed at them are ignored while the fader exists.",
     "overlap": "This fader would overlap another fader.",
     "covered_one": "{{count}} button lies under this fader and will be hidden.",
@@ -701,15 +723,22 @@
     "moveHint": "Move the whole fader with Ctrl or ⌘ and drag; it only lands where every pad is free.",
     "displayToggle": "Show the level on another scale",
     "displayHint": "For example a −100 to 26 dB range shown as 0 to 100 %. The actions still get the real value; the shown one is available as “display”.",
-    "displayMin": "Shown at the minimum",
-    "displayMax": "Shown at the maximum",
+    "displayMin": "Shown at the first pad",
+    "displayMax": "Shown at the last pad",
     "pick": "Fader",
     "pickPlaceholder": "Choose a fader…",
     "value": "Value",
     "runActions": "Run the fader's actions",
     "runActionsHint": "Off: only the level and the LEDs change.",
     "setHint": "Writing to fader.<name> with “Set variable” or “Add to variable” moves the fader too, so a button can nudge a level with “Add to variable: fader.mic, −5”.",
-    "silent": "silent"
+    "silent": "silent",
+    "tabFader": "Fader",
+    "tabActions": "Actions",
+    "invert": "Invert",
+    "rangeHint": "The first pad is the one the fader starts on; the run continues in its direction. A larger value at the first pad makes the fader count down.",
+    "rangeInverted": "Counting down: the first pad is the high end, the last pad the low end. Actions and the fader variable get these values.",
+    "variable": "Variable name",
+    "variableHint": "Macros read the level as {{key}}"
   },
   "obs": {
     "collection": "Scene collection",
@@ -872,5 +901,45 @@
     "device": "Device",
     "pick": "Choose a device…",
     "hint": "Changes the system's default device, the one everything plays or records through. Names come from the system; a name that only partly matches still works."
+  },
+  "ha": {
+    "entity": "Entity",
+    "entityOptional": "Entity (optional)",
+    "entityPlaceholder": "light.living_room",
+    "entityCount_one": "{{count}} entity",
+    "entityCount_other": "{{count}} entities",
+    "notConnected": "Not connected",
+    "refresh": "Reload",
+    "currentState": "currently {{state}}",
+    "mode": "Do",
+    "modes": {
+      "on": "Turn on",
+      "off": "Turn off",
+      "toggle": "Toggle"
+    },
+    "kind": "Set",
+    "kinds": {
+      "brightness": "Brightness",
+      "colorTemperature": "Colour temperature",
+      "position": "Cover position",
+      "fanSpeed": "Fan speed",
+      "volume": "Volume",
+      "number": "Number",
+      "temperature": "Target temperature"
+    },
+    "kindHints": {
+      "brightness": "Turns the light on at this brightness. With a variable set, its number (0–100) replaces the slider; a fader named desk is {{fader.desk}}.",
+      "colorTemperature": "Turns the light on at this colour temperature in Kelvin. A variable replaces the slider when it holds a number.",
+      "position": "0 is closed, 100 is open. A variable replaces the slider when it holds a number.",
+      "fanSpeed": "0 turns the fan off. A variable replaces the slider when it holds a number.",
+      "volume": "0–100 %, sent as the player's volume level. A variable replaces the slider when it holds a number.",
+      "number": "Sent as is, in the entity's own unit and range. A variable replaces the field when it holds a number.",
+      "temperature": "Target temperature in the unit Home Assistant uses. A variable replaces the slider when it holds a number."
+    },
+    "value": "Value",
+    "domain": "Domain",
+    "service": "Service",
+    "data": "Service data (JSON)",
+    "dataHint": "Optional. A JSON object with the service's fields; {{placeholders}} are filled in before it is sent. The entity above is added as entity_id."
   }
 }

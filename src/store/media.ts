@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { api, events, type AudioDevices, type ObsState, type SlobsState, type VoiceInfo } from "../lib/api";
+import { api, events, type AudioDevices, type HaState, type ObsState, type SlobsState, type VoiceInfo } from "../lib/api";
 
 interface MediaStore {
   audioDevices: AudioDevices | null;
@@ -8,6 +8,7 @@ interface MediaStore {
   /** OBS filters per source name */
   filters: Record<string, string[]>;
   slobs: SlobsState | null;
+  homeAssistant: HaState | null;
   /** Streamlabs filters per source name */
   slobsFilters: Record<string, string[]>;
   init: () => Promise<() => void>;
@@ -23,6 +24,8 @@ interface MediaStore {
   slobsDisconnect: () => Promise<void>;
   slobsRefresh: () => Promise<void>;
   loadSlobsFilters: (source: string) => Promise<string[]>;
+  loadHomeAssistant: () => Promise<void>;
+  homeAssistantRefresh: () => Promise<void>;
 }
 
 export const useMediaStore = create<MediaStore>((set, get) => ({
@@ -31,12 +34,18 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
   obs: null,
   filters: {},
   slobs: null,
+  homeAssistant: null,
   slobsFilters: {},
 
   init: async () => {
-    const unlisten = await Promise.all([events.onObsState((obs) => set({ obs })), events.onSlobsState((slobs) => set({ slobs }))]);
+    const unlisten = await Promise.all([
+      events.onObsState((obs) => set({ obs })),
+      events.onSlobsState((slobs) => set({ slobs })),
+      events.onHomeAssistantState((homeAssistant) => set({ homeAssistant })),
+    ]);
     void get().loadObs();
     void get().loadSlobs();
+    void get().loadHomeAssistant();
     return () => unlisten.forEach((fn) => fn());
   },
 
@@ -114,6 +123,20 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
     }
   },
 
+  loadHomeAssistant: async () => {
+    try {
+      set({ homeAssistant: await api.homeAssistantState() });
+    } catch {
+      // not fatal: the editors fall back to typing an entity id
+    }
+  },
+  homeAssistantRefresh: async () => {
+    try {
+      set({ homeAssistant: await api.homeAssistantRefresh() });
+    } catch {
+      await get().loadHomeAssistant();
+    }
+  },
   loadSlobsFilters: async (source) => {
     try {
       const list = await api.slobsFilters(source);

@@ -14,6 +14,8 @@ pub struct Diagnostics {
     pub webview_version: Option<String>,
     pub os: OsSummary,
     pub config_dir: String,
+    /// Where integration credentials are kept
+    pub credential_store: String,
     pub log_dir: String,
     pub device: DeviceSummary,
     pub midi_inputs: Vec<String>,
@@ -129,6 +131,7 @@ pub async fn diagnostics(app: AppHandle, state: State<'_, AppState>) -> CmdResul
 
     let obs = state.obs.state();
     let slobs = state.slobs.state();
+    let home_assistant = state.home_assistant.state();
     let integrations = vec![
         IntegrationSummary {
             name: "OBS Studio".into(),
@@ -143,6 +146,13 @@ pub async fn diagnostics(app: AppHandle, state: State<'_, AppState>) -> CmdResul
             endpoint: format!("{}:{}", settings.slobs.host, settings.slobs.port),
             connected: slobs.connected,
             error: slobs.error.clone(),
+        },
+        IntegrationSummary {
+            name: "Home Assistant".into(),
+            enabled: settings.home_assistant.enabled,
+            endpoint: settings.home_assistant.url.clone(),
+            connected: home_assistant.connected,
+            error: home_assistant.error.clone(),
         },
     ];
 
@@ -169,6 +179,7 @@ pub async fn diagnostics(app: AppHandle, state: State<'_, AppState>) -> CmdResul
         webview_version: tauri::webview_version().ok(),
         os,
         config_dir,
+        credential_store: state.settings.lock().secrets.kind().to_string(),
         log_dir,
         device,
         midi_inputs,

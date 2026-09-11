@@ -2,6 +2,7 @@
 
 use crate::midi::types::{LaunchpadModel, MidiError, MidiResult};
 use parking_lot::Mutex;
+use crate::secrets::{SecretKey, SecretStore};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -107,6 +108,33 @@ impl Default for SlobsSettings {
     }
 }
 
+/// Home Assistant over its REST API with a long-lived access token.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HomeAssistantSettings {
+    #[serde(default)]
+    pub enabled: bool,
+    /// Base URL of the instance, e.g. `http://homeassistant.local:8123`
+    #[serde(default = "default_ha_url")]
+    pub url: String,
+    /// Long-lived access token (profile page → Security)
+    #[serde(default)]
+    pub token: String,
+    /// Accept a self-signed certificate on an https URL
+    #[serde(default)]
+    pub ignore_tls_errors: bool,
+}
+
+fn default_ha_url() -> String {
+    "http://homeassistant.local:8123".into()
+}
+
+impl Default for HomeAssistantSettings {
+    fn default() -> Self {
+        HomeAssistantSettings { enabled: false, url: default_ha_url(), token: String::new(), ignore_tls_errors: false }
+    }
+}
+
 /// Window behaviour, also reachable from the tray menu.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -150,6 +178,8 @@ pub struct Settings {
     #[serde(default)]
     pub slobs: SlobsSettings,
     #[serde(default)]
+    pub home_assistant: HomeAssistantSettings,
+    #[serde(default)]
     pub window: WindowSettings,
     /// Show diagnostics in the main window (device facts, MIDI monitor, variables).
     #[serde(default)]
@@ -175,6 +205,7 @@ impl Default for Settings {
             audio: AudioSettings::default(),
             obs: ObsSettings::default(),
             slobs: SlobsSettings::default(),
+            home_assistant: HomeAssistantSettings::default(),
             window: WindowSettings::default(),
             developer_mode: false,
         }
@@ -184,12 +215,21 @@ impl Default for Settings {
 pub struct SettingsStore {
     path: PathBuf,
     pub settings: Settings,
+    /// Integration credentials live here, not in the settings file.
+    pub secrets: SecretStore,
+}
+
+impl Settings {
+    /// The credentials, in a fixed order, for moving them between the file and the store.
+    fn secret_fields(&mut self) -> [(SecretKey, &mut String); 3] {
+        [(SecretKey::ObsPassword, &mut self.obs.password), (SecretKey::SlobsToken, &mut self.slobs.token), (SecretKey::HomeAssistantToken, &mut self.home_assistant.token)]
+    }
 }
 
 impl SettingsStore {
     pub fn load(config_dir: &Path) -> Self {
         let path = config_dir.join("settings.json");
-        let settings = match fs::read_to_string(&path) {
+        let mut settings = match fs::read_to_string(&path) {
             Ok(contents) => match serde_json::from_str::<Settings>(&contents) {
                 Ok(s) => s,
                 Err(e) => {
@@ -199,15 +239,44 @@ impl SettingsStore {
             },
             Err(_) => Settings::default(),
         };
-        tracing::info!(path = %path.display(), "settings loaded");
-        SettingsStore { path, settings }
+        let secrets = SecretStore::open(config_dir);
+        // Credentials still sitting in the file (older versions kept them there) move to
+        // the store; otherwise the store fills the blanks.
+        let mut migrated = false;
+        for (key, field) in settings.secret_fields() {
+            if !field.trim().is_empty() {
+                match secrets.set(key, field) {
+                    Ok(()) => migrated = true,
+                    Err(e) => tracing::warn!(error = %e, "credential could not be moved to the store, keeping it in the settings file"),
+                }
+            } else {
+                *field = secrets.get(key);
+            }
+        }
+        tracing::info!(path = %path.display(), credentials = secrets.kind(), "settings loaded");
+        let store = SettingsStore { path, settings, secrets };
+        if migrated {
+            if let Err(e) = store.save() {
+                tracing::warn!(error = %e, "settings could not be rewritten without credentials");
+            }
+        }
+        store
     }
 
     pub fn save(&self) -> MidiResult<()> {
         if let Some(parent) = self.path.parent() {
             fs::create_dir_all(parent).map_err(|e| MidiError::Settings(e.to_string()))?;
         }
-        let json = serde_json::to_string_pretty(&self.settings).map_err(|e| MidiError::Settings(e.to_string()))?;
+        // Credentials go to the store; the file gets them blanked. If the store refuses
+        // one, it stays in the file rather than being lost.
+        let mut on_disk = self.settings.clone();
+        for (key, field) in on_disk.secret_fields() {
+            match self.secrets.set(key, field) {
+                Ok(()) => field.clear(),
+                Err(e) => tracing::warn!(error = %e, "credential store rejected a value, keeping it in the settings file"),
+            }
+        }
+        let json = serde_json::to_string_pretty(&on_disk).map_err(|e| MidiError::Settings(e.to_string()))?;
         fs::write(&self.path, json).map_err(|e| MidiError::Settings(e.to_string()))
     }
 }

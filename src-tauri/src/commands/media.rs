@@ -235,6 +235,32 @@ pub struct HttpTest {
 
 /// Send a request from the editor with sample placeholder values.
 #[tauri::command]
+pub async fn home_assistant_state(state: State<'_, AppState>) -> CmdResult<crate::homeassistant::HaState> {
+    Ok(state.home_assistant.state())
+}
+
+#[tauri::command]
+pub async fn home_assistant_refresh(state: State<'_, AppState>) -> CmdResult<crate::homeassistant::HaState> {
+    let ha = state.home_assistant.clone();
+    ha.refresh().await?;
+    Ok(ha.state())
+}
+
+#[tauri::command]
+pub async fn set_home_assistant_settings(config: crate::config::HomeAssistantSettings, app: AppHandle, state: State<'_, AppState>) -> CmdResult<Settings> {
+    let settings = {
+        let mut st = state.settings.lock();
+        st.settings.home_assistant = config;
+        st.save().map_err(err)?;
+        st.settings.clone()
+    };
+    let _ = app.emit(super::settings::EVENT_SETTINGS, &settings);
+    let ha = state.home_assistant.clone();
+    tauri::async_runtime::spawn(async move { ha.settings_changed().await });
+    Ok(settings)
+}
+
+#[tauri::command]
 pub async fn test_http_request(request: HttpTest) -> CmdResult<HttpOutcome> {
     let spec = HttpSpec {
         method: request.method,

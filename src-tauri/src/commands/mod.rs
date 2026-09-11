@@ -29,6 +29,7 @@ pub struct AppState {
     pub speech: SpeechHandle,
     pub obs: ObsHandle,
     pub slobs: SlobsHandle,
+    pub home_assistant: crate::homeassistant::HaHandle,
     /// Profiles before each edit made from the UI, newest last (undo).
     pub history: Mutex<Vec<crate::profile::Profile>>,
     /// Profiles undone, newest last (redo); cleared by the next edit.

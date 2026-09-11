@@ -116,3 +116,32 @@ export function Field({ label, children }: { label: string; children: ReactNode 
     </div>
   );
 }
+
+/** Tab strip for an editor header: one highlighted segment per option. */
+export function Segmented<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="flex gap-1 rounded-lg bg-stage-800 p-1">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          onClick={() => onChange(o.value)}
+          className={clsx(
+            "rounded-md px-3 py-1 text-xs font-medium transition-colors",
+            value === o.value ? "bg-stage-600 text-stage-100" : "text-stage-400 hover:text-stage-200",
+          )}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
