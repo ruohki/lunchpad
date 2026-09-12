@@ -692,7 +692,7 @@
     "level": "Volume",
     "fromVariable": "From variable",
     "fromPlaceholder": "e.g. value",
-    "hint": "Sets the system's default device to this level. With a variable set, its number (0–100) replaces the slider.",
+    "hint": "Sets the chosen device to this level; “System default” follows whatever is the default at the time. With a variable set, its number (0–100) replaces the slider.",
     "mode": "Do",
     "modes": {
       "set": "Set the volume",
@@ -702,8 +702,10 @@
       "toggleMute": "Toggle mute"
     },
     "step": "Step",
-    "adjustHint": "Adds the step to the current volume of the system's default device; negative steps turn it down. A variable replaces the step.",
-    "muteHint": "Mutes the system's default device. On macOS the microphone has no mute switch, so Lunchpad parks its level at 0 and brings it back on unmute."
+    "adjustHint": "Adds the step to the current volume of the chosen device; negative steps turn it down. A variable replaces the step.",
+    "muteHint": "Mutes the chosen device, “System default” follows whatever is the default at the time. A device without a mute switch (the Mac's microphone, some USB interfaces) is parked at level 0 and brought back on unmute.",
+    "device": "Device",
+    "defaultDevice": "System default"
   },
   "fader": {
     "titleNew": "New fader",

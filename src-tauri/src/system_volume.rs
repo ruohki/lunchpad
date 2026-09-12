@@ -4,7 +4,24 @@
 use crate::macros::{SystemVolumeMode, SystemVolumeTarget};
 
 /// Apply one of the modes: set a level, change it by a step, or mute.
-pub async fn apply(target: SystemVolumeTarget, mode: SystemVolumeMode, amount: f32) -> Result<(), String> {
+pub async fn apply(target: SystemVolumeTarget, mode: SystemVolumeMode, amount: f32, device: Option<&str>) -> Result<(), String> {
+    // A named device is controlled directly; without one the system's default device is meant.
+    if let Some(name) = device.map(str::trim).filter(|s| !s.is_empty()) {
+        use crate::audio_devices as dev;
+        return match mode {
+            SystemVolumeMode::Set => dev::set_volume(target, name, amount).await,
+            SystemVolumeMode::Adjust => {
+                let current = dev::get_volume(target, name).await?;
+                dev::set_volume(target, name, current + amount).await
+            }
+            SystemVolumeMode::Mute => dev::set_muted(target, name, true).await,
+            SystemVolumeMode::Unmute => dev::set_muted(target, name, false).await,
+            SystemVolumeMode::ToggleMute => {
+                let muted = dev::get_muted(target, name).await?;
+                dev::set_muted(target, name, !muted).await
+            }
+        };
+    }
     match mode {
         SystemVolumeMode::Set => set(target, amount).await,
         SystemVolumeMode::Adjust => {
@@ -147,7 +164,7 @@ pub async fn is_muted(target: SystemVolumeTarget) -> Result<bool, String> {
 
 #[cfg_attr(windows, allow(dead_code))]
 /// First number in a tool's answer ("53", "Volume: front-left: 34817 /  53% / …").
-fn parse_percent(text: &str) -> Option<f32> {
+pub(crate) fn parse_percent(text: &str) -> Option<f32> {
     if let Some(pos) = text.find('%') {
         let head = &text[..pos];
         let digits: String = head.chars().rev().take_while(|c| c.is_ascii_digit() || *c == '.').collect::<String>().chars().rev().collect();

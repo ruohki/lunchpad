@@ -1,5 +1,6 @@
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { SYSTEM_VOLUME_MODES, type Action, type Button, type SystemVolumeMode, type SystemVolumeTarget } from "../../lib/api";
+import { api, SYSTEM_VOLUME_MODES, type Action, type Button, type SystemVolumeMode, type SystemVolumeTarget } from "../../lib/api";
 import { Select } from "../Select";
 import { Slider } from "../Slider";
 import { useVariableSuggestions } from "./VariableFields";
@@ -9,8 +10,30 @@ import { VariableNameField } from "./VariableNameField";
 export function SystemVolumeEditor({ action, onChange, button }: { action: Action; onChange: (next: Action) => void; button: Button }) {
   const { t } = useTranslation();
   const suggestions = useVariableSuggestions(button);
+  const target = action.type === "setSystemVolume" ? action.target : "output";
+  const [devices, setDevices] = useState<string[]>([]);
+  useEffect(() => {
+    let live = true;
+    api
+      .listSystemAudioDevices(target)
+      .then((list) => {
+        if (live) setDevices(list);
+      })
+      .catch(() => {
+        if (live) setDevices([]);
+      });
+    return () => {
+      live = false;
+    };
+  }, [target]);
   if (action.type !== "setSystemVolume") return null;
   const withLevel = action.mode === "set" || action.mode === "adjust";
+  const chosen = action.device ?? "";
+  const deviceOptions = [
+    { value: "", label: t("volume.defaultDevice") },
+    ...devices.map((d) => ({ value: d, label: d })),
+    ...(chosen && !devices.includes(chosen) ? [{ value: chosen, label: t("sound.missingDevice", { name: chosen }) }] : []),
+  ];
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-3">
@@ -23,8 +46,12 @@ export function SystemVolumeEditor({ action, onChange, button }: { action: Actio
               { value: "output", label: t("volume.targets.output") },
               { value: "input", label: t("volume.targets.input") },
             ]}
-            onChange={(target) => onChange({ ...action, target })}
+            onChange={(target) => onChange({ ...action, target, device: null })}
           />
+        </div>
+        <div className="flex flex-col gap-1 text-xs text-stage-400">
+          {t("volume.device")}
+          <Select size="sm" value={chosen} options={deviceOptions} onChange={(device) => onChange({ ...action, device: device || null })} />
         </div>
         <div className="flex flex-col gap-1 text-xs text-stage-400">
           {t("volume.mode")}

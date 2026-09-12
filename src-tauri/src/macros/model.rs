@@ -256,6 +256,9 @@ pub enum ActionKind {
         /// Variable or placeholder that overrides `volume` when it holds a number
         #[serde(default)]
         volume_from: Option<String>,
+        /// A specific device by name; `None` = the system's default device
+        #[serde(default)]
+        device: Option<String>,
     },
     SlobsToggleFilter {
         source: String,

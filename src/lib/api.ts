@@ -365,7 +365,7 @@ export type ActionKind =
   | { type: "slobsSwitchScene"; scene: string; collection: string }
   | { type: "slobsToggleSource"; scene: string; collection: string; source: string; visible: boolean; mode: VisibilityMode | null }
   | { type: "slobsSetAudio"; scene: string; collection: string; source: string; muted: boolean; muteMode: MuteMode | null; volumeDb: number; volumeFrom: string | null; volumeUnit: VolumeUnit; setVolume: boolean }
-  | { type: "setSystemVolume"; target: SystemVolumeTarget; mode: SystemVolumeMode; volume: number; volumeFrom: string | null }
+  | { type: "setSystemVolume"; target: SystemVolumeTarget; mode: SystemVolumeMode; volume: number; volumeFrom: string | null; device: string | null }
   | { type: "stopAllSounds" }
   | { type: "setAudioDevice"; target: SystemVolumeTarget; device: string }
   | { type: "addToVariable"; name: string; amount: string; scope: VarScope }

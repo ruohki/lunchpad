@@ -68,6 +68,120 @@ pub async fn set_default(target: SystemVolumeTarget, name: &str) -> Result<(), S
     }
 }
 
+/// Volume in percent of the device called `name` (not necessarily the default one).
+pub async fn get_volume(target: SystemVolumeTarget, name: &str) -> Result<f32, String> {
+    let wanted = name.trim().to_string();
+    #[cfg(target_os = "macos")]
+    {
+        tokio::task::spawn_blocking(move || {
+            let id = mac::find(target, &wanted)?;
+            mac::get_volume(id, target).map(|v| v * 100.0)
+        })
+        .await
+        .map_err(|e| e.to_string())?
+    }
+    #[cfg(target_os = "windows")]
+    {
+        tokio::task::spawn_blocking(move || win::endpoint_volume(target, &wanted).and_then(|v| unsafe { v.GetMasterVolumeLevelScalar().map(|s| s * 100.0).map_err(|e| e.to_string()) })).await.map_err(|e| e.to_string())?
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let id = linux::find(target, &wanted).await?;
+        let out = linux::pactl(&[if target == SystemVolumeTarget::Output { "get-sink-volume" } else { "get-source-volume" }, &id]).await?;
+        crate::system_volume::parse_percent(&out).ok_or_else(|| format!("could not read the volume: {out}"))
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+    {
+        let _ = (target, wanted);
+        Err("audio devices are not supported on this platform".into())
+    }
+}
+
+/// Set the volume in percent of the device called `name`.
+pub async fn set_volume(target: SystemVolumeTarget, name: &str, percent: f32) -> Result<(), String> {
+    let wanted = name.trim().to_string();
+    let percent = if percent.is_finite() { percent.clamp(0.0, 100.0) } else { 0.0 };
+    #[cfg(target_os = "macos")]
+    {
+        tokio::task::spawn_blocking(move || {
+            let id = mac::find(target, &wanted)?;
+            mac::set_volume(id, target, percent / 100.0)
+        })
+        .await
+        .map_err(|e| e.to_string())?
+    }
+    #[cfg(target_os = "windows")]
+    {
+        tokio::task::spawn_blocking(move || win::endpoint_volume(target, &wanted).and_then(|v| unsafe { v.SetMasterVolumeLevelScalar(percent / 100.0, std::ptr::null()).map_err(|e| e.to_string()) })).await.map_err(|e| e.to_string())?
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let id = linux::find(target, &wanted).await?;
+        linux::pactl(&[if target == SystemVolumeTarget::Output { "set-sink-volume" } else { "set-source-volume" }, &id, &format!("{}%", percent.round() as i32)]).await.map(|_| ())
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+    {
+        let _ = (target, wanted, percent);
+        Err("audio devices are not supported on this platform".into())
+    }
+}
+
+/// Whether the device called `name` is muted.
+pub async fn get_muted(target: SystemVolumeTarget, name: &str) -> Result<bool, String> {
+    let wanted = name.trim().to_string();
+    #[cfg(target_os = "macos")]
+    {
+        tokio::task::spawn_blocking(move || {
+            let id = mac::find(target, &wanted)?;
+            mac::get_muted(id, target)
+        })
+        .await
+        .map_err(|e| e.to_string())?
+    }
+    #[cfg(target_os = "windows")]
+    {
+        tokio::task::spawn_blocking(move || win::endpoint_volume(target, &wanted).and_then(|v| unsafe { v.GetMute().map(|b| b.as_bool()).map_err(|e| e.to_string()) })).await.map_err(|e| e.to_string())?
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let id = linux::find(target, &wanted).await?;
+        Ok(linux::pactl(&[if target == SystemVolumeTarget::Output { "get-sink-mute" } else { "get-source-mute" }, &id]).await?.to_lowercase().contains("yes"))
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+    {
+        let _ = (target, wanted);
+        Err("audio devices are not supported on this platform".into())
+    }
+}
+
+/// Mute or unmute the device called `name`.
+pub async fn set_muted(target: SystemVolumeTarget, name: &str, muted: bool) -> Result<(), String> {
+    let wanted = name.trim().to_string();
+    #[cfg(target_os = "macos")]
+    {
+        tokio::task::spawn_blocking(move || {
+            let id = mac::find(target, &wanted)?;
+            mac::set_muted(id, target, muted)
+        })
+        .await
+        .map_err(|e| e.to_string())?
+    }
+    #[cfg(target_os = "windows")]
+    {
+        tokio::task::spawn_blocking(move || win::endpoint_volume(target, &wanted).and_then(|v| unsafe { v.SetMute(muted, std::ptr::null()).map_err(|e| e.to_string()) })).await.map_err(|e| e.to_string())?
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let id = linux::find(target, &wanted).await?;
+        linux::pactl(&[if target == SystemVolumeTarget::Output { "set-sink-mute" } else { "set-source-mute" }, &id, if muted { "1" } else { "0" }]).await.map(|_| ())
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+    {
+        let _ = (target, wanted, muted);
+        Err("audio devices are not supported on this platform".into())
+    }
+}
+
 fn kind(target: SystemVolumeTarget) -> &'static str {
     match target {
         SystemVolumeTarget::Output => "output",
@@ -107,9 +221,10 @@ fn parse_pactl_list(text: &str) -> Vec<(String, String)> {
 mod mac {
     use super::SystemVolumeTarget;
     use objc2_core_audio::{
-        kAudioDevicePropertyStreams, kAudioHardwarePropertyDefaultInputDevice, kAudioHardwarePropertyDefaultOutputDevice, kAudioHardwarePropertyDevices, kAudioObjectPropertyElementMain,
-        kAudioObjectPropertyName, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyScopeInput, kAudioObjectPropertyScopeOutput, kAudioObjectSystemObject, AudioObjectGetPropertyData,
-        AudioObjectGetPropertyDataSize, AudioObjectID, AudioObjectPropertyAddress, AudioObjectPropertyScope, AudioObjectPropertySelector, AudioObjectSetPropertyData,
+        kAudioDevicePropertyMute, kAudioDevicePropertyStreams, kAudioDevicePropertyVolumeScalar, kAudioHardwarePropertyDefaultInputDevice, kAudioHardwarePropertyDefaultOutputDevice,
+        kAudioHardwarePropertyDevices, kAudioObjectPropertyElementMain, kAudioObjectPropertyName, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyScopeInput,
+        kAudioObjectPropertyScopeOutput, kAudioObjectSystemObject, AudioObjectGetPropertyData, AudioObjectGetPropertyDataSize, AudioObjectHasProperty, AudioObjectID,
+        AudioObjectPropertyAddress, AudioObjectPropertyScope, AudioObjectPropertySelector, AudioObjectSetPropertyData,
     };
     use objc2_core_foundation::{CFRetained, CFString};
     use std::ffi::c_void;
@@ -174,6 +289,127 @@ mod mac {
         Ok(out)
     }
 
+    /// The device called `name` (see `pick` for how names match).
+    pub fn find(target: SystemVolumeTarget, name: &str) -> Result<AudioObjectID, String> {
+        let devices = devices(target)?;
+        super::pick(&devices, name).map(|(id, _)| *id).ok_or_else(|| format!("no {} device called \"{name}\"", super::kind(target)))
+    }
+
+    fn scope_of(target: SystemVolumeTarget) -> AudioObjectPropertyScope {
+        match target {
+            SystemVolumeTarget::Output => kAudioObjectPropertyScopeOutput,
+            SystemVolumeTarget::Input => kAudioObjectPropertyScopeInput,
+        }
+    }
+
+    /// Elements that carry a property: the main element when the device has one, else the
+    /// first two channels (many USB interfaces only expose per-channel controls).
+    fn elements_with(id: AudioObjectID, selector: AudioObjectPropertySelector, scope: AudioObjectPropertyScope) -> Vec<u32> {
+        let has = |element: u32| {
+            let mut addr = AudioObjectPropertyAddress { mSelector: selector, mScope: scope, mElement: element };
+            // SAFETY: a plain query with a valid address.
+            unsafe { AudioObjectHasProperty(id, NonNull::from(&mut addr)) }
+        };
+        if has(kAudioObjectPropertyElementMain) {
+            vec![kAudioObjectPropertyElementMain]
+        } else {
+            [1u32, 2].into_iter().filter(|e| has(*e)).collect()
+        }
+    }
+
+    fn read_u32(id: AudioObjectID, selector: AudioObjectPropertySelector, scope: AudioObjectPropertyScope, element: u32) -> Result<u32, String> {
+        let mut addr = AudioObjectPropertyAddress { mSelector: selector, mScope: scope, mElement: element };
+        let mut value: u32 = 0;
+        let mut size = std::mem::size_of::<u32>() as u32;
+        // SAFETY: reads one u32 into `value`.
+        let status = unsafe { AudioObjectGetPropertyData(id, NonNull::from(&mut addr), 0, std::ptr::null(), NonNull::from(&mut size), NonNull::new_unchecked(&mut value as *mut _ as *mut c_void)) };
+        if status == 0 {
+            Ok(value)
+        } else {
+            Err(format!("CoreAudio error {status}"))
+        }
+    }
+
+    fn read_f32(id: AudioObjectID, selector: AudioObjectPropertySelector, scope: AudioObjectPropertyScope, element: u32) -> Result<f32, String> {
+        let mut addr = AudioObjectPropertyAddress { mSelector: selector, mScope: scope, mElement: element };
+        let mut value: f32 = 0.0;
+        let mut size = std::mem::size_of::<f32>() as u32;
+        // SAFETY: reads one f32 into `value`.
+        let status = unsafe { AudioObjectGetPropertyData(id, NonNull::from(&mut addr), 0, std::ptr::null(), NonNull::from(&mut size), NonNull::new_unchecked(&mut value as *mut _ as *mut c_void)) };
+        if status == 0 {
+            Ok(value)
+        } else {
+            Err(format!("CoreAudio error {status}"))
+        }
+    }
+
+    fn write<T: Copy>(id: AudioObjectID, selector: AudioObjectPropertySelector, scope: AudioObjectPropertyScope, element: u32, mut value: T) -> Result<(), String> {
+        let mut addr = AudioObjectPropertyAddress { mSelector: selector, mScope: scope, mElement: element };
+        // SAFETY: writes one value of the property's type.
+        let status = unsafe { AudioObjectSetPropertyData(id, NonNull::from(&mut addr), 0, std::ptr::null(), std::mem::size_of::<T>() as u32, NonNull::new_unchecked(&mut value as *mut _ as *mut c_void)) };
+        if status == 0 {
+            Ok(())
+        } else {
+            Err(format!("CoreAudio error {status}"))
+        }
+    }
+
+    /// Volume 0..1 of a device in the target's direction.
+    pub fn get_volume(id: AudioObjectID, target: SystemVolumeTarget) -> Result<f32, String> {
+        let scope = scope_of(target);
+        let elements = elements_with(id, kAudioDevicePropertyVolumeScalar, scope);
+        let first = elements.first().ok_or_else(|| "this device has no volume control".to_string())?;
+        read_f32(id, kAudioDevicePropertyVolumeScalar, scope, *first)
+    }
+
+    pub fn set_volume(id: AudioObjectID, target: SystemVolumeTarget, scalar: f32) -> Result<(), String> {
+        let scope = scope_of(target);
+        let elements = elements_with(id, kAudioDevicePropertyVolumeScalar, scope);
+        if elements.is_empty() {
+            return Err("this device has no volume control".into());
+        }
+        for element in elements {
+            write(id, kAudioDevicePropertyVolumeScalar, scope, element, scalar.clamp(0.0, 1.0))?;
+        }
+        Ok(())
+    }
+
+    /// Muted state; a device without a mute switch counts as muted when its volume is zero.
+    pub fn get_muted(id: AudioObjectID, target: SystemVolumeTarget) -> Result<bool, String> {
+        let scope = scope_of(target);
+        let elements = elements_with(id, kAudioDevicePropertyMute, scope);
+        match elements.first() {
+            Some(element) => read_u32(id, kAudioDevicePropertyMute, scope, *element).map(|v| v != 0),
+            None => get_volume(id, target).map(|v| v <= 0.0),
+        }
+    }
+
+    /// Mute through the device's own switch, or by parking the volume at zero when it has none.
+    pub fn set_muted(id: AudioObjectID, target: SystemVolumeTarget, muted: bool) -> Result<(), String> {
+        let scope = scope_of(target);
+        let elements = elements_with(id, kAudioDevicePropertyMute, scope);
+        if elements.is_empty() {
+            let mut parked = PARKED_VOLUME.lock();
+            if muted {
+                let current = get_volume(id, target)?;
+                if current > 0.0 {
+                    parked.retain(|(d, _)| *d != id);
+                    parked.push((id, current));
+                }
+                return set_volume(id, target, 0.0);
+            }
+            let restore = parked.iter().position(|(d, _)| *d == id).map(|i| parked.remove(i).1).unwrap_or(0.75);
+            return set_volume(id, target, restore);
+        }
+        for element in elements {
+            write(id, kAudioDevicePropertyMute, scope, element, u32::from(muted))?;
+        }
+        Ok(())
+    }
+
+    /// Volumes remembered while a device without a mute switch is "muted", by device id.
+    static PARKED_VOLUME: parking_lot::Mutex<Vec<(AudioObjectID, f32)>> = parking_lot::Mutex::new(Vec::new());
+
     pub fn set_default(target: SystemVolumeTarget, id: AudioObjectID) -> Result<(), String> {
         let selector = match target {
             SystemVolumeTarget::Output => kAudioHardwarePropertyDefaultOutputDevice,
@@ -195,6 +431,15 @@ mod mac {
 
 #[cfg(target_os = "linux")]
 mod linux {
+    use super::{parse_pactl_list, pick, kind, SystemVolumeTarget};
+
+    /// The technical sink / source name for a device description.
+    pub async fn find(target: SystemVolumeTarget, name: &str) -> Result<String, String> {
+        let out = pactl(&["list", if target == SystemVolumeTarget::Output { "sinks" } else { "sources" }]).await?;
+        let devices = parse_pactl_list(&out);
+        pick(&devices, name).map(|(id, _)| id.clone()).ok_or_else(|| format!("no {} device called \"{name}\"", kind(target)))
+    }
+
     pub async fn pactl(args: &[&str]) -> Result<String, String> {
         let out = tokio::process::Command::new("pactl").args(args).output().await.map_err(|e| e.to_string())?;
         if out.status.success() {
@@ -254,6 +499,19 @@ mod win {
                 out.push((wide, name));
             }
             Ok(out)
+        }
+    }
+
+    /// The volume interface of the device called `name`.
+    pub fn endpoint_volume(target: SystemVolumeTarget, name: &str) -> Result<windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume, String> {
+        let devices = devices(target)?;
+        let (id, _) = super::pick(&devices, name).ok_or_else(|| format!("no {} device called \"{name}\"", super::kind(target)))?;
+        // SAFETY: COM lookup of an endpoint by the id the enumeration returned.
+        unsafe {
+            let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+            let enumerator: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL).map_err(|e| e.to_string())?;
+            let device = enumerator.GetDevice(PCWSTR(id.as_ptr())).map_err(|e| e.to_string())?;
+            device.Activate(CLSCTX_ALL, None).map_err(|e| e.to_string())
         }
     }
 

@@ -156,9 +156,10 @@ pub async fn execute_external(ctx: &RunContext, action: &Action) {
             let delta = ctx.expand(amount).trim().parse::<f64>().unwrap_or(0.0);
             ctx.set_var(name, number_text(current + delta), *scope);
         }
-        ActionKind::SetSystemVolume { target, mode, volume, volume_from } => {
+        ActionKind::SetSystemVolume { target, mode, volume, volume_from, device } => {
             let amount = number_from(ctx, volume_from, *volume);
-            report(action, "System volume", crate::system_volume::apply(*target, *mode, amount).await);
+            let device = device.as_deref().map(|d| ctx.expand(d));
+            report(action, "System volume", crate::system_volume::apply(*target, *mode, amount, device.as_deref()).await);
         }
         ActionKind::SlobsToggleFilter { source, filter, enabled } => {
             let Some(slobs) = &services.slobs else { return unavailable(action) };

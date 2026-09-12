@@ -171,7 +171,7 @@ export function createActions(type: ActionType): Action[] {
     case "textToSpeech":
       return [make({ type: "textToSpeech", text: "", voice: null, volume: 1 })];
     case "setSystemVolume":
-      return [make({ type: "setSystemVolume", target: "output", mode: "set", volume: 50, volumeFrom: null })];
+      return [make({ type: "setSystemVolume", target: "output", mode: "set", volume: 50, volumeFrom: null, device: null })];
     case "stopAllSounds":
       return [make({ type: "stopAllSounds" })];
     case "setAudioDevice":
@@ -305,7 +305,7 @@ export function summarize(t: TFunction, action: Action, pages: Page[]): string {
     case "textToSpeech":
       return action.text;
     case "setSystemVolume": {
-      const device = t(`volume.targets.${action.target}`);
+      const device = action.device || t(`volume.targets.${action.target}`);
       if (action.mode === "set") return `${device} · ${action.volumeFrom ? `{{${action.volumeFrom}}}` : `${Math.round(action.volume)} %`}`;
       if (action.mode === "adjust") return `${device} · ${action.volumeFrom ? `±{{${action.volumeFrom}}}` : `${action.volume >= 0 ? "+" : ""}${Math.round(action.volume)} %`}`;
       return `${device} · ${t(`volume.modes.${action.mode}`)}`;
