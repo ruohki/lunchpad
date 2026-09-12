@@ -4,6 +4,7 @@ import { ButtonEditor } from "./components/ButtonEditor";
 import { DevicePicker } from "./components/DevicePicker";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { LaunchpadGrid } from "./components/LaunchpadGrid";
+import { OutsidePanel } from "./components/OutsidePanel";
 import { Notices } from "./components/Notices";
 import { HeaderBar } from "./components/HeaderBar";
 import { PageTabs } from "./components/PageBar";
@@ -142,6 +143,7 @@ export default function App() {
           </AnimatePresence>
           <ButtonEditor />
           <FaderEditor />
+          <OutsidePanel />
           <Notices />
         </main>
       </div>

@@ -6,6 +6,7 @@ import { useSettingsStore } from "../store/settings";
 import { useUpdateStore } from "../store/update";
 import { Button, IconClose } from "./ui";
 import { useState } from "react";
+import { useUiStore } from "../store/ui";
 import { buttonsOutside } from "../lib/grid";
 
 /** Bottom-right stack for errors and import results. */
@@ -27,6 +28,7 @@ export function Notices() {
   const dismissMissing = useProfileStore((s) => s.dismissMissing);
   const activePage = useProfileStore((s) => s.activePage());
   const layout = useDeviceStore((s) => s.layout);
+  const openOutside = useUiStore((s) => s.openOutside);
   const outside = activePage ? buttonsOutside(activePage, layout).length : 0;
   const [outsideDismissed, setOutsideDismissed] = useState<string | null>(null);
   const outsideKey = activePage ? `${activePage.id}:${outside}:${layout?.model ?? ""}` : "";
@@ -84,6 +86,7 @@ export function Notices() {
       title: t("notices.outsideTitle", { count: outside, model: t(`models.${layout.model}`) }),
       lines: [t("notices.outsideHint")],
       onClose: () => setOutsideDismissed(outsideKey),
+      action: { label: t("notices.outsideShow"), run: openOutside },
     });
   }
   if (updateStatus === "available" && !updateDismissed) {

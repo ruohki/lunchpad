@@ -218,7 +218,8 @@
     "editFader": "Edit fader…",
     "removeFader": "Remove fader",
     "undo": "Undo",
-    "redo": "Redo"
+    "redo": "Redo",
+    "outside": "Buttons out of sight… ({{count}})"
   },
   "editor": {
     "titleEdit": "Edit button",
@@ -326,7 +327,8 @@
     "missingHint": "Buttons with a missing file show a dot; open them and choose the sound again.",
     "outsideTitle_one": "{{count}} button on this page has no pad on the {{model}}",
     "outsideTitle_other": "{{count}} buttons on this page have no pad on the {{model}}",
-    "outsideHint": "They are kept and show up again on a Launchpad with a bigger grid. Settings → Pages lists how many each page has."
+    "outsideHint": "They are kept and show up again on a Launchpad with a bigger grid; open the list to drag them onto free pads.",
+    "outsideShow": "Show them"
   },
   "crash": {
     "title": "Something went wrong",
@@ -941,5 +943,12 @@
     "service": "Service",
     "data": "Service data (JSON)",
     "dataHint": "Optional. A JSON object with the service's fields; {{placeholders}} are filled in before it is sent. The entity above is added as entity_id."
+  },
+  "outside": {
+    "title": "Out of sight",
+    "hint_one": "{{count}} button on this page has no pad on the {{model}}. Drag it onto an empty pad to bring it back.",
+    "hint_other": "{{count}} buttons on this page have no pad on the {{model}}. Drag one onto an empty pad to bring it back.",
+    "position": "Column {{column}}, row {{row}}",
+    "none": "Every button on this page has a pad."
   }
 }

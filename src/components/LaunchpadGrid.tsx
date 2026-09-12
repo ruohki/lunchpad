@@ -17,6 +17,8 @@ import { ContextMenu, type MenuEntry, type MenuState } from "./ContextMenu";
 import { PadFace } from "./PadFace";
 import { IconGear } from "./ui";
 import { limitedRgb } from "../lib/colors";
+import { padAt, sameRef, useDragStore } from "../lib/drag";
+import { buttonsOutside } from "../lib/grid";
 
 interface Props {
   layout: Layout;
@@ -27,31 +29,10 @@ interface Props {
 /** Pointer distance before a modifier-press turns into a drag instead of a click. */
 const DRAG_THRESHOLD = 6;
 
-interface DragState {
-  from: PadRef;
-  copy: boolean;
-  over: PadRef | null;
-  /** Dragging a whole fader by one of its pads (step = which pad was grabbed). */
-  fader: { fader: Fader; step: number } | null;
-  /** The fader would fit where the pointer is. */
-  fits: boolean;
-}
-
 /** True for the modifier that moves a button: Ctrl, or ⌘ on macOS. */
 const isMoveModifier = (e: { ctrlKey: boolean; metaKey: boolean }) => e.ctrlKey || e.metaKey;
 /** True for the modifier that copies a button: Shift (Alt is kept from the legacy app). */
 const isCopyModifier = (e: { shiftKey: boolean; altKey: boolean }) => e.shiftKey || e.altKey;
-
-const sameRef = (a: PadRef | null, b: PadRef | null) => a?.x === b?.x && a?.y === b?.y;
-
-/** The pad under a screen point, through the `data-pad` attribute each pad carries. */
-function padAt(x: number, y: number): PadRef | null {
-  const el = document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-pad]");
-  const raw = el?.dataset.pad;
-  if (!raw) return null;
-  const [px, py] = raw.split(",").map(Number);
-  return Number.isFinite(px) && Number.isFinite(py) ? { x: px, y: py } : null;
-}
 
 /**
  * The button matrix of the connected model, drawn to scale. Rows are laid out
@@ -67,7 +48,8 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
   const { ref, width, height } = useElementSize<HTMLDivElement>();
   const reduced = useReducedMotion();
   const [menu, setMenu] = useState<MenuState | null>(null);
-  const [drag, setDrag] = useState<DragState | null>(null);
+  const drag = useDragStore((s) => s.drag);
+  const setDrag = useDragStore((s) => s.setDrag);
   const pending = useRef<{ from: PadRef; copy: boolean; x: number; y: number; started: boolean; fader: { fader: Fader; step: number } | null } | null>(null);
 
   const clipboard = useProfileStore((s) => s.clipboard);
@@ -86,6 +68,8 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
   const moveButton = useProfileStore((s) => s.moveButton);
   const moveFader = useProfileStore((s) => s.moveFader);
   const page = useProfileStore((s) => s.activePage());
+  const openOutside = useUiStore((s) => s.openOutside);
+  const outsideCount = useMemo(() => (page ? buttonsOutside(page, layout).length : 0), [page, layout]);
   const pageRef = useRef(page);
   pageRef.current = page;
   const layoutRef = useRef(layout);
@@ -186,6 +170,7 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
       // macOS reports Ctrl+click as a right click; Ctrl is the move modifier, not a menu request.
       if (e.ctrlKey || pending.current?.started) return;
       const historyItems: MenuEntry[] = [
+        ...(outsideCount > 0 ? ["divider" as const, { label: t("grid.outside", { count: outsideCount }), onSelect: openOutside }] : []),
         "divider",
         { label: t("grid.undo"), disabled: history.undo === 0, onSelect: () => void undo() },
         { label: t("grid.redo"), disabled: history.redo === 0, onSelect: () => void redo() },
@@ -222,7 +207,7 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
         ],
       });
     },
-    [t, clipboard, openEditor, openFaderEditor, removeFader, copyButton, cutButton, pasteButton, clearButton, undo, redo, history, running, stopAll],
+    [t, clipboard, openEditor, openFaderEditor, removeFader, copyButton, cutButton, pasteButton, clearButton, undo, redo, history, running, stopAll, outsideCount, openOutside],
   );
 
   const dragButton = drag && !drag.fader ? (page?.buttons.find((b) => b.x === drag.from.x && b.y === drag.from.y) ?? null) : null;
@@ -275,9 +260,11 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
                         : "blocked"
                       : null
                     : !!drag && !!drag.over && drag.over.x === pad.x && drag.over.y === pad.y && !sameRef(drag.over, drag.from)
-                      ? drag.copy
-                        ? "copy"
-                        : "move"
+                      ? !drag.fits
+                        ? "blocked"
+                        : drag.copy
+                          ? "copy"
+                          : "move"
                       : null
                 }
                 onContextMenu={openMenu}
