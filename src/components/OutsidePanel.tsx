@@ -35,6 +35,12 @@ export function OutsidePanel() {
 
   const outside = useMemo(() => (page ? buttonsOutside(page, layout) : []), [page, layout]);
 
+  // The panel exists to bring buttons back; once the last one is on a pad it has nothing
+  // left to show and closes on its own. (It only opens with at least one button listed.)
+  useEffect(() => {
+    if (open && outside.length === 0) close();
+  }, [open, outside.length, close]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
