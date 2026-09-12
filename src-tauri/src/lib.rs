@@ -230,7 +230,10 @@ pub fn run() {
             // Shared variables survive restarts.
             if let Ok(text) = std::fs::read_to_string(config_dir.join("variables.json")) {
                 match serde_json::from_str::<std::collections::HashMap<String, String>>(&text) {
-                    Ok(globals) => engine.set_globals(globals),
+                    Ok(globals) => {
+                        engine.set_globals(globals);
+                        engine.prune_fader_variables();
+                    }
                     Err(e) => tracing::warn!(error = %e, "variables.json unreadable, starting empty"),
                 }
             }
@@ -342,6 +345,9 @@ pub fn run() {
             test_http_request,
             test_script,
             get_variables,
+            delete_variables,
+            clear_variables,
+            prune_fader_variables,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

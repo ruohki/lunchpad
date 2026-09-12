@@ -692,6 +692,10 @@ export const api = {
     invoke<HttpOutcome>("test_http_request", { request }),
   testScript: (code: string, locals: Record<string, string> = {}) => invoke<ScriptOutcome>("test_script", { request: { code, locals } }),
   getVariables: () => invoke<Record<string, string>>("get_variables"),
+  deleteVariables: (names: string[]) => invoke<Record<string, string>>("delete_variables", { names }),
+  clearVariables: () => invoke<Record<string, string>>("clear_variables"),
+  /** Drop fader values no fader publishes any more; returns how many went. */
+  pruneFaderVariables: () => invoke<number>("prune_fader_variables"),
 
   getRunningMacros: () => invoke<RunningMacro[]>("get_running_macros"),
   stopAllMacros: () => invoke<void>("stop_all_macros"),

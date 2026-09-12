@@ -7,6 +7,9 @@ interface VariablesStore {
   hints: string[];
   init: () => Promise<() => void>;
   setHints: (hints: string[]) => void;
+  remove: (names: string[]) => Promise<void>;
+  clear: () => Promise<void>;
+  pruneFaders: () => Promise<number>;
 }
 
 export const useVariablesStore = create<VariablesStore>((set) => ({
@@ -22,4 +25,11 @@ export const useVariablesStore = create<VariablesStore>((set) => ({
     return unlisten;
   },
   setHints: (hints) => set({ hints }),
+  remove: async (names) => set({ globals: await api.deleteVariables(names) }),
+  clear: async () => set({ globals: await api.clearVariables() }),
+  pruneFaders: async () => {
+    const count = await api.pruneFaderVariables();
+    set({ globals: await api.getVariables() });
+    return count;
+  },
 }));

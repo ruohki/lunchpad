@@ -412,6 +412,55 @@ impl MacroEngine {
         *self.inner.globals.lock() = globals;
     }
 
+    /// Drop the named shared variables. Returns how many existed.
+    pub fn remove_globals(&self, names: &[String]) -> usize {
+        let snapshot = {
+            let mut globals = self.inner.globals.lock();
+            let before = globals.len();
+            for name in names {
+                globals.remove(name.trim());
+            }
+            if globals.len() == before {
+                return 0;
+            }
+            globals.clone()
+        };
+        let removed = names.len();
+        self.inner.sink.variables_changed(&snapshot);
+        removed
+    }
+
+    /// Drop every shared variable.
+    pub fn clear_globals(&self) {
+        let snapshot = {
+            let mut globals = self.inner.globals.lock();
+            globals.clear();
+            globals.clone()
+        };
+        self.inner.sink.variables_changed(&snapshot);
+    }
+
+    /// Fader values are derived state: drop every `fader.*` variable that no fader on any
+    /// page publishes any more (renamed or removed faders). Returns how many went.
+    pub fn prune_fader_variables(&self) -> usize {
+        let keep: HashSet<String> = {
+            let store = self.inner.profile.lock();
+            store
+                .profile
+                .pages
+                .iter()
+                .flat_map(|p| p.faders.iter())
+                .flat_map(|f| [format!("fader.{}", f.id), format!("fader.{}", f.variable_key())])
+                .collect()
+        };
+        let stale: Vec<String> = self.inner.globals.lock().keys().filter(|k| k.starts_with("fader.") && !keep.contains(*k)).cloned().collect();
+        if stale.is_empty() {
+            return 0;
+        }
+        tracing::info!(count = stale.len(), "dropping stale fader variables");
+        self.remove_globals(&stale)
+    }
+
     pub fn running(&self) -> Vec<RunningMacro> {
         let mut list: Vec<RunningMacro> = self.inner.runners.lock().values().map(|r| r.info.clone()).collect();
         list.sort_by_key(|r| r.started_at_ms);
@@ -892,6 +941,27 @@ mod tests {
         assert_eq!(g.get("got").map(String::as_str), Some("-30|50|2/5"));
         assert_eq!(g.get("fader.mic").map(String::as_str), Some("-30"));
         assert_eq!(profile.lock().profile.page(DEFAULT_PAGE_ID).unwrap().faders[0].value, -30.0);
+    }
+
+    #[tokio::test]
+    async fn stale_fader_variables_are_pruned() {
+        let (engine, profile) = engine();
+        profile.lock().profile.page_mut(DEFAULT_PAGE_ID).unwrap().set_fader(Fader { id: "f9".into(), name: "Rolladen 1".into(), length: 3, ..Fader::default() });
+        engine.set_globals(HashMap::from([
+            ("fader.f9".into(), "1".into()),
+            ("fader.Rolladen_1".into(), "1".into()),
+            ("fader.old name".into(), "2".into()),
+            ("fader.deadbeef".into(), "3".into()),
+            ("count".into(), "4".into()),
+        ]));
+        assert_eq!(engine.prune_fader_variables(), 2);
+        let left = engine.globals();
+        assert!(left.contains_key("fader.f9") && left.contains_key("fader.Rolladen_1") && left.contains_key("count"));
+        assert!(!left.contains_key("fader.old name") && !left.contains_key("fader.deadbeef"));
+        assert_eq!(engine.prune_fader_variables(), 0);
+        assert_eq!(engine.remove_globals(&["count".into()]), 1);
+        engine.clear_globals();
+        assert!(engine.globals().is_empty());
     }
 
     #[tokio::test]

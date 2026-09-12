@@ -319,3 +319,21 @@ pub async fn test_script(request: ScriptTest, state: State<'_, AppState>) -> Cmd
 pub async fn get_variables(state: State<'_, AppState>) -> CmdResult<HashMap<String, String>> {
     Ok(state.engine.globals())
 }
+
+#[tauri::command]
+pub async fn delete_variables(names: Vec<String>, state: State<'_, AppState>) -> CmdResult<HashMap<String, String>> {
+    state.engine.remove_globals(&names);
+    Ok(state.engine.globals())
+}
+
+#[tauri::command]
+pub async fn clear_variables(state: State<'_, AppState>) -> CmdResult<HashMap<String, String>> {
+    state.engine.clear_globals();
+    Ok(state.engine.globals())
+}
+
+/// Drop `fader.*` variables no fader publishes any more; returns how many went.
+#[tauri::command]
+pub async fn prune_fader_variables(state: State<'_, AppState>) -> CmdResult<usize> {
+    Ok(state.engine.prune_fader_variables())
+}

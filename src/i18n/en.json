@@ -154,7 +154,8 @@
       "interface": "Interface",
       "about": "About Lunchpad",
       "diagnostics": "Diagnostics",
-      "homeAssistant": "Home Assistant"
+      "homeAssistant": "Home Assistant",
+      "variables": "Variables"
     },
     "deviceTitle": "Connected device",
     "rememberedOnly": "Remembered: {{model}} on “{{port}}”. Not connected right now.",
@@ -186,7 +187,18 @@
     "haTokenHint": "Profile → Security → Long-lived access tokens → Create token. The token is stored in Lunchpad's settings file.",
     "haIgnoreTls": "Accept a self-signed certificate",
     "haStatusConnected": "Connected to Home Assistant {{version}} ({{location}}), {{count}} entities",
-    "haRefresh": "Reload entities"
+    "haRefresh": "Reload entities",
+    "variablesHint": "Shared variables are what macros write with “set variable”, plus the level of every fader as fader.<name>. They survive restarts. Fader values of renamed or removed faders are dropped automatically; anything else stays until you remove it here.",
+    "variablesPrune": "Remove stale fader values",
+    "variablesPruned_one": "{{count}} value removed.",
+    "variablesPruned_other": "{{count}} values removed.",
+    "variablesClear": "Remove all",
+    "variablesClearConfirm_one": "Remove {{count}} variable",
+    "variablesClearConfirm_other": "Remove all {{count}} variables",
+    "variablesList_one": "{{count}} variable",
+    "variablesList_other": "{{count}} variables",
+    "variablesEmpty": "No shared variables yet.",
+    "variablesRemove": "Remove {{name}}"
   },
   "pages": {
     "label": "Pages",

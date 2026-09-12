@@ -49,6 +49,8 @@ fn mutate<T>(app: &AppHandle, state: &AppState, record: bool, f: impl FnOnce(&mu
     }
     let _ = app.emit(EVENT_PROFILE, &profile);
     state.manager.lock().request_repaint();
+    // A renamed or removed fader leaves its old variable behind; drop it right away.
+    state.engine.prune_fader_variables();
     Ok(result)
 }
 
