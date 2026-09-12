@@ -13,6 +13,8 @@ interface Props {
   round: boolean;
   /** Connected Launchpad has red/green LEDs only: draw the colours it can show, no pulsing. */
   limited?: boolean;
+  /** The pad has no LED: colours do not apply, draw a neutral face with the look on it. */
+  noLed?: boolean;
   className?: string;
 }
 
@@ -21,11 +23,11 @@ interface Props {
  * animated), text or image look on top. Shared by the grid and the editor
  * preview.
  */
-export function PadFace({ button, cell, active, round, limited = false, className }: Props) {
+export function PadFace({ button, cell, active, round, limited = false, noLed = false, className }: Props) {
   const color: PadColor = active && button.activeColor ? button.activeColor : button.color;
   const rgb = limited ? limitedRgb(padColorRgb(color)) : padColorRgb(color);
   const alt = limited ? limitedRgb(padColorAltRgb(color)) : padColorAltRgb(color);
-  const off = rgb.r === 0 && rgb.g === 0 && rgb.b === 0;
+  const off = noLed || (rgb.r === 0 && rgb.g === 0 && rgb.b === 0);
   const bg = off ? "var(--color-stage-700)" : padCss(rgb);
 
   const style: CSSProperties & Record<string, string> = {

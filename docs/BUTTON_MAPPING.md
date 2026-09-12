@@ -117,6 +117,33 @@ Flashing rides on the hardware double buffer: after the reset the driver sends `
 written with flags `0x00` as colour A, then `B0 00 2C` selects buffer 1, colour B is written,
 and `B0 00 28` returns to buffer 0. Pulsing has no hardware equivalent and shows steady.
 
+## Launchkey Mini MK3  (unverified)
+
+Not a Launchpad: 16 pads, 8 knobs, two touch strips, a few buttons and a keyboard. Driven in
+DAW mode on the DAW port (`9F 0C 7F` on, `9F 0C 00` off, then `BF 03 02` Session pads and
+`BF 09 03` Pan knobs). Novation has no Mini-specific programmer's guide; the DAW protocol of
+the full-size Launchkey MK3 reference applies. Identified by port name ("Launchkey Mini MK3");
+the inquiry reply's family bytes are unknown until a device is seen.
+
+Logical layout 14 x 4 (x from the left, y from the bottom):
+
+| Region | Coordinates | MIDI | Numbers | LED |
+|---|---|---|---|---|
+| Pitch / Mod strips | (0, 3), (1, 3), 4 rows | not read yet | | none |
+| Shift | (2, 3) | CC ch 16 | 108 | none |
+| Transpose, Octave ± | (2, 2), (2, 1), (2, 0) | none in DAW mode | | none |
+| Knobs 1-8 | x 3-10, y 3 | CC ch 16 | 21..28, value 0-127 → control events | none |
+| Pads top row | x 3-10, y 2 | Note ch 1 | 96..103 | RGB palette |
+| Pads bottom row | x 3-10, y 1 | Note ch 1 | 112..119 | RGB palette |
+| ▶ (scene launch) | (11, 2) | CC ch 1 | 104 | RGB palette |
+| Stop Solo Mute | (11, 1) | CC ch 1 | 105 | RGB palette |
+| Arp, Fixed Chord | (12, 2), (13, 2) | none in DAW mode | | none |
+| Play, Record | (12, 1), (13, 1) | CC ch 16 | 115, 117 | white, brightness on ch 16 |
+
+LEDs: a palette index as the velocity / value on channel 1 (solid), 2 (flashing, alternate colour)
+or 3 (pulsing); RGB colours become the nearest palette entry. Knobs feed a single-cell fader
+placed on them; the engine paces the fader's actions to one run per 60 ms while a knob moves.
+
 ## Hardware checklist (run per model)
 
 1. `cargo run --example midiprobe -- 20` from `src-tauri`: confirm the inquiry reply and the

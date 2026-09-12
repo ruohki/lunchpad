@@ -121,7 +121,10 @@ impl OutputHandle {
 
 pub type ButtonListener = Arc<dyn Fn(&ButtonEvent) + Send + Sync>;
 pub type PressureListener = Arc<dyn Fn(&PressureEvent) + Send + Sync>;
+pub type ControlListener = Arc<dyn Fn(&ControlEvent) + Send + Sync>;
 pub const EVENT_PRESSURE: &str = "device:pressure";
+/// A knob or touch strip moved.
+pub const EVENT_CONTROL: &str = "device:control";
 /// Firmware learned after connecting, for a device that did not answer the scan.
 pub const EVENT_FIRMWARE: &str = "device:firmware";
 
@@ -157,6 +160,7 @@ pub struct DeviceManager {
     last_error: Option<String>,
     listeners: Arc<Mutex<Vec<ButtonListener>>>,
     pressure_listeners: Arc<Mutex<Vec<PressureListener>>>,
+    control_listeners: Arc<Mutex<Vec<ControlListener>>>,
     press_feedback: Arc<Mutex<bool>>,
     /// Velocity that counts as a press; `None` = the model's default.
     press_threshold: Arc<Mutex<Option<u8>>>,
@@ -234,6 +238,7 @@ impl DeviceManager {
             last_error: None,
             listeners: Arc::new(Mutex::new(Vec::new())),
             pressure_listeners: Arc::new(Mutex::new(Vec::new())),
+            control_listeners: Arc::new(Mutex::new(Vec::new())),
             press_feedback: Arc::new(Mutex::new(press_feedback)),
             press_threshold: Arc::new(Mutex::new(press_threshold)),
             live: Arc::new(Mutex::new(Default::default())),
@@ -298,6 +303,10 @@ impl DeviceManager {
 
     pub fn add_button_listener(&self, listener: ButtonListener) {
         self.listeners.lock().push(listener);
+    }
+
+    pub fn add_control_listener(&self, listener: ControlListener) {
+        self.control_listeners.lock().push(listener);
     }
 
     pub fn add_pressure_listener(&self, listener: PressureListener) {
@@ -620,6 +629,7 @@ impl DeviceManager {
         let cb_app = self.app.clone();
         let cb_listeners = self.listeners.clone();
         let cb_pressure_listeners = self.pressure_listeners.clone();
+        let cb_control_listeners = self.control_listeners.clone();
         let cb_threshold = self.press_threshold.clone();
         let late_firmware: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
         let cb_late_firmware = late_firmware.clone();
@@ -636,6 +646,14 @@ impl DeviceManager {
                             tracing::info!(firmware = %reply.firmware, "device answered the inquiry after connecting");
                             *cb_late_firmware.lock() = Some(reply.firmware.clone());
                             let _ = cb_app.emit(EVENT_FIRMWARE, FirmwareEvent { firmware: reply.firmware });
+                        }
+                        return;
+                    }
+                    if let Some(control) = cb_driver.parse_control(msg) {
+                        tracing::trace!(x = control.x, y = control.y, value = control.value, "control");
+                        let _ = cb_app.emit(EVENT_CONTROL, control);
+                        for listener in cb_control_listeners.lock().iter() {
+                            listener(&control);
                         }
                         return;
                     }

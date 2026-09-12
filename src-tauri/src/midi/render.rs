@@ -115,6 +115,9 @@ pub fn build_frame(layout: &Layout, inputs: &RenderInputs) -> HashMap<(u8, u8), 
 
     let mut frame = HashMap::with_capacity(layout.pads.len());
     for pad in &layout.pads {
+        if pad.led == LedKind::None {
+            continue;
+        }
         let color = match pad.shape {
             PadShape::Empty => continue,
             PadShape::Logo => LOGO_COLOR,

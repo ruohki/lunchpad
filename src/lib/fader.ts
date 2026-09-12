@@ -1,8 +1,15 @@
 import { newActionId, type Fader, type FaderDirection, type Layout, type Page } from "./api";
+import { isControl } from "./grid";
 
-/** Mirrors `Fader` in src-tauri/src/profile/model.rs. */
+/** Mirrors `Fader` in src-tauri/src/profile/model.rs. A single-cell fader sits on a knob or strip. */
 export function faderSteps(f: Fader): number {
-  return Math.max(2, f.length);
+  return Math.max(1, f.length);
+}
+
+/** True when the cell at (x, y) is a knob or touch strip of the connected layout. */
+export function isControlCell(layout: Layout | null, x: number, y: number): boolean {
+  const spec = layout?.pads.find((p) => p.x === x && p.y === y);
+  return !!spec && isControl(spec.shape);
 }
 
 const DELTA: Record<FaderDirection, [number, number]> = { up: [0, 1], right: [1, 0], down: [0, -1], left: [-1, 0] };
@@ -44,11 +51,13 @@ export function faderLevelStep(f: Fader): number {
 }
 
 export function faderValueAtStep(f: Fader, step: number): number {
-  return f.min + ((f.max - f.min) * step) / (faderSteps(f) - 1);
+  const steps = faderSteps(f);
+  return steps <= 1 ? f.min : f.min + ((f.max - f.min) * step) / (steps - 1);
 }
 
 export function faderColorAt(f: Fader, step: number): [number, number, number] {
-  const t = step / (faderSteps(f) - 1);
+  const steps = faderSteps(f);
+  const t = steps <= 1 ? 0 : step / (steps - 1);
   const mix = (a: number, b: number) => Math.round(a + (b - a) * t);
   return [mix(f.colorA[0], f.colorB[0]), mix(f.colorA[1], f.colorB[1]), mix(f.colorA[2], f.colorB[2])];
 }
@@ -81,6 +90,8 @@ export function hexToRgb(hex: string): [number, number, number] {
 
 /** How many pads fit from (x, y) in a direction on this layout. */
 export function maxFaderLength(layout: Layout | null, x: number, y: number, direction: FaderDirection): number {
+  // A knob or strip holds exactly one fader cell: the hardware supplies the value.
+  if (isControlCell(layout, x, y)) return 1;
   const w = layout?.width ?? 9;
   const h = layout?.height ?? 9;
   const [dx, dy] = DELTA[direction];
@@ -89,16 +100,17 @@ export function maxFaderLength(layout: Layout | null, x: number, y: number, dire
     const px = x + dx * i;
     const py = y + dy * i;
     if (px < 0 || py < 0 || px >= w || py >= h) break;
-    // Only real pads count: skip holes and the shared corner.
+    // Only real pads count: skip holes, the shared corner and controls.
     const spec = layout?.pads.find((p) => p.x === px && p.y === py);
-    if (layout && (!spec || spec.shape === "empty" || spec.shape === "logo")) break;
+    if (layout && (!spec || spec.shape === "empty" || spec.shape === "logo" || isControl(spec.shape))) break;
     n++;
   }
   return Math.max(2, n);
 }
 
 export function newFader(x: number, y: number, layout: Layout | null): Fader {
-  const direction: FaderDirection = maxFaderLength(layout, x, y, "up") >= 3 ? "up" : "right";
+  const control = isControlCell(layout, x, y);
+  const direction: FaderDirection = !control && maxFaderLength(layout, x, y, "up") >= 3 ? "up" : "right";
   return {
     id: "",
     name: "",
@@ -106,7 +118,7 @@ export function newFader(x: number, y: number, layout: Layout | null): Fader {
     x,
     y,
     direction,
-    length: Math.min(4, maxFaderLength(layout, x, y, direction)),
+    length: control ? 1 : Math.min(4, maxFaderLength(layout, x, y, direction)),
     colorA: [0, 96, 255],
     colorB: [255, 64, 32],
     dim: 12,
@@ -131,6 +143,8 @@ export function faderFitsAt(fader: Fader, x: number, y: number, page: Page, layo
     if (layout) {
       const spec = layout.pads.find((p) => p.x === px && p.y === py);
       if (!spec || spec.shape === "empty" || spec.shape === "logo") return false;
+      // A knob or strip takes a single-cell fader only; a run cannot cross one.
+      if (isControl(spec.shape) && pads.length !== 1) return false;
       if (px >= layout.width || py >= layout.height) return false;
     }
     if (page.buttons.some((b) => b.x === px && b.y === py)) return false;

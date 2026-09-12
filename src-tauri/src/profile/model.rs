@@ -286,8 +286,9 @@ impl Default for Fader {
 }
 
 impl Fader {
+    /// Pads in the run; a single-cell fader sits on a knob or touch strip that supplies the value.
     pub fn steps(&self) -> usize {
-        self.length.max(2) as usize
+        self.length.max(1) as usize
     }
 
     /// The pads in order from the minimum; stops at the edge of the grid.
@@ -326,7 +327,11 @@ impl Fader {
     }
 
     fn t(&self, step: usize) -> f64 {
-        step as f64 / (self.steps() - 1) as f64
+        if self.steps() <= 1 {
+            0.0
+        } else {
+            step as f64 / (self.steps() - 1) as f64
+        }
     }
 
     pub fn value_at_step(&self, step: usize) -> f64 {

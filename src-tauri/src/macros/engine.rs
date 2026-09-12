@@ -19,7 +19,7 @@ use super::exec::execute_external;
 use super::model::*;
 use super::services::Services;
 use super::sink::EngineSink;
-use crate::midi::types::{ButtonEvent, PressureEvent};
+use crate::midi::types::{ButtonEvent, ControlEvent, PressureEvent};
 use crate::profile::{self, PadColor, Profile, SharedProfile};
 use parking_lot::Mutex;
 use serde::Serialize;
@@ -90,6 +90,8 @@ struct Inner {
     holds: Mutex<HashMap<(String, u8, u8), HoldArm>>,
     /// Latest aftertouch per held pad, read live by `{{pressure}}`.
     pressure: Mutex<HashMap<(u8, u8), u8>>,
+    /// Latest knob / strip value per fader while a worker is pacing its actions.
+    pending_controls: Mutex<HashMap<String, PendingControl>>,
     ptt_count: Mutex<i32>,
     epoch: Instant,
 }
@@ -135,6 +137,7 @@ impl MacroEngine {
                 runners: Mutex::new(HashMap::new()),
                 holds: Mutex::new(HashMap::new()),
                 pressure: Mutex::new(HashMap::new()),
+                pending_controls: Mutex::new(HashMap::new()),
                 ptt_count: Mutex::new(0),
                 epoch: Instant::now(),
             }),
@@ -149,6 +152,51 @@ impl MacroEngine {
     /// Aftertouch on a held pad: kept for `{{pressure}}` until the pad is released.
     pub fn on_pressure(&self, event: &PressureEvent) {
         self.inner.pressure.lock().insert((event.x, event.y), event.value);
+    }
+
+    /// A knob or touch strip moved: the fader sitting on that cell takes the value.
+    /// Knobs stream many values a second, so one worker per fader applies the latest
+    /// value every `CONTROL_INTERVAL` and runs the fader's actions with it, ending on
+    /// the last value received.
+    pub fn on_control(&self, event: &ControlEvent) {
+        let (page_id, hit) = {
+            let store = self.inner.profile.lock();
+            let Some(page) = store.profile.active() else { return };
+            let Some((f, _)) = page.fader_at(event.x, event.y) else { return };
+            let mut at = f.clone();
+            at.value = f.min + (f.max - f.min) * event.value.clamp(0.0, 1.0) as f64;
+            let hit = FaderHit { id: f.id.clone(), key: f.variable_key(), step: at.level_step(), steps: at.steps(), value: at.value, min: f.min, max: f.max, decimals: f.decimals, display: at.display_text() };
+            (page.id.clone(), hit)
+        };
+        let id = hit.id.clone();
+        let start_worker = {
+            let mut pending = self.inner.pending_controls.lock();
+            let slot = pending.entry(id.clone()).or_default();
+            slot.latest = Some((page_id, event.x, event.y, hit));
+            !std::mem::replace(&mut slot.busy, true)
+        };
+        if !start_worker {
+            return;
+        }
+        let engine = MacroEngine { inner: self.inner.clone() };
+        self.inner.runtime.spawn(async move {
+            loop {
+                tokio::time::sleep(CONTROL_INTERVAL).await;
+                let next = {
+                    let mut pending = engine.inner.pending_controls.lock();
+                    let slot = pending.entry(id.clone()).or_default();
+                    match slot.latest.take() {
+                        Some(v) => Some(v),
+                        None => {
+                            slot.busy = false;
+                            None
+                        }
+                    }
+                };
+                let Some((page_id, x, y, hit)) = next else { break };
+                engine.fader_pressed(&page_id, x, y, hit, 127, true);
+            }
+        });
     }
 
     /// Hardware or UI press/release on the active page.
@@ -638,6 +686,15 @@ fn snapshot(ctx: &RunContext, list: ActionList) -> Option<(Vec<Action>, bool)> {
     Some((actions, button.loop_down))
 }
 
+/// Shortest gap between two action runs of a fader driven by a knob or strip.
+const CONTROL_INTERVAL: Duration = Duration::from_millis(60);
+
+#[derive(Default)]
+struct PendingControl {
+    latest: Option<(String, u8, u8, FaderHit)>,
+    busy: bool,
+}
+
 /// What the engine needs from a fader pad press, copied out of the profile lock.
 struct FaderHit {
     id: String,
@@ -941,6 +998,33 @@ mod tests {
         assert_eq!(g.get("got").map(String::as_str), Some("-30|50|2/5"));
         assert_eq!(g.get("fader.mic").map(String::as_str), Some("-30"));
         assert_eq!(profile.lock().profile.page(DEFAULT_PAGE_ID).unwrap().faders[0].value, -30.0);
+    }
+
+    #[tokio::test]
+    async fn a_knob_drives_a_single_cell_fader() {
+        let (engine, profile) = engine();
+        profile.lock().profile.page_mut(DEFAULT_PAGE_ID).unwrap().set_fader(Fader {
+            id: "knob1".into(),
+            name: "gain".into(),
+            x: 3,
+            y: 3,
+            length: 1,
+            min: 0.0,
+            max: 100.0,
+            on_change: vec![a(ActionKind::SetVariable { name: "applied".into(), value: "{{value}}".into(), scope: VarScope::Global })],
+            ..Fader::default()
+        });
+        // A burst of values: only the last one runs the actions, after the pacing gap.
+        for v in [0.1f32, 0.4, 0.75] {
+            engine.on_control(&ControlEvent { x: 3, y: 3, value: v });
+        }
+        engine.on_control(&ControlEvent { x: 4, y: 3, value: 0.5 }); // no fader here: ignored
+        tokio::time::sleep(Duration::from_millis(250)).await;
+        let globals = engine.globals();
+        assert_eq!(globals.get("fader.gain").map(String::as_str), Some("75"));
+        assert_eq!(globals.get("applied").map(String::as_str), Some("75"));
+        let value = profile.lock().profile.page(DEFAULT_PAGE_ID).unwrap().faders[0].value;
+        assert!((value - 75.0).abs() < 1e-9);
     }
 
     #[tokio::test]

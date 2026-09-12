@@ -21,16 +21,19 @@ pub enum LaunchpadModel {
     LaunchpadProMk3,
     /// Launchpad S / MK1 / Mini MK1 / Mini MK2 (red+green LEDs only)
     LaunchpadLegacy,
+    /// Launchkey Mini MK3: 16 RGB pads, 8 knobs, two touch strips, a few buttons
+    LaunchkeyMiniMk3,
 }
 
 impl LaunchpadModel {
-    pub const ALL: [LaunchpadModel; 6] = [
+    pub const ALL: [LaunchpadModel; 7] = [
         LaunchpadModel::LaunchpadMk2,
         LaunchpadModel::LaunchpadX,
         LaunchpadModel::LaunchpadMiniMk3,
         LaunchpadModel::LaunchpadProMk2,
         LaunchpadModel::LaunchpadProMk3,
         LaunchpadModel::LaunchpadLegacy,
+        LaunchpadModel::LaunchkeyMiniMk3,
     ];
 
     pub fn display_name(&self) -> &'static str {
@@ -41,6 +44,7 @@ impl LaunchpadModel {
             LaunchpadModel::LaunchpadProMk2 => "Launchpad Pro MK2",
             LaunchpadModel::LaunchpadProMk3 => "Launchpad Pro MK3",
             LaunchpadModel::LaunchpadLegacy => "Launchpad S / Mini / MK1",
+            LaunchpadModel::LaunchkeyMiniMk3 => "Launchkey Mini MK3",
         }
     }
 
@@ -71,6 +75,9 @@ impl LaunchpadModel {
     /// or when the inquiry times out.
     pub fn from_port_name(name: &str) -> Option<Self> {
         let n = name.to_lowercase();
+        if n.contains("launchkey mini") || n.contains("lkmk3") && n.contains("mini") {
+            return Some(LaunchpadModel::LaunchkeyMiniMk3);
+        }
         if !n.contains("launchpad") {
             return None;
         }
@@ -155,6 +162,23 @@ pub enum PadShape {
     Logo,
     /// No control at this coordinate (corners)
     Empty,
+    /// Rotary knob: sends a continuous value, no LED (Launchkey)
+    Knob,
+    /// Touch strip: a continuous value along a bar, no LED (Launchkey)
+    Strip,
+}
+
+/// What a control can show.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum LedKind {
+    /// Full colour
+    #[default]
+    Rgb,
+    /// A single white (or fixed-colour) LED: colours become a brightness
+    White,
+    /// Nothing to light: colour settings do not apply
+    None,
 }
 
 /// Which region of the device a control belongs to.
@@ -185,6 +209,44 @@ pub struct PadSpec {
     pub note: Option<u8>,
     /// True if the control speaks Control Change instead of Note messages.
     pub cc: bool,
+    /// What the control can light up.
+    #[serde(default)]
+    pub led: LedKind,
+    /// Rows the control spans downwards from `y` (touch strips); 1 for everything else.
+    #[serde(default = "one")]
+    pub rows: u8,
+}
+
+fn one() -> u8 {
+    1
+}
+
+impl PadSpec {
+    pub fn with_led(mut self, led: LedKind) -> Self {
+        self.led = led;
+        self
+    }
+
+    pub fn with_rows(mut self, rows: u8) -> Self {
+        self.rows = rows.max(1);
+        self
+    }
+
+    /// A printed button that sends nothing the app can use (keyboard functions).
+    pub fn without_input(mut self) -> Self {
+        self.note = None;
+        self.cc = false;
+        self
+    }
+}
+
+/// A knob or touch strip moved: `value` runs 0..1 over the control's travel.
+#[derive(Debug, Clone, Copy, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ControlEvent {
+    pub x: u8,
+    pub y: u8,
+    pub value: f32,
 }
 
 /// Complete description of a model's button matrix, consumed by the UI.

@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { emptyButton, FADER_VARIABLES, type Button, type Fader, type FaderDirection, type Layout, type Page } from "../lib/api";
-import { faderVariable, faderPadRgb, faderPads, formatFaderValue, hexToRgb, maxFaderLength, rgbToHex } from "../lib/fader";
+import { faderVariable, faderPadRgb, faderPads, formatFaderValue, hexToRgb, isControlCell, maxFaderLength, rgbToHex } from "../lib/fader";
 import { useDeviceStore } from "../store/device";
 import { useProfileStore } from "../store/profile";
 import { useVariablesStore } from "../store/variables";
@@ -126,14 +126,16 @@ function FaderForm({
 
   const pseudo: Button = useMemo(() => ({ ...emptyButton(), down: fader.onChange }), [fader.onChange]);
   const setDirection = (direction: FaderDirection) => setFader({ ...fader, direction, length: Math.min(fader.length, maxFaderLength(layout, fader.x, fader.y, direction)) });
-  const valid = fader.length >= 2 && !overlaps && fader.min !== fader.max;
+  const control = isControlCell(layout, fader.x, fader.y);
+  const controlShape = layout?.pads.find((p) => p.x === fader.x && p.y === fader.y)?.shape;
+  const valid = (control ? fader.length >= 1 : fader.length >= 2) && !overlaps && fader.min !== fader.max;
 
   return (
     <>
       <header className="flex items-center justify-between border-b border-stage-800 px-5 py-3">
         <div className="flex items-center gap-4">
           <h2 className="text-sm font-semibold text-stage-100">
-            {isNew ? t("fader.titleNew") : t("fader.titleEdit")}
+            {control ? t(controlShape === "strip" ? "fader.titleStrip" : "fader.titleKnob") : isNew ? t("fader.titleNew") : t("fader.titleEdit")}
             <span className="ml-2 font-normal text-stage-400">{t("fader.position", { column: fader.x + 1, row: fader.y + 1 })}</span>
           </h2>
           <Segmented
@@ -167,6 +169,8 @@ function FaderForm({
             <input value={fader.variable ?? ""} onChange={(e) => setFader({ ...fader, variable: e.target.value.replace(/\s+/g, "_") })} placeholder={faderVariable({ ...fader, variable: "" })} className={inputCls + " font-mono"} spellCheck={false} />
             <span className="text-stage-500">{t("fader.variableHint", { key: `fader.${faderVariable(fader)}` })}</span>
           </label>
+          {!control && (
+            <>
           <div className="flex flex-col gap-1 text-xs text-stage-400">
             {t("fader.direction")}
             <Select<FaderDirection> size="sm" value={fader.direction} options={DIRECTIONS.map((d) => ({ value: d, label: t(`fader.directions.${d}`) }))} onChange={setDirection} />
@@ -175,8 +179,13 @@ function FaderForm({
             {t("fader.length", { max: maxLen })}
             <NumberText value={fader.length} onChange={(n) => setFader({ ...fader, length: Math.max(2, Math.min(maxLen, Math.round(n))) })} className="w-20" />
           </label>
+            </>
+          )}
         </section>
 
+        {control && <p className="text-xs text-stage-500">{t("fader.controlHint")}</p>}
+
+        {!control && (
         <section className="flex flex-col gap-2">
           <div className="text-xs text-stage-400">{t("fader.preview")}</div>
           <div className="flex gap-1">
@@ -189,7 +198,9 @@ function FaderForm({
           {overlaps && <p className="text-xs text-danger">{t("fader.overlap")}</p>}
           {covered > 0 && <p className="text-xs text-warn">{t("fader.covered", { count: covered })}</p>}
         </section>
+        )}
 
+        {!control && (
         <section className="grid grid-cols-3 items-end gap-3">
           <RgbField label={t("fader.colorA")} value={rgbToHex(fader.colorA)} onChange={(hex) => setFader({ ...fader, colorA: hexToRgb(hex) })} />
           <RgbField label={t("fader.colorB")} value={rgbToHex(fader.colorB)} onChange={(hex) => setFader({ ...fader, colorB: hexToRgb(hex) })} />
@@ -198,6 +209,7 @@ function FaderForm({
             <Slider value={fader.dim} min={0} max={60} onChange={(dim) => setFader({ ...fader, dim })} format={(v) => `${v} %`} ariaLabel={t("fader.dim")} />
           </div>
         </section>
+        )}
 
         <section className="flex flex-col gap-2">
         <div className="flex flex-wrap items-end gap-3">
@@ -268,7 +280,7 @@ function FaderForm({
           )}
         </section>
 
-        <p className="text-xs text-stage-500">{t("fader.coverHint")}</p>
+        {!control && <p className="text-xs text-stage-500">{t("fader.coverHint")}</p>}
       </div>
       )}
 

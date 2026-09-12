@@ -242,6 +242,8 @@ pub fn run() {
                 manager.lock().add_button_listener(Arc::new(move |event| for_buttons.on_button(event)));
                 let for_pressure = engine.clone();
                 manager.lock().add_pressure_listener(Arc::new(move |event| for_pressure.on_pressure(event)));
+                let for_controls = engine.clone();
+                manager.lock().add_control_listener(Arc::new(move |event| for_controls.on_control(event)));
             }
 
             let window_settings = settings.lock().settings.window.clone();

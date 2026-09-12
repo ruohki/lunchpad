@@ -5,6 +5,7 @@
 //! coordinates to MIDI notes/CCs and back, and (c) build LED colour messages.
 //! Drivers are pure: they only build byte vectors and never touch a port.
 
+mod launchkey_mini_mk3;
 mod legacy;
 mod mini_mk3;
 mod mk2;
@@ -82,6 +83,11 @@ pub trait LaunchpadDriver: Send + Sync {
         Some(ButtonEvent { x, y, pressed, note: number, cc, value })
     }
 
+    /// A knob or touch strip movement; only models with such controls report any.
+    fn parse_control(&self, _msg: &[u8]) -> Option<ControlEvent> {
+        None
+    }
+
     /// Aftertouch: polyphonic key pressure (`A0`) names the pad, channel
     /// pressure (`D0`) applies to every pad currently held.
     fn parse_pressure(&self, msg: &[u8], held: &[(u8, u8)]) -> Vec<PressureEvent> {
@@ -101,6 +107,7 @@ pub fn driver_for(model: LaunchpadModel) -> Box<dyn LaunchpadDriver> {
         LaunchpadModel::LaunchpadProMk2 => Box::new(pro_mk2::ProMk2),
         LaunchpadModel::LaunchpadProMk3 => Box::new(pro_mk3::ProMk3),
         LaunchpadModel::LaunchpadLegacy => Box::new(legacy::Legacy),
+        LaunchpadModel::LaunchkeyMiniMk3 => Box::new(launchkey_mini_mk3::LaunchkeyMiniMk3),
     }
 }
 
@@ -120,7 +127,11 @@ pub(crate) fn spec(
             .map(|(n, cc)| (Some(n), cc))
             .unwrap_or((None, false)),
     };
-    PadSpec { x, y, shape, region, label: label.map(|s| s.to_string()), note, cc }
+    let led = match shape {
+        PadShape::Empty | PadShape::Knob | PadShape::Strip => LedKind::None,
+        _ => LedKind::Rgb,
+    };
+    PadSpec { x, y, shape, region, label: label.map(|s| s.to_string()), note, cc, led, rows: 1 }
 }
 
 /// Shared LED builder for MK2 / Pro MK2 (`0A` solid, `23` flash, `28` pulse,
@@ -234,6 +245,12 @@ mod tests {
                 if matches!(pad.shape, PadShape::Empty | PadShape::Logo) {
                     continue;
                 }
+                // Printed buttons that send nothing (keyboard functions) and strips not read yet
+                // carry no note; every square pad must.
+                if pad.note.is_none() {
+                    assert_ne!(pad.shape, PadShape::Pad, "{model}: pad ({}, {}) without a note", pad.x, pad.y);
+                    continue;
+                }
                 let (note, cc) = driver
                     .xy_to_note(pad.x, pad.y)
                     .unwrap_or_else(|| panic!("{model}: no note for ({}, {})", pad.x, pad.y));
@@ -255,7 +272,12 @@ mod tests {
             (4, 0, LedColor::Off),
         ];
         for model in LaunchpadModel::ALL {
-            let msgs = driver_for(model).led_messages(&leds);
+            let driver = driver_for(model);
+            // Models whose grid does not start at (0, 0) get the same modes on their first RGB pads.
+            let layout = driver.layout();
+            let first = layout.pads.iter().filter(|p| p.shape == PadShape::Pad).min_by_key(|p| (p.y, p.x)).expect("a pad");
+            let shifted: Vec<(u8, u8, LedColor)> = leds.iter().map(|(x, y, c)| (first.x + x, first.y + y, *c)).collect();
+            let msgs = driver.led_messages(&shifted);
             assert!(!msgs.is_empty(), "{model}");
             for m in &msgs {
                 assert!(m.iter().skip(1).all(|b| *b < 0x80 || *b == 0xF7), "{model}: data byte >= 0x80 in {m:02X?}");
@@ -279,7 +301,11 @@ mod tests {
             let mut seen = std::collections::HashSet::new();
             for pad in &layout.pads {
                 assert!(pad.x < layout.width && pad.y < layout.height, "{model}");
-                assert!(seen.insert((pad.x, pad.y)), "{model}: duplicate ({}, {})", pad.x, pad.y);
+                // A control spanning several rows covers the cells below its anchor.
+                for r in 0..pad.rows {
+                    assert!(pad.y >= r, "{model}: ({}, {}) spans past the bottom", pad.x, pad.y);
+                    assert!(seen.insert((pad.x, pad.y - r)), "{model}: duplicate ({}, {})", pad.x, pad.y - r);
+                }
             }
             assert_eq!(seen.len(), (layout.width as usize) * (layout.height as usize), "{model}");
         }

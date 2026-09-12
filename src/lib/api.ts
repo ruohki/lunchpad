@@ -11,7 +11,8 @@ export type LaunchpadModel =
   | "LaunchpadMiniMk3"
   | "LaunchpadProMk2"
   | "LaunchpadProMk3"
-  | "LaunchpadLegacy";
+  | "LaunchpadLegacy"
+  | "LaunchkeyMiniMk3";
 
 export interface MidiPortInfo {
   index: number;
@@ -31,7 +32,9 @@ export interface DiscoveredLaunchpad {
   connected: boolean;
 }
 
-export type PadShape = "pad" | "round" | "small" | "logo" | "empty";
+export type PadShape = "pad" | "round" | "small" | "logo" | "empty" | "knob" | "strip";
+/** What a control can light: full colour, one white LED (colours become a brightness), or nothing. */
+export type LedKind = "rgb" | "white" | "none";
 export type PadRegion = "grid" | "top" | "right" | "bottom" | "left" | "bottom2" | "other";
 
 export interface PadSpec {
@@ -42,6 +45,9 @@ export interface PadSpec {
   label: string | null;
   note: number | null;
   cc: boolean;
+  led: LedKind;
+  /** rows the control spans downwards from y (touch strips); 1 otherwise */
+  rows: number;
 }
 
 export interface Layout {

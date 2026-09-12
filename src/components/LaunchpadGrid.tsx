@@ -4,7 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { api, padKey, type Button, type Fader, type Layout, type PadSpec } from "../lib/api";
-import { faderAt, faderFitsAt, faderLevelStep, faderPadRgb, faderPads, formatFaderValue } from "../lib/fader";
+import { faderAt, faderFitsAt, faderFraction, faderLevelStep, faderPadRgb, faderPads, formatFaderValue, isControlCell } from "../lib/fader";
 import { useShallow } from "zustand/react/shallow";
 import { useElementSize } from "../lib/useElementSize";
 import { useDeviceStore } from "../store/device";
@@ -18,7 +18,7 @@ import { PadFace } from "./PadFace";
 import { IconGear } from "./ui";
 import { limitedRgb } from "../lib/colors";
 import { padAt, sameRef, useDragStore } from "../lib/drag";
-import { buttonsOutside } from "../lib/grid";
+import { buttonsOutside, isControl } from "../lib/grid";
 
 interface Props {
   layout: Layout;
@@ -111,7 +111,9 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
         return { x: faderDrag.fader.x + (over.x - grabbed[0]), y: faderDrag.fader.y + (over.y - grabbed[1]) };
       };
       const fitsAt = (over: PadRef | null): boolean => {
-        if (!faderDrag || !over || !pageRef.current) return true;
+        if (!over || !pageRef.current) return true;
+        // A button cannot land on a knob or a touch strip.
+        if (!faderDrag) return !isControlCell(layoutRef.current, over.x, over.y);
         const origin = originFor(over);
         return origin.x >= 0 && origin.y >= 0 && faderFitsAt(faderDrag.fader, origin.x, origin.y, pageRef.current, layoutRef.current);
       };
@@ -150,6 +152,7 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
           }
           return;
         }
+        if (!fitsAt(over)) return;
         void moveButton(p.from, over, p.copy);
       };
       const onCancel = () => cleanup();
@@ -188,6 +191,10 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
             ...historyItems,
           ],
         });
+        return;
+      }
+      if (isControl(pad.shape)) {
+        setMenu({ x: e.clientX, y: e.clientY, items: [{ label: t("grid.assignFader"), onSelect: () => openFaderEditor(pad.x, pad.y) }, ...historyItems] });
         return;
       }
       setMenu({
@@ -240,12 +247,20 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
             gap: cell * 0.08,
           }}
         >
-          {padsTopDown.map((pad) =>
-            pad.x === layout.width - 1 && pad.y === layout.height - 1 && (pad.shape === "empty" || pad.shape === "logo") ? (
-              <SettingsPad key={padKey(pad.x, pad.y)} cell={cell} />
-            ) : (
+          {padsTopDown.map((pad) => {
+            // Explicit placement: rows count from the bottom, and touch strips span several rows.
+            const place = { gridColumn: pad.x + 1, gridRow: `${layout.height - pad.y} / span ${Math.max(1, pad.rows)}` };
+            if (pad.x === layout.width - 1 && pad.y === layout.height - 1 && (pad.shape === "empty" || pad.shape === "logo")) {
+              return (
+                <div key={padKey(pad.x, pad.y)} style={place}>
+                  <SettingsPad cell={cell} />
+                </div>
+              );
+            }
+            if (pad.shape === "empty") return null;
+            return (
+              <div key={padKey(pad.x, pad.y)} style={place} className="min-h-0 min-w-0">
               <Pad
-                key={padKey(pad.x, pad.y)}
                 pad={pad}
                 cell={cell}
                 order={pad.x + pad.y}
@@ -270,8 +285,9 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
                 onContextMenu={openMenu}
                 onDragStart={startDrag}
               />
-            ),
-          )}
+              </div>
+            );
+          })}
         </motion.div>
       )}
       {drag && dragButton && <DragGhost button={dragButton} cell={cell} copy={drag.copy} round={dragShape === "round" || dragShape === "small"} limited={layout.limitedColor} />}
@@ -302,6 +318,46 @@ function FaderGhost({ fader, cell }: { fader: Fader; cell: number }) {
       })}
     </div>,
     document.body,
+  );
+}
+
+/** A rotary knob: a 270° arc showing the bound fader's level, dim when nothing is bound. */
+function KnobFace({ fraction, cell }: { fraction: number | null; cell: number }) {
+  const size = Math.max(18, cell * 0.72);
+  const r = 40;
+  const start = 135;
+  const sweep = 270;
+  const point = (deg: number): [number, number] => [50 + r * Math.cos((deg * Math.PI) / 180), 50 + r * Math.sin((deg * Math.PI) / 180)];
+  const arc = (from: number, to: number) => {
+    const [x1, y1] = point(from);
+    const [x2, y2] = point(to);
+    return `M ${x1} ${y1} A ${r} ${r} 0 ${to - from > 180 ? 1 : 0} 1 ${x2} ${y2}`;
+  };
+  const f = Math.max(0, Math.min(1, fraction ?? 0));
+  const end = start + sweep * f;
+  const [px, py] = [50 + 24 * Math.cos((end * Math.PI) / 180), 50 + 24 * Math.sin((end * Math.PI) / 180)];
+  return (
+    <svg viewBox="0 0 100 100" width={size} height={size} aria-hidden>
+      <circle cx="50" cy="50" r="33" className="fill-stage-800" />
+      <path d={arc(start, start + sweep)} className="stroke-stage-600" strokeWidth="8" fill="none" strokeLinecap="round" />
+      {fraction !== null && f > 0.004 && <path d={arc(start, end)} className="stroke-accent-400" strokeWidth="8" fill="none" strokeLinecap="round" />}
+      <line x1="50" y1="50" x2={px} y2={py} className={fraction !== null ? "stroke-stage-100" : "stroke-stage-500"} strokeWidth="6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** A touch strip: a tall bar filled to the bound fader's level. */
+function StripFace({ fraction, label, cell }: { fraction: number | null; label: string | null; cell: number }) {
+  const pct = Math.round(Math.max(0, Math.min(1, fraction ?? 0)) * 100);
+  return (
+    <div
+      aria-hidden
+      className="relative h-full overflow-hidden rounded-md bg-stage-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+      style={{ width: Math.max(10, cell * 0.48) }}
+    >
+      {fraction !== null && <div className="absolute inset-x-0 bottom-0 bg-accent-500/70" style={{ height: `${pct}%` }} />}
+      {label && <span className="absolute inset-x-0 top-1 text-center text-[9px] text-stage-400">{label}</span>}
+    </div>
   );
 }
 
@@ -336,7 +392,7 @@ function SettingsPad({ cell }: { cell: number }) {
   const toggle = useUiStore((s) => s.toggleSettings);
   const open = useUiStore((s) => s.settingsOpen);
   return (
-    <div className="flex items-center justify-center" style={{ padding: cell * 0.08 }}>
+    <div className="flex h-full w-full items-center justify-center" style={{ padding: cell * 0.08 }}>
       <motion.button
         type="button"
         aria-label={t("common.settings")}
@@ -422,7 +478,10 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, dragSource, 
   const [mouseDown, setMouseDown] = useState(false);
   const reduced = useReducedMotion();
   const lit = pressed || mouseDown || running || linked;
-  const pressable = pad.shape !== "empty" && pad.shape !== "logo";
+  const control = isControl(pad.shape);
+  /** A printed button that sends nothing the app can use (keyboard functions). */
+  const decorative = !control && pad.note === null && pad.shape !== "empty" && pad.shape !== "logo";
+  const pressable = !control && !decorative && pad.shape !== "empty" && pad.shape !== "logo";
 
   const press = useCallback(
     (e: React.PointerEvent) => {
@@ -459,6 +518,41 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, dragSource, 
     );
   }
 
+  if (control) {
+    const fraction = fader ? faderFraction(fader) : null;
+    const name = pad.shape === "strip" ? t("grid.strip", { name: pad.label ?? "" }) : t("grid.knob", { n: pad.label ?? pad.x + 1 });
+    return (
+      <div
+        data-pad={`${pad.x},${pad.y}`}
+        className={clsx("relative flex h-full w-full items-center justify-center", dropTarget === "blocked" && "rounded-md ring-2 ring-danger")}
+        onContextMenu={(e) => onContextMenu(e, pad, false, fader?.id ?? null)}
+      >
+        <button
+          type="button"
+          aria-label={fader ? `${name}: ${formatFaderValue(fader)}` : name}
+          onClick={() => openFaderEditor(pad.x, pad.y)}
+          className="flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-md py-1 focus-visible:outline-2 focus-visible:outline-accent-400"
+        >
+          {pad.shape === "strip" ? <StripFace fraction={fraction} label={pad.label} cell={cell} /> : <KnobFace fraction={fraction} cell={cell} />}
+          {pad.shape === "knob" && <span className="text-[9px] leading-none text-stage-500">{fader ? formatFaderValue(fader) : pad.label}</span>}
+        </button>
+      </div>
+    );
+  }
+
+  if (decorative) {
+    return (
+      <div className="flex h-full w-full items-center justify-center" style={{ padding: cell * 0.12 }}>
+        <span
+          aria-label={t("grid.noInput", { name: pad.label ?? "" })}
+          className="flex h-full w-full items-center justify-center rounded-md bg-stage-800/50 px-1 text-center text-[9px] leading-tight text-stage-600"
+        >
+          {pad.label}
+        </span>
+      </div>
+    );
+  }
+
   const round = pad.shape === "round" || pad.shape === "small";
   const legendSize = Math.max(8, Math.min(12, cell * 0.16));
 
@@ -466,7 +560,7 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, dragSource, 
     <div
       data-pad={`${pad.x},${pad.y}`}
       className={clsx(
-        "relative flex items-center justify-center transition-opacity",
+        "relative flex h-full w-full items-center justify-center transition-opacity",
         round ? "rounded-full" : "rounded-[14%]",
         dropTarget === "move" && "ring-2 ring-accent-400",
         dropTarget === "copy" && "ring-2 ring-ok",
@@ -530,7 +624,7 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, dragSource, 
         {fader ? (
           <FaderFace fader={fader} step={step} cell={cell} round={round} limited={limited} />
         ) : button ? (
-          <PadFace button={button as Button} cell={cell} active={lit} round={round} limited={limited} />
+          <PadFace button={button as Button} cell={cell} active={lit} round={round} limited={limited} noLed={pad.led === "none"} />
         ) : (
           pad.label && (
             <span className="px-1 font-medium" style={{ fontSize: legendSize }}>

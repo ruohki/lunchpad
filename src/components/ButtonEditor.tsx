@@ -97,6 +97,7 @@ function EditorForm({ pageId, x, y, initial, limited, pages, layout, onCancel, o
   const [button, setButton] = useState<Button>(() => initial ?? randomNewButton());
   const [tab, setTab] = useState<Tab>("appearance");
   const [previewActive, setPreviewActive] = useState(false);
+  const ledKind = layout?.pads.find((p) => p.x === x && p.y === y)?.led ?? "rgb";
   const [imageError, setImageError] = useState<string | null>(null);
   const dirty = JSON.stringify(button) !== JSON.stringify(initial);
 
@@ -160,7 +161,7 @@ function EditorForm({ pageId, x, y, initial, limited, pages, layout, onCancel, o
             onPointerUp={() => setPreviewActive(false)}
             onPointerLeave={() => setPreviewActive(false)}
           >
-            <PadFace button={button} cell={144} active={previewActive} round={false} limited={limited} />
+            <PadFace button={button} cell={144} active={previewActive} round={false} limited={limited} noLed={ledKind === "none"} />
           </div>
           <p className="text-center text-xs text-stage-400">{t("editor.previewHint")}</p>
         </div>
@@ -228,8 +229,12 @@ function EditorForm({ pageId, x, y, initial, limited, pages, layout, onCancel, o
             )}
           </section>
 
+          {ledKind === "none" ? (
+            <p className="text-xs text-stage-500">{t("editor.noLedHint")}</p>
+          ) : (
           <section className="flex flex-col gap-3">
             <h3 className="text-sm font-medium text-stage-100">{t("editor.colour")}</h3>
+            {ledKind === "white" && <p className="text-xs text-stage-500">{t("editor.whiteLedHint")}</p>}
             <div className="grid grid-cols-2 gap-3">
               <ColorField label={t("editor.colour")} value={button.color} onChange={(color) => setButton({ ...button, color })} limited={limited} />
               {button.activeColor && (
@@ -248,7 +253,9 @@ function EditorForm({ pageId, x, y, initial, limited, pages, layout, onCancel, o
               hint={t("editor.activeHint")}
             />
           </section>
+          )}
 
+          {ledKind !== "none" && (
           <section className="flex flex-col gap-3">
             <div>
               <h3 className="text-sm font-medium text-stage-100">{t("editor.linkTitle")}</h3>
@@ -259,6 +266,7 @@ function EditorForm({ pageId, x, y, initial, limited, pages, layout, onCancel, o
               onChange={(stateLink) => setButton({ ...button, stateLink, activeColor: stateLink && !button.activeColor ? { ...button.color } : button.activeColor })}
             />
           </section>
+          )}
         </div>
         )}
       </div>

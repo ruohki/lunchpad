@@ -203,8 +203,8 @@ pub async fn set_button(page_id: String, x: u8, y: u8, button: Button, app: AppH
 pub async fn set_fader(page_id: String, fader: crate::profile::Fader, app: AppHandle, state: State<'_, AppState>) -> CmdResult<()> {
     mutate(&app, &state, true, |p| {
         let page = p.page_mut(&page_id).ok_or_else(|| ProfileError::PageNotFound(page_id.clone()))?;
-        if fader.length < 2 {
-            return Err(ProfileError::Invalid("a fader needs at least two pads".into()));
+        if fader.length < 1 {
+            return Err(ProfileError::Invalid("a fader needs at least one pad".into()));
         }
         let mut fader = fader;
         if fader.id.is_empty() {

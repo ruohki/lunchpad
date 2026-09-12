@@ -13,7 +13,8 @@
     "LaunchpadMiniMk3": "Launchpad Mini MK3",
     "LaunchpadProMk2": "Launchpad Pro MK2",
     "LaunchpadProMk3": "Launchpad Pro MK3",
-    "LaunchpadLegacy": "Launchpad (first generation)"
+    "LaunchpadLegacy": "Launchpad (first generation)",
+    "LaunchkeyMiniMk3": "Launchkey Mini MK3"
   },
   "integrations": {
     "obs": "OBS Studio",
@@ -231,7 +232,11 @@
     "removeFader": "Remove fader",
     "undo": "Undo",
     "redo": "Redo",
-    "outside": "Buttons out of sight… ({{count}})"
+    "outside": "Buttons out of sight… ({{count}})",
+    "knob": "Knob {{n}}",
+    "strip": "{{name}} strip",
+    "noInput": "{{name}} (keyboard function, not usable here)",
+    "assignFader": "Assign a fader…"
   },
   "editor": {
     "titleEdit": "Edit button",
@@ -271,7 +276,9 @@
     "tabActions": "Actions",
     "test": "Run saved macro",
     "testHint": "Runs the button as it is saved. Save first to test your changes.",
-    "sizeLabel": "Size"
+    "sizeLabel": "Size",
+    "noLedHint": "This button has no LED, so colours do not apply. The look is only shown on screen.",
+    "whiteLedHint": "This button has a single white LED: a colour becomes a brightness."
   },
   "faces": {
     "sans": "Sans",
@@ -754,7 +761,10 @@
     "rangeHint": "The first pad is the one the fader starts on; the run continues in its direction. A larger value at the first pad makes the fader count down.",
     "rangeInverted": "Counting down: the first pad is the high end, the last pad the low end. Actions and the fader variable get these values.",
     "variable": "Variable name",
-    "variableHint": "Macros read the level as {{key}}"
+    "variableHint": "Macros read the level as {{key}}",
+    "titleKnob": "Knob",
+    "titleStrip": "Touch strip",
+    "controlHint": "The hardware supplies the value: turning the knob or touching the strip moves this fader over its range and runs its actions, paced to a few times a second while it moves."
   },
   "obs": {
     "collection": "Scene collection",
