@@ -84,7 +84,7 @@ export function SettingsDialog({ open, onClose }: Props) {
             <nav className="flex w-52 shrink-0 flex-col border-r border-stage-800 bg-stage-900/80 p-3" aria-label={t("settings.title")}>
               <div className="px-2 pb-3 pt-1 text-sm font-semibold text-stage-100">{t("settings.title")}</div>
               {NAV.map((g) => (
-                <div key={g.group} className="mb-3">
+                <div key={g.group} className="mb-4 flex flex-col gap-1">
                   <div className="px-2 pb-1 text-[11px] text-stage-500">{t(`settings.groups.${g.group}`)}</div>
                   {g.tabs.map((id) => (
                     <button
