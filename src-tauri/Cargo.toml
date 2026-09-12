@@ -1,6 +1,6 @@
 [package]
 name = "lunchpad"
-version = "1.0.0-rc.1"
+version = "1.0.0-rc.2"
 license = "GPL-3.0-only"
 description = "Macro application for Novation Launchpads"
 authors = ["Tillmann Hübner"]
