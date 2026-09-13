@@ -397,6 +397,10 @@ export type ActionKind =
       ignoreTlsErrors: boolean;
       saveTo: string | null;
       saveScope: VarScope;
+      response: HttpResponse;
+      responseField: string;
+      fileName: string;
+      reuse: boolean;
     }
   | { type: "ifStart"; variable: string; op: CompareOp; value: string; elseId: string; endId: string }
   | { type: "ifElse"; startId: string; endId: string }
@@ -411,6 +415,8 @@ export const COMPARE_OPS: CompareOp[] = ["equals", "notEquals", "contains", "sta
 export const BUILTIN_VARIABLES = ["velocity", "velocity01", "pressure", "pressure01", "x", "y", "pageId"] as const;
 export type HttpMethod = "get" | "post" | "put" | "patch" | "delete" | "head";
 export type HttpBodyMode = "text" | "file" | "multipart";
+/** What an HTTP action does with the response: keep the text, or save a file from the body, a base64 field or a URL in a field. */
+export type HttpResponse = "text" | "file" | "base64Field" | "urlField";
 export interface HttpFilePart {
   field: string;
   path: string;
@@ -428,6 +434,18 @@ export interface HttpOutcome {
   ok: boolean;
   elapsedMs: number;
   bodyPreview: string;
+  bytes: number;
+  /** The file the response was saved to */
+  file: string | null;
+  /** The file existed already and no request was sent */
+  cached: boolean;
+  /** The server answered but the response could not be turned into a file */
+  error: string | null;
+}
+export interface DownloadCacheInfo {
+  path: string;
+  files: number;
+  bytes: number;
 }
 
 export interface ScriptOutcome {
@@ -702,6 +720,12 @@ export const api = {
   clearVariables: () => invoke<Record<string, string>>("clear_variables"),
   /** Drop fader values no fader publishes any more; returns how many went. */
   pruneFaderVariables: () => invoke<number>("prune_fader_variables"),
+  /** Files and size of the folder HTTP actions download into. */
+  downloadCacheInfo: () => invoke<DownloadCacheInfo>("download_cache_info"),
+  /** Remove every downloaded file; returns how many went. */
+  clearDownloadCache: () => invoke<number>("clear_download_cache"),
+  /** Open the download folder in the file manager. */
+  openDownloadFolder: () => invoke<void>("open_download_folder"),
 
   getRunningMacros: () => invoke<RunningMacro[]>("get_running_macros"),
   stopAllMacros: () => invoke<void>("stop_all_macros"),

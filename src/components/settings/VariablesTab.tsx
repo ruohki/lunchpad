@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { api, type DownloadCacheInfo } from "../../lib/api";
 import { useVariablesStore } from "../../store/variables";
 import { Tooltip } from "../Tooltip";
 import { Button, IconClose } from "../ui";
@@ -79,6 +80,66 @@ export function VariablesTab() {
           </ul>
         )}
       </Section>
+
+      <DownloadsSection />
     </>
+  );
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** The files HTTP request actions downloaded, with a way to start over. */
+function DownloadsSection() {
+  const { t } = useTranslation();
+  const [info, setInfo] = useState<DownloadCacheInfo | null>(null);
+  const [confirm, setConfirm] = useState(false);
+  const [cleared, setCleared] = useState<number | null>(null);
+
+  const refresh = () => api.downloadCacheInfo().then(setInfo).catch(() => undefined);
+  useEffect(() => {
+    void refresh();
+  }, []);
+
+  return (
+    <Section title={t("settings.downloads")} description={t("settings.downloadsHint")}>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="mr-2 text-sm text-stage-300">{info && info.files > 0 ? t("settings.downloadsCount", { count: info.files, size: formatSize(info.bytes) }) : t("settings.downloadsEmpty")}</span>
+        <Button size="sm" onClick={() => void api.openDownloadFolder().catch(() => undefined)}>
+          {t("settings.downloadsShow")}
+        </Button>
+        {confirm ? (
+          <>
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={() => {
+                setConfirm(false);
+                void api
+                  .clearDownloadCache()
+                  .then((n) => {
+                    setCleared(n);
+                    void refresh();
+                  })
+                  .catch(() => undefined);
+              }}
+            >
+              {t("settings.downloadsClearConfirm", { count: info?.files ?? 0 })}
+            </Button>
+            <Button size="sm" onClick={() => setConfirm(false)}>
+              {t("common.cancel")}
+            </Button>
+          </>
+        ) : (
+          <Button size="sm" onClick={() => setConfirm(true)} disabled={!info || info.files === 0}>
+            {t("settings.downloadsClear")}
+          </Button>
+        )}
+        {cleared !== null && <span className="text-xs text-stage-400">{t("settings.downloadsCleared", { count: cleared })}</span>}
+      </div>
+    </Section>
   );
 }

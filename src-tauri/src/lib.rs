@@ -225,6 +225,7 @@ pub fn run() {
                 slobs: Some(slobs.clone()),
                 home_assistant: Some(home_assistant.clone()),
                 settings: Some(settings.clone()),
+                downloads: Some(http::download_dir(app.handle())),
             };
             let engine = MacroEngine::new(profile.clone(), running_pads, sink, services, runtime);
             // Shared variables survive restarts.
@@ -345,6 +346,9 @@ pub fn run() {
             home_assistant_refresh,
             set_home_assistant_settings,
             test_http_request,
+            download_cache_info,
+            clear_download_cache,
+            open_download_folder,
             test_script,
             get_variables,
             delete_variables,

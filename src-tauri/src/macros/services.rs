@@ -8,6 +8,7 @@ use crate::input::KeyboardHandle;
 use crate::obs::ObsHandle;
 use crate::slobs::SlobsHandle;
 use crate::speech::SpeechHandle;
+use std::path::PathBuf;
 
 #[derive(Clone, Default)]
 pub struct Services {
@@ -18,4 +19,6 @@ pub struct Services {
     pub slobs: Option<SlobsHandle>,
     pub home_assistant: Option<HaHandle>,
     pub settings: Option<SharedSettings>,
+    /// Where HTTP actions keep the files they download (`None` = a temp folder)
+    pub downloads: Option<PathBuf>,
 }

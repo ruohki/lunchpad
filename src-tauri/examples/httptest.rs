@@ -19,12 +19,16 @@ async fn main() {
         auth: HttpAuth::Bearer { token: "secret".into() },
         timeout_ms: 5000,
         ignore_tls_errors: false,
+        response: lunchpad_lib::macros::HttpResponse::Text,
+        response_field: String::new(),
+        file_name: String::new(),
+        reuse: false,
     };
     let mut vars: HashMap<&str, String> = HashMap::new();
     vars.insert("velocity", "99".into());
     vars.insert("x", "2".into());
     vars.insert("y", "3".into());
-    let out = perform(&spec, &vars).await.expect("request");
+    let out = perform(&spec, &vars, &lunchpad_lib::http::fallback_download_dir()).await.expect("request");
     println!("status {} in {} ms: {}", out.status, out.elapsed_ms, out.body_preview.trim());
 
     let mut locals = HashMap::new();

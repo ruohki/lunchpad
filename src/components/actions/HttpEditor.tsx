@@ -1,7 +1,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { api, type Action, type Button as ButtonModel, type HttpAuth, type HttpMethod, type HttpOutcome } from "../../lib/api";
+import { api, type Action, type Button as ButtonModel, type HttpAuth, type HttpMethod, type HttpOutcome, type HttpResponse } from "../../lib/api";
 import { PlaceholderField } from "./PlaceholderField";
 import { Select } from "../Select";
 import { Button, Toggle } from "../ui";
@@ -31,10 +31,11 @@ async function pickFile(): Promise<string | null> {
 export function HttpEditor({ action, onChange, button }: { action: HttpAction; onChange: (next: Action) => void; button?: ButtonModel }) {
   const { t } = useTranslation();
   const suggestions = useVariableSuggestions(button);
-  const [outcome, setOutcome] = useState<HttpOutcome | { error: string } | null>(null);
+  const [outcome, setOutcome] = useState<HttpOutcome | { failed: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const canHaveBody = action.method !== "get" && action.method !== "head";
   const kind = bodyKind(action);
+  const needsField = action.response === "base64Field" || action.response === "urlField";
 
   const setKind = (k: BodyKind) => {
     if (k === "file") return onChange({ ...action, bodyMode: "file", contentType: null });
@@ -55,7 +56,7 @@ export function HttpEditor({ action, onChange, button }: { action: HttpAction; o
       const { type: _t, saveTo: _s, saveScope: _c, ...request } = action;
       setOutcome(await api.testHttpRequest(request));
     } catch (e) {
-      setOutcome({ error: String(e) });
+      setOutcome({ failed: String(e) });
     } finally {
       setBusy(false);
     }
@@ -186,6 +187,35 @@ export function HttpEditor({ action, onChange, button }: { action: HttpAction; o
         </div>
       )}
 
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center gap-3 text-xs text-stage-400">
+          {t("http.response")}
+          <Select<HttpResponse>
+            size="sm"
+            value={action.response}
+            options={[
+              { value: "text", label: t("http.responseText"), hint: t("http.responseTextHint") },
+              { value: "file", label: t("http.responseFile"), hint: t("http.responseFileHint") },
+              { value: "base64Field", label: t("http.responseBase64"), hint: t("http.responseBase64Hint") },
+              { value: "urlField", label: t("http.responseUrl"), hint: t("http.responseUrlHint") },
+            ]}
+            onChange={(response) => onChange({ ...action, response })}
+            className="w-64"
+          />
+          {needsField && (
+            <input value={action.responseField} onChange={(e) => onChange({ ...action, responseField: e.target.value })} placeholder={t("http.fieldHint")} className={monoCls + " flex-1"} spellCheck={false} aria-label={t("http.field")} />
+          )}
+        </div>
+        {(action.response !== "text" || action.reuse) && (
+          <div className="flex flex-col gap-1 text-xs text-stage-400">
+            {t("http.fileName")}
+            <PlaceholderField mono value={action.fileName} onChange={(fileName) => onChange({ ...action, fileName })} suggestions={suggestions} placeholder={t("http.fileNameAuto")} ariaLabel={t("http.fileName")} />
+            <span className="text-stage-500">{t("http.fileNameHint")}</span>
+          </div>
+        )}
+        <Toggle checked={action.reuse} onChange={(reuse) => onChange({ ...action, reuse })} label={t("http.reuse")} hint={t("http.reuseHint")} />
+      </div>
+
       <div className="flex flex-wrap items-end gap-4">
         <SaveToFields name={action.saveTo} scope={action.saveScope} onChange={(saveTo, saveScope) => onChange({ ...action, saveTo, saveScope })} label={t("http.saveTo")} />
         <label className="flex flex-col gap-1 text-xs text-stage-400">
@@ -200,18 +230,25 @@ export function HttpEditor({ action, onChange, button }: { action: HttpAction; o
         </label>
         <Toggle checked={action.ignoreTlsErrors} onChange={(ignoreTlsErrors) => onChange({ ...action, ignoreTlsErrors })} label={t("http.ignoreTls")} />
       </div>
+      {action.saveTo && <p className="text-xs text-stage-500">{t("http.saveHint", { name: action.saveTo })}</p>}
       <PlaceholderHint />
 
       {outcome && (
         <div className="rounded-lg bg-stage-950 p-3 font-mono text-xs">
-          {"error" in outcome ? (
-            <span className="text-danger">{outcome.error}</span>
+          {"failed" in outcome ? (
+            <span className="text-danger">{outcome.failed}</span>
           ) : (
             <>
               <div className={outcome.ok ? "text-ok" : "text-warn"}>
-                {t("http.result", { status: outcome.status, ms: outcome.elapsedMs })}
+                {outcome.cached ? t("http.reused", { file: outcome.file }) : t("http.result", { status: outcome.status, ms: outcome.elapsedMs })}
               </div>
-              <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-all text-stage-300">{outcome.bodyPreview || t("http.emptyBody")}</pre>
+              {outcome.file && !outcome.cached && <div className="text-stage-300">{t("http.savedTo", { file: outcome.file })}</div>}
+              {outcome.error && <div className="text-danger">{outcome.error}</div>}
+              {!outcome.cached && (
+                <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-all text-stage-300">
+                  {outcome.bodyPreview || (outcome.bytes > 0 ? t("http.binaryBody", { bytes: outcome.bytes }) : t("http.emptyBody"))}
+                </pre>
+              )}
             </>
           )}
         </div>

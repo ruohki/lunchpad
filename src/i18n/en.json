@@ -199,7 +199,18 @@
     "variablesList_one": "{{count}} variable",
     "variablesList_other": "{{count}} variables",
     "variablesEmpty": "No shared variables yet.",
-    "variablesRemove": "Remove {{name}}"
+    "variablesRemove": "Remove {{name}}",
+    "downloads": "Downloaded files",
+    "downloadsHint": "Files that HTTP request actions saved and reuse while their request is unchanged. Removing them makes every such request run again.",
+    "downloadsCount_one": "{{count}} file, {{size}}",
+    "downloadsCount_other": "{{count}} files, {{size}}",
+    "downloadsEmpty": "No downloaded files.",
+    "downloadsClear": "Remove all",
+    "downloadsClearConfirm_one": "Remove {{count}} file",
+    "downloadsClearConfirm_other": "Remove all {{count}} files",
+    "downloadsCleared_one": "{{count}} file removed.",
+    "downloadsCleared_other": "{{count}} files removed.",
+    "downloadsShow": "Show folder"
   },
   "pages": {
     "label": "Pages",
@@ -659,7 +670,10 @@
     "velocityHint": "On velocity-sensitive pads a soft press plays quieter than a hard one.",
     "analyzing": "Reading the file…",
     "length": "{{seconds}} s total",
-    "missing": "File not found"
+    "missing": "File not found",
+    "usePlaceholder": "From a variable",
+    "usePlaceholderHint": "Type {{ to pick the variable that holds the file, e.g. the file an HTTP request saved. Trim and preview are off because the file is only known when the macro runs.",
+    "path": "File path"
   },
   "speech": {
     "placeholder": "Text to speak",
@@ -884,7 +898,27 @@
     "filePath": "Path to the file",
     "files": "Files",
     "addFile": "File",
-    "fieldName": "Field name"
+    "fieldName": "Field name",
+    "response": "Response",
+    "responseText": "Keep the text",
+    "responseTextHint": "The body goes into the variable (first 2 KB)",
+    "responseFile": "Save the body as a file",
+    "responseFileHint": "The response is the file, e.g. audio from a text-to-speech service",
+    "responseBase64": "Decode a base64 field",
+    "responseBase64Hint": "A JSON field holds the file as base64 (a data: URL is fine)",
+    "responseUrl": "Download a URL from a field",
+    "responseUrlHint": "A JSON field holds the address of the file",
+    "field": "Field",
+    "fieldHint": "Field in the JSON, e.g. audioContent or data.0.url; empty = the whole body",
+    "fileName": "File name",
+    "fileNameAuto": "Automatic (derived from the request)",
+    "fileNameHint": "Kept in the download folder; the extension comes from the response unless you give one. An absolute path is used as it is.",
+    "reuse": "Reuse when unchanged",
+    "reuseHint": "Skip the request when a file for the same address, headers, body and login already exists. With a file name of your own, that name alone decides.",
+    "saveHint": "Also sets {{name}}.status, {{name}}.file (the saved file) and {{name}}.cached",
+    "savedTo": "Saved to {{file}}",
+    "reused": "Reused {{file}}, no request sent",
+    "binaryBody": "({{bytes}} bytes, not text)"
   },
   "script": {
     "hint": "Read variables as vars.name, shared ones as globals.name; assign to them to change them. velocity, x, y and pageId are available. The last expression (or return) is the result.",

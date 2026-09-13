@@ -19,10 +19,14 @@ async fn main() {
         auth: HttpAuth::None,
         timeout_ms: 5000,
         ignore_tls_errors: false,
+        response: lunchpad_lib::macros::HttpResponse::Text,
+        response_field: String::new(),
+        file_name: String::new(),
+        reuse: false,
     };
-    let out = perform(&base, &vars).await.expect("multipart");
+    let out = perform(&base, &vars, &lunchpad_lib::http::fallback_download_dir()).await.expect("multipart");
     println!("multipart: {} {}", out.status, out.body_preview);
     let raw = HttpSpec { body_mode: HttpBodyMode::File, body_file: Some(file), files: vec![], body: String::new(), ..base };
-    let out = perform(&raw, &vars).await.expect("file body");
+    let out = perform(&raw, &vars, &lunchpad_lib::http::fallback_download_dir()).await.expect("file body");
     println!("file body: {} {}", out.status, out.body_preview);
 }

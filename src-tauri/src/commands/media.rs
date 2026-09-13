@@ -6,8 +6,8 @@ use crate::audio::{AudioDevices, PlayRequest};
 use crate::config::{AudioSettings, ObsSettings, Settings, SlobsSettings};
 use crate::obs::ObsState;
 use crate::slobs::SlobsState;
-use crate::http::{perform, HttpOutcome, HttpSpec};
-use crate::macros::{HttpAuth, HttpBodyMode, HttpFilePart, HttpHeader, HttpMethod};
+use crate::http::{self, perform, DownloadCacheInfo, HttpOutcome, HttpSpec};
+use crate::macros::{HttpAuth, HttpBodyMode, HttpFilePart, HttpHeader, HttpMethod, HttpResponse};
 use crate::speech::{SpeakRequest, VoiceInfo};
 use std::collections::HashMap;
 use serde::Deserialize;
@@ -231,9 +231,16 @@ pub struct HttpTest {
     pub timeout_ms: Option<u64>,
     #[serde(default)]
     pub ignore_tls_errors: bool,
+    #[serde(default)]
+    pub response: HttpResponse,
+    #[serde(default)]
+    pub response_field: String,
+    #[serde(default)]
+    pub file_name: String,
+    #[serde(default)]
+    pub reuse: bool,
 }
 
-/// Send a request from the editor with sample placeholder values.
 #[tauri::command]
 pub async fn home_assistant_state(state: State<'_, AppState>) -> CmdResult<crate::homeassistant::HaState> {
     Ok(state.home_assistant.state())
@@ -260,8 +267,10 @@ pub async fn set_home_assistant_settings(config: crate::config::HomeAssistantSet
     Ok(settings)
 }
 
+/// Send a request from the editor with sample placeholder values; files are
+/// saved and reused exactly as when a macro runs it.
 #[tauri::command]
-pub async fn test_http_request(request: HttpTest) -> CmdResult<HttpOutcome> {
+pub async fn test_http_request(request: HttpTest, app: AppHandle) -> CmdResult<HttpOutcome> {
     let spec = HttpSpec {
         method: request.method,
         url: request.url,
@@ -274,6 +283,10 @@ pub async fn test_http_request(request: HttpTest) -> CmdResult<HttpOutcome> {
         auth: request.auth,
         timeout_ms: request.timeout_ms.unwrap_or(10_000),
         ignore_tls_errors: request.ignore_tls_errors,
+        response: request.response,
+        response_field: request.response_field,
+        file_name: request.file_name,
+        reuse: request.reuse,
     };
     let mut vars: HashMap<&str, String> = HashMap::new();
     vars.insert("velocity", "127".into());
@@ -283,7 +296,30 @@ pub async fn test_http_request(request: HttpTest) -> CmdResult<HttpOutcome> {
     vars.insert("x", "0".into());
     vars.insert("y", "0".into());
     vars.insert("pageId", "default".into());
-    perform(&spec, &vars).await
+    perform(&spec, &vars, &http::download_dir(&app)).await
+}
+
+/// Files and size of the folder HTTP actions download into.
+#[tauri::command]
+pub async fn download_cache_info(app: AppHandle) -> CmdResult<DownloadCacheInfo> {
+    let dir = http::download_dir(&app);
+    tauri::async_runtime::spawn_blocking(move || http::cache_info(&dir)).await.map_err(err)
+}
+
+/// Open the download folder in the system's file manager.
+#[tauri::command]
+pub async fn open_download_folder(app: AppHandle) -> CmdResult<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let dir = http::download_dir(&app);
+    std::fs::create_dir_all(&dir).map_err(err)?;
+    app.opener().open_path(dir.to_string_lossy(), None::<&str>).map_err(err)
+}
+
+/// Remove every downloaded file; returns how many went.
+#[tauri::command]
+pub async fn clear_download_cache(app: AppHandle) -> CmdResult<u64> {
+    let dir = http::download_dir(&app);
+    tauri::async_runtime::spawn_blocking(move || http::clear_cache(&dir)).await.map_err(err)?
 }
 
 // ----- scripts & variables --------------------------------------------------

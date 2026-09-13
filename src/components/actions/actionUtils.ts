@@ -197,6 +197,10 @@ export function createActions(type: ActionType): Action[] {
           ignoreTlsErrors: false,
           saveTo: null,
           saveScope: "local",
+          response: "text",
+          responseField: "",
+          fileName: "",
+          reuse: false,
         }),
       ];
     case "setVariable":
@@ -269,6 +273,8 @@ export function knownVariables(button: { down: Action[]; up: Action[]; hold?: Ac
     if (a.type === "httpRequest" && a.saveTo) {
       names.add(a.saveTo);
       names.add(`${a.saveTo}.status`);
+      names.add(`${a.saveTo}.file`);
+      names.add(`${a.saveTo}.cached`);
     }
     if (a.type === "runScript" && a.saveTo) names.add(a.saveTo);
     if (a.type === "launchApplication" && a.saveOutputTo) names.add(a.saveOutputTo);

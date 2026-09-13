@@ -330,11 +330,27 @@ pub enum ActionKind {
         timeout_ms: u64,
         #[serde(default)]
         ignore_tls_errors: bool,
-        /// Store the response body in this variable (`<name>.status` gets the status code)
+        /// Store the response body in this variable (`<name>.status` gets the
+        /// status code, `<name>.file` the saved file, `<name>.cached` whether
+        /// the file was reused)
         #[serde(default)]
         save_to: Option<String>,
         #[serde(default)]
         save_scope: VarScope,
+        /// What becomes of the response: text only, or a file in the download
+        /// folder made from the body, a base64 field or a URL in a field
+        #[serde(default)]
+        response: HttpResponse,
+        /// JSON field (dot path, `data.0.url`) for the field modes; empty = the whole body
+        #[serde(default)]
+        response_field: String,
+        /// File name (placeholders allowed) in the download folder, or an absolute
+        /// path; empty = a name derived from the request
+        #[serde(default)]
+        file_name: String,
+        /// Skip the request when a file (or stored text) for the same inputs exists
+        #[serde(default)]
+        reuse: bool,
     },
     /// Branch: actions up to `IfElse` run when the condition holds, actions
     /// between `IfElse` and `IfEnd` when it does not.
@@ -436,6 +452,21 @@ pub enum HttpMethod {
     Patch,
     Delete,
     Head,
+}
+
+/// What an HTTP action does with the response body.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum HttpResponse {
+    /// Keep the text in the variable only
+    #[default]
+    Text,
+    /// The body is the file
+    File,
+    /// A field holds base64 data (a data URL prefix is fine)
+    Base64Field,
+    /// A field holds a URL to download
+    UrlField,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -658,6 +689,27 @@ mod tests {
         assert_eq!(serde_json::to_value(&s).unwrap()["volumeDb"], -6.5);
         let r: Action = serde_json::from_str(r#"{"id":"r","type":"slobsSaveReplay"}"#).unwrap();
         assert_eq!(r.kind, ActionKind::SlobsSaveReplay);
+    }
+
+    #[test]
+    fn http_response_defaults() {
+        let a: Action = serde_json::from_str(r#"{"id":"h","type":"httpRequest","method":"get","url":"https://x"}"#).unwrap();
+        match a.kind {
+            ActionKind::HttpRequest { response, response_field, file_name, reuse, .. } => {
+                assert_eq!(response, HttpResponse::Text);
+                assert!(response_field.is_empty() && file_name.is_empty() && !reuse);
+            }
+            _ => panic!(),
+        }
+        let b: Action = serde_json::from_str(r#"{"id":"h","type":"httpRequest","method":"post","url":"https://x","response":"base64Field","responseField":"audioContent","reuse":true}"#).unwrap();
+        match b.kind {
+            ActionKind::HttpRequest { response, response_field, reuse, .. } => {
+                assert_eq!(response, HttpResponse::Base64Field);
+                assert_eq!(response_field, "audioContent");
+                assert!(reuse);
+            }
+            _ => panic!(),
+        }
     }
 
     #[test]

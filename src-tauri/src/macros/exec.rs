@@ -22,7 +22,7 @@ pub async fn execute_external(ctx: &RunContext, action: &Action) {
                 .clone()
                 .or_else(|| services.settings.as_ref().and_then(|s| s.lock().settings.audio.output_device.clone()));
             let volume = if *volume_from_velocity { volume * (ctx.velocity as f32 / 127.0) } else { *volume };
-            let (id, done) = audio.play(PlayRequest { file: PathBuf::from(file), device, volume, start: *start, end: *end });
+            let (id, done) = audio.play(PlayRequest { file: PathBuf::from(ctx.expand(file)), device, volume, start: *start, end: *end });
             tokio::select! {
                 result = done => {
                     if let Ok(Err(e)) = result {
@@ -204,7 +204,7 @@ pub async fn execute_external(ctx: &RunContext, action: &Action) {
             report(action, "Home Assistant", ha.call_service(&ctx.expand(domain), &ctx.expand(service), opt(&entity), payload).await);
         }
 
-        ActionKind::HttpRequest { method, url, headers, content_type, body, body_mode, body_file, files, auth, timeout_ms, ignore_tls_errors, save_to, save_scope } => {
+        ActionKind::HttpRequest { method, url, headers, content_type, body, body_mode, body_file, files, auth, timeout_ms, ignore_tls_errors, save_to, save_scope, response, response_field, file_name, reuse } => {
             let spec = HttpSpec {
                 method: *method,
                 url: url.clone(),
@@ -217,20 +217,29 @@ pub async fn execute_external(ctx: &RunContext, action: &Action) {
                 auth: auth.clone(),
                 timeout_ms: *timeout_ms,
                 ignore_tls_errors: *ignore_tls_errors,
+                response: *response,
+                response_field: response_field.clone(),
+                file_name: file_name.clone(),
+                reuse: *reuse,
             };
             let owned = ctx.variables();
             let vars: HashMap<&str, String> = owned.iter().map(|(k, v)| (k.as_str(), v.clone())).collect();
+            let download_dir = services.downloads.clone().unwrap_or_else(http::fallback_download_dir);
             tokio::select! {
-                result = http::perform(&spec, &vars) => match result {
+                result = http::perform(&spec, &vars, &download_dir) => match result {
                     Ok(o) => {
-                        if o.ok {
-                            tracing::info!(action = %action.id, status = o.status, ms = o.elapsed_ms, "http request done");
+                        if o.cached {
+                            tracing::info!(action = %action.id, file = o.file.as_deref().unwrap_or(""), "http request reused its file");
+                        } else if o.ok {
+                            tracing::info!(action = %action.id, status = o.status, ms = o.elapsed_ms, file = o.file.as_deref().unwrap_or(""), "http request done");
                         } else {
                             tracing::warn!(action = %action.id, status = o.status, body = %o.body_preview.chars().take(200).collect::<String>(), "http request answered with an error status");
                         }
                         if let Some(name) = save_to {
                             ctx.set_var(name, o.body_preview.clone(), *save_scope);
                             ctx.set_var(&format!("{name}.status"), o.status.to_string(), *save_scope);
+                            ctx.set_var(&format!("{name}.file"), o.file.clone().unwrap_or_default(), *save_scope);
+                            ctx.set_var(&format!("{name}.cached"), if o.cached { "true" } else { "false" }.into(), *save_scope);
                         }
                     }
                     Err(e) => {
@@ -238,6 +247,8 @@ pub async fn execute_external(ctx: &RunContext, action: &Action) {
                         if let Some(name) = save_to {
                             ctx.set_var(name, String::new(), *save_scope);
                             ctx.set_var(&format!("{name}.status"), "0".into(), *save_scope);
+                            ctx.set_var(&format!("{name}.file"), String::new(), *save_scope);
+                            ctx.set_var(&format!("{name}.cached"), "false".into(), *save_scope);
                         }
                     }
                 },

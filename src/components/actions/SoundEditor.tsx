@@ -1,7 +1,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { api, type Action, type AudioInfo } from "../../lib/api";
+import { api, type Action, type AudioInfo, type Button as ButtonModel } from "../../lib/api";
 import { useDeviceStore } from "../../store/device";
 import { useMediaStore } from "../../store/media";
 import { Select } from "../Select";
@@ -9,13 +9,16 @@ import { Slider } from "../Slider";
 import { Button, Toggle } from "../ui";
 import { Tooltip } from "../Tooltip";
 import { useProfileStore } from "../../store/profile";
+import { PlaceholderField } from "./PlaceholderField";
+import { useVariableSuggestions } from "./VariableFields";
 
 type SoundAction = Extract<Action, { type: "playSound" }>;
 
 const DEFAULT_DEVICE = "__default__";
 
-export function SoundEditor({ action, onChange }: { action: SoundAction; onChange: (next: Action) => void }) {
+export function SoundEditor({ action, onChange, button }: { action: SoundAction; onChange: (next: Action) => void; button?: ButtonModel }) {
   const { t } = useTranslation();
+  const suggestions = useVariableSuggestions(button);
   const isMissing = useProfileStore((s) => !!action.file && s.missingFiles.includes(action.file));
   const velocitySensitive = useDeviceStore((s) => s.layout?.velocitySensitive ?? false);
   const audioDevices = useMediaStore((s) => s.audioDevices);
@@ -24,6 +27,9 @@ export function SoundEditor({ action, onChange }: { action: SoundAction; onChang
   const [error, setError] = useState<string | null>(null);
   const [playing, setPlaying] = useState<number | null>(null);
   const [name, setName] = useState("");
+  // The path comes from a variable (an HTTP request's file, say): no waveform, trim or preview.
+  const [manual, setManual] = useState(false);
+  const dynamic = manual || action.file.includes("{{");
 
   useEffect(() => {
     if (!audioDevices) void loadAudioDevices().catch(() => undefined);
@@ -33,7 +39,7 @@ export function SoundEditor({ action, onChange }: { action: SoundAction; onChang
     let cancelled = false;
     setInfo(null);
     setError(null);
-    if (!action.file) {
+    if (!action.file || dynamic) {
       setName("");
       return;
     }
@@ -45,7 +51,7 @@ export function SoundEditor({ action, onChange }: { action: SoundAction; onChang
     return () => {
       cancelled = true;
     };
-  }, [action.file]);
+  }, [action.file, dynamic]);
 
   const pickFile = async () => {
     const path = await open({
@@ -53,7 +59,15 @@ export function SoundEditor({ action, onChange }: { action: SoundAction; onChang
       directory: false,
       filters: [{ name: t("sound.files"), extensions: ["mp3", "wav", "flac", "ogg", "oga", "m4a", "aac", "aiff", "aif"] }],
     });
-    if (typeof path === "string") onChange({ ...action, file: path, start: 0, end: 1 });
+    if (typeof path === "string") {
+      setManual(false);
+      onChange({ ...action, file: path, start: 0, end: 1 });
+    }
+  };
+
+  const useVariable = () => {
+    setManual(true);
+    onChange({ ...action, file: "", start: 0, end: 1 });
   };
 
   const preview = async () => {
@@ -82,24 +96,39 @@ export function SoundEditor({ action, onChange }: { action: SoundAction; onChang
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" onClick={() => void pickFile()}>
-          {t("sound.choose")}
-        </Button>
-        <Tooltip content={action.file}>
-          <span className={"min-w-0 flex-1 truncate text-sm " + (isMissing ? "text-danger" : "text-stage-200")}>
-            {name || t("sound.noFile")}
-            {isMissing && <span className="ml-2 text-xs">{t("sound.missing")}</span>}
-          </span>
-        </Tooltip>
-        <Button size="sm" onClick={() => void preview()} disabled={!action.file}>
-          {playing !== null ? t("sound.stop") : t("sound.preview")}
-        </Button>
-      </div>
+      {dynamic ? (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2">
+            <PlaceholderField mono value={action.file} onChange={(file) => onChange({ ...action, file })} suggestions={suggestions} placeholder="{{tts.file}}" ariaLabel={t("sound.path")} />
+            <Button size="sm" onClick={() => void pickFile()}>
+              {t("sound.choose")}
+            </Button>
+          </div>
+          <p className="text-xs text-stage-500">{t("sound.usePlaceholderHint")}</p>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" onClick={() => void pickFile()}>
+            {t("sound.choose")}
+          </Button>
+          <Button size="sm" onClick={useVariable}>
+            {t("sound.usePlaceholder")}
+          </Button>
+          <Tooltip content={action.file}>
+            <span className={"min-w-0 flex-1 truncate text-sm " + (isMissing ? "text-danger" : "text-stage-200")}>
+              {name || t("sound.noFile")}
+              {isMissing && <span className="ml-2 text-xs">{t("sound.missing")}</span>}
+            </span>
+          </Tooltip>
+          <Button size="sm" onClick={() => void preview()} disabled={!action.file}>
+            {playing !== null ? t("sound.stop") : t("sound.preview")}
+          </Button>
+        </div>
+      )}
 
       {error && <p className="text-xs text-danger">{error}</p>}
 
-      {action.file && (
+      {action.file && !dynamic && (
         <Trimmer
           info={info}
           start={action.start}

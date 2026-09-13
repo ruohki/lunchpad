@@ -110,7 +110,7 @@ export function ActionEditor({ action, onChange, pages, layout, button }: Props)
       );
 
     case "playSound":
-      return <SoundEditor action={action} onChange={onChange} />;
+      return <SoundEditor action={action} onChange={onChange} button={button} />;
     case "textToSpeech":
       return <SpeechEditor action={action} onChange={onChange} button={button} />;
     case "setSystemVolume":
