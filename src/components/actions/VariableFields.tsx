@@ -2,6 +2,7 @@ import { BUILTIN_VARIABLES, FADER_VARIABLES } from "../../lib/api";
 import { useShallow } from "zustand/react/shallow";
 import { faderVariable } from "../../lib/fader";
 import { useProfileStore } from "../../store/profile";
+import { useSettingsStore } from "../../store/settings";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { Action, VarScope } from "../../lib/api";
@@ -20,12 +21,13 @@ export function useVariableSuggestions(button?: { down: Action[]; up: Action[]; 
   const hints = useVariablesStore((s) => s.hints);
   const faderOpen = useProfileStore((s) => s.faderEditor !== null);
   const faderNames = useProfileStore(useShallow((s) => (s.profile?.pages ?? []).flatMap((p) => (p.faders ?? []).map((f) => `fader.${faderVariable(f)}`))));
+  const secretNames = useSettingsStore(useShallow((s) => (s.settings?.secrets ?? []).map((n) => `secret.${n}`)));
   return useMemo(() => {
     const context = [...hints, ...(faderOpen ? FADER_VARIABLES.filter((v) => !hints.includes(v)) : [])];
     const names = button ? knownVariables(button, globals) : [...BUILTIN_VARIABLES, ...Object.keys(globals)];
-    const rest = [...new Set([...names, ...faderNames])].filter((n) => !context.includes(n)).sort();
+    const rest = [...new Set([...names, ...faderNames, ...secretNames])].filter((n) => !context.includes(n)).sort();
     return [...context, ...rest];
-  }, [button, globals, hints, faderOpen, faderNames]);
+  }, [button, globals, hints, faderOpen, faderNames, secretNames]);
 }
 
 export const inputCls = "rounded-md bg-stage-800 px-2.5 py-1.5 text-sm text-stage-100 outline-none placeholder:text-stage-500 focus:ring-1 focus:ring-accent-400";

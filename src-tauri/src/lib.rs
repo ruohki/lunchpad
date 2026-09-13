@@ -314,6 +314,8 @@ pub fn run() {
             set_push_to_talk,
             check_keyboard_access,
             set_developer_mode,
+            set_secret,
+            delete_secret,
             set_window_settings,
             set_tray_labels,
             diagnostics,

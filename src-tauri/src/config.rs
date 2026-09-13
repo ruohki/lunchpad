@@ -184,6 +184,9 @@ pub struct Settings {
     /// Show diagnostics in the main window (device facts, MIDI monitor, variables).
     #[serde(default)]
     pub developer_mode: bool,
+    /// Names of the user's secrets (`{{secret.<name>}}`); the values are in the credential store.
+    #[serde(default)]
+    pub secrets: Vec<String>,
 }
 
 fn default_version() -> u32 {
@@ -208,6 +211,7 @@ impl Default for Settings {
             home_assistant: HomeAssistantSettings::default(),
             window: WindowSettings::default(),
             developer_mode: false,
+            secrets: Vec::new(),
         }
     }
 }
@@ -240,6 +244,10 @@ impl SettingsStore {
             Err(_) => Settings::default(),
         };
         let secrets = SecretStore::open(config_dir);
+        settings.secrets.retain(|n| crate::secrets::valid_secret_name(n));
+        settings.secrets.sort();
+        settings.secrets.dedup();
+        secrets.load_users(&settings.secrets);
         // Credentials still sitting in the file (older versions kept them there) move to
         // the store; otherwise the store fills the blanks.
         let mut migrated = false;
@@ -278,5 +286,27 @@ impl SettingsStore {
         }
         let json = serde_json::to_string_pretty(&on_disk).map_err(|e| MidiError::Settings(e.to_string()))?;
         fs::write(&self.path, json).map_err(|e| MidiError::Settings(e.to_string()))
+    }
+
+    /// Add or replace a named secret and remember its name.
+    pub fn set_user_secret(&mut self, name: &str, value: &str) -> Result<(), String> {
+        let name = name.trim();
+        if value.trim().is_empty() {
+            return Err("the secret is empty".into());
+        }
+        self.secrets.set_user(name, value)?;
+        if !self.settings.secrets.iter().any(|n| n == name) {
+            self.settings.secrets.push(name.to_string());
+            self.settings.secrets.sort();
+        }
+        self.save().map_err(|e| e.to_string())
+    }
+
+    /// Forget a named secret: its value and its name.
+    pub fn remove_user_secret(&mut self, name: &str) -> Result<(), String> {
+        let name = name.trim();
+        self.secrets.set_user(name, "")?;
+        self.settings.secrets.retain(|n| n != name);
+        self.save().map_err(|e| e.to_string())
     }
 }

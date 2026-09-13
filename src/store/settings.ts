@@ -12,6 +12,8 @@ interface SettingsStore {
   setHomeAssistant: (config: HomeAssistantSettings) => Promise<void>;
   setWindow: (config: WindowSettings) => Promise<void>;
   setDeveloperMode: (enabled: boolean) => Promise<void>;
+  setSecret: (name: string, value: string) => Promise<void>;
+  deleteSecret: (name: string) => Promise<void>;
   checkKeyboardAccess: () => Promise<void>;
   dismissInputProblem: () => void;
 }
@@ -60,6 +62,16 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
 
   setDeveloperMode: async (enabled) => {
     const settings = await api.setDeveloperMode(enabled);
+    set({ settings });
+  },
+
+  setSecret: async (name, value) => {
+    const settings = await api.setSecret(name, value);
+    set({ settings });
+  },
+
+  deleteSecret: async (name) => {
+    const settings = await api.deleteSecret(name);
     set({ settings });
   },
 

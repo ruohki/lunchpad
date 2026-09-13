@@ -222,7 +222,8 @@ pub async fn execute_external(ctx: &RunContext, action: &Action) {
                 file_name: file_name.clone(),
                 reuse: *reuse,
             };
-            let owned = ctx.variables();
+            let mut owned = ctx.variables();
+            owned.extend(ctx.secrets());
             let vars: HashMap<&str, String> = owned.iter().map(|(k, v)| (k.as_str(), v.clone())).collect();
             let download_dir = services.downloads.clone().unwrap_or_else(http::fallback_download_dir);
             tokio::select! {

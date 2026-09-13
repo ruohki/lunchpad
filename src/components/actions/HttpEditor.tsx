@@ -98,6 +98,7 @@ export function HttpEditor({ action, onChange, button }: { action: HttpAction; o
           </div>
         )}
       </div>
+      <p className="text-xs text-stage-500">{t("http.secretHint")}</p>
 
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between text-xs text-stage-400">

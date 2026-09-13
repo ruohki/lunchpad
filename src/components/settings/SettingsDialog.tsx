@@ -11,11 +11,12 @@ import { KeyboardTab } from "./KeyboardTab";
 import { LaunchpadTab } from "./LaunchpadTab";
 import { ObsTab } from "./ObsTab";
 import { PagesTab } from "./PagesTab";
+import { SecretsTab } from "./SecretsTab";
 import { SlobsTab } from "./SlobsTab";
 import { SoundTab } from "./SoundTab";
 import { VariablesTab } from "./VariablesTab";
 
-export type SettingsTab = "launchpad" | "sound" | "keyboard" | "interface" | "obs" | "slobs" | "homeAssistant" | "pages" | "variables" | "about" | "diagnostics";
+export type SettingsTab = "launchpad" | "sound" | "keyboard" | "interface" | "obs" | "slobs" | "homeAssistant" | "pages" | "variables" | "secrets" | "about" | "diagnostics";
 
 interface NavGroup {
   group: string;
@@ -26,7 +27,7 @@ interface NavGroup {
 const NAV: NavGroup[] = [
   { group: "general", tabs: ["launchpad", "sound", "keyboard", "interface"] },
   { group: "integrations", tabs: ["obs", "slobs", "homeAssistant"] },
-  { group: "data", tabs: ["pages", "variables"] },
+  { group: "data", tabs: ["pages", "variables", "secrets"] },
   { group: "about", tabs: ["about", "diagnostics"] },
 ];
 
@@ -40,6 +41,7 @@ const TABS: Record<SettingsTab, () => React.ReactElement> = {
   homeAssistant: HomeAssistantTab,
   pages: PagesTab,
   variables: VariablesTab,
+  secrets: SecretsTab,
   about: AboutTab,
   diagnostics: DiagnosticsTab,
 };

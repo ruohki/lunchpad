@@ -238,6 +238,8 @@ export interface Settings {
   homeAssistant: HomeAssistantSettings;
   window: WindowSettings;
   developerMode: boolean;
+  /** Names of the user's secrets, used as `{{secret.<name>}}`; the values stay in the credential store. */
+  secrets: string[];
 }
 
 export interface AudioDevices {
@@ -681,6 +683,9 @@ export const api = {
   setPushToTalk: (config: PushToTalkSettings) => invoke<Settings>("set_push_to_talk", { config }),
   checkKeyboardAccess: () => invoke<void>("check_keyboard_access"),
   setDeveloperMode: (enabled: boolean) => invoke<Settings>("set_developer_mode", { enabled }),
+  /** Add or replace a named secret; the value is never read back. */
+  setSecret: (name: string, value: string) => invoke<Settings>("set_secret", { name, value }),
+  deleteSecret: (name: string) => invoke<Settings>("delete_secret", { name }),
   setWindowSettings: (config: WindowSettings) => invoke<Settings>("set_window_settings", { config }),
   setTrayLabels: (labels: TrayLabels) => invoke<void>("set_tray_labels", { labels }),
 

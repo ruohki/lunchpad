@@ -156,7 +156,8 @@
       "about": "About Lunchpad",
       "diagnostics": "Diagnostics",
       "homeAssistant": "Home Assistant",
-      "variables": "Variables"
+      "variables": "Variables",
+      "secrets": "Secrets"
     },
     "deviceTitle": "Connected device",
     "rememberedOnly": "Remembered: {{model}} on “{{port}}”. Not connected right now.",
@@ -210,7 +211,18 @@
     "downloadsClearConfirm_other": "Remove all {{count}} files",
     "downloadsCleared_one": "{{count}} file removed.",
     "downloadsCleared_other": "{{count}} files removed.",
-    "downloadsShow": "Show folder"
+    "downloadsShow": "Show folder",
+    "secretsHint": "API keys and passwords your macros need. They live in your system's credential store, never in the profile or the settings file, and are not shown again once saved. In an HTTP request's address, headers, login or body, type {{ and pick secret.<name>.",
+    "secretsName": "Name",
+    "secretsValue": "Value",
+    "secretsAdd": "Add",
+    "secretsNameHint": "Letters, digits, _ and -. Adding a name that exists replaces its value.",
+    "secretsList_one": "{{count}} secret",
+    "secretsList_other": "{{count}} secrets",
+    "secretsEmpty": "No secrets yet.",
+    "secretsReplace": "Replace",
+    "secretsSave": "Save",
+    "secretsRemove": "Remove {{name}}"
   },
   "pages": {
     "label": "Pages",
@@ -918,7 +930,8 @@
     "saveHint": "Also sets {{name}}.status, {{name}}.file (the saved file) and {{name}}.cached",
     "savedTo": "Saved to {{file}}",
     "reused": "Reused {{file}}, no request sent",
-    "binaryBody": "({{bytes}} bytes, not text)"
+    "binaryBody": "({{bytes}} bytes, not text)",
+    "secretHint": "Keep API keys out of the profile: store them under Settings › Secrets and insert them as secret.<name>."
   },
   "script": {
     "hint": "Read variables as vars.name, shared ones as globals.name; assign to them to change them. velocity, x, y and pageId are available. The last expression (or return) is the result.",

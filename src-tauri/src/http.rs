@@ -61,7 +61,9 @@ pub struct HttpOutcome {
 /// How much of a text body goes into the variable and the editor's preview.
 const PREVIEW_CHARS: usize = 2048;
 
-/// Replace `{{name}}` placeholders. Unknown names are left as they are.
+/// Replace `{{name}}` placeholders. Unknown names are left as they are. Logs
+/// in this module name the template URL, never the expanded one, so a key in
+/// a query string stays out of the log.
 pub fn substitute(template: &str, vars: &HashMap<&str, String>) -> String {
     let mut out = template.to_string();
     for (k, v) in vars {
@@ -619,7 +621,7 @@ pub async fn perform(spec: &HttpSpec, vars: &HashMap<&str, String>, download_dir
             } else {
                 String::new()
             };
-            tracing::info!(url = %req.url, file = %path.display(), "http request reused its file");
+            tracing::info!(url = %spec.url, file = %path.display(), "http request reused its file");
             return Ok(HttpOutcome { status: 200, ok: true, elapsed_ms: 0, body_preview, bytes, file: Some(path.display().to_string()), cached: true, error: None });
         }
     }
@@ -645,7 +647,7 @@ pub async fn perform(spec: &HttpSpec, vars: &HashMap<&str, String>, download_dir
     match store(spec, &req, &client, &target, answer.content_type.as_deref(), &answer.bytes).await {
         Ok(file) => outcome.file = file.map(|p| p.display().to_string()),
         Err(e) => {
-            tracing::warn!(url = %req.url, error = %e, "http response could not be saved");
+            tracing::warn!(url = %spec.url, error = %e, "http response could not be saved");
             outcome.error = Some(e);
         }
     }

@@ -540,11 +540,27 @@ impl RunContext {
         self.inner.globals.lock().clone()
     }
 
-    /// Replace `{{name}}` placeholders in `text`.
+    /// The user's named secrets as `secret.<name>`. Kept out of [`variables`]
+    /// so they never reach scripts, the variables view or a saved file.
+    pub fn secrets(&self) -> HashMap<String, String> {
+        match &self.inner.services.settings {
+            Some(settings) => settings.lock().secrets.users().into_iter().map(|(name, value)| (format!("secret.{name}"), value)).collect(),
+            None => HashMap::new(),
+        }
+    }
+
+    /// Replace `{{name}}` placeholders in `text`: secrets first, then variables.
     pub fn expand(&self, text: &str) -> String {
-        let vars = self.variables();
+        if !text.contains("{{") {
+            return text.to_string();
+        }
         let mut out = text.to_string();
-        for (k, v) in &vars {
+        if out.contains("{{secret.") {
+            for (k, v) in &self.secrets() {
+                out = out.replace(&format!("{{{{{k}}}}}"), v);
+            }
+        }
+        for (k, v) in &self.variables() {
             out = out.replace(&format!("{{{{{k}}}}}"), v);
         }
         out

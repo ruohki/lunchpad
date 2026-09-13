@@ -270,7 +270,7 @@ pub async fn set_home_assistant_settings(config: crate::config::HomeAssistantSet
 /// Send a request from the editor with sample placeholder values; files are
 /// saved and reused exactly as when a macro runs it.
 #[tauri::command]
-pub async fn test_http_request(request: HttpTest, app: AppHandle) -> CmdResult<HttpOutcome> {
+pub async fn test_http_request(request: HttpTest, app: AppHandle, state: State<'_, AppState>) -> CmdResult<HttpOutcome> {
     let spec = HttpSpec {
         method: request.method,
         url: request.url,
@@ -296,6 +296,10 @@ pub async fn test_http_request(request: HttpTest, app: AppHandle) -> CmdResult<H
     vars.insert("x", "0".into());
     vars.insert("y", "0".into());
     vars.insert("pageId", "default".into());
+    let secrets: Vec<(String, String)> = state.settings.lock().secrets.users().into_iter().map(|(name, value)| (format!("secret.{name}"), value)).collect();
+    for (name, value) in &secrets {
+        vars.insert(name.as_str(), value.clone());
+    }
     perform(&spec, &vars, &http::download_dir(&app)).await
 }
 

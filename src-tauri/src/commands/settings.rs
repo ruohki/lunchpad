@@ -64,3 +64,27 @@ pub async fn set_developer_mode(enabled: bool, app: AppHandle, state: State<'_, 
     let _ = app.emit(EVENT_SETTINGS, &settings);
     Ok(settings)
 }
+
+/// Add or replace a named secret (`{{secret.<name>}}`); the value goes to the
+/// credential store and is never sent back to the interface.
+#[tauri::command]
+pub async fn set_secret(name: String, value: String, app: AppHandle, state: State<'_, AppState>) -> CmdResult<Settings> {
+    let settings = {
+        let mut st = state.settings.lock();
+        st.set_user_secret(&name, &value)?;
+        st.settings.clone()
+    };
+    let _ = app.emit(EVENT_SETTINGS, &settings);
+    Ok(settings)
+}
+
+#[tauri::command]
+pub async fn delete_secret(name: String, app: AppHandle, state: State<'_, AppState>) -> CmdResult<Settings> {
+    let settings = {
+        let mut st = state.settings.lock();
+        st.remove_user_secret(&name)?;
+        st.settings.clone()
+    };
+    let _ = app.emit(EVENT_SETTINGS, &settings);
+    Ok(settings)
+}
