@@ -7,9 +7,10 @@ import { ContextMenu, type MenuEntry, type MenuState } from "../ContextMenu";
 import { Toggle } from "../ui";
 import { ActionEditor } from "./ActionEditors";
 import { Icon } from "../../icons/Icon";
-import { ACTION_ICONS, createActions, GROUP_ICONS, hasWait, isMarker, markersOrdered, removeAction, summarize } from "./actionUtils";
+import { ACTION_ICONS, blockOf, cloneActions, createActions, GROUP_ICONS, hasWait, isMarker, markersOrdered, removeAction, summarize } from "./actionUtils";
 import { Tooltip } from "../Tooltip";
 import { useSettingsStore } from "../../store/settings";
+import { useUiStore } from "../../store/ui";
 
 interface Props {
   button: Button;
@@ -62,8 +63,34 @@ export function ActionsTab({ button, onChange, pages, layout, lists = ["down", "
   const obsEnabled = useSettingsStore((s) => s.settings?.obs.enabled ?? false);
   const slobsEnabled = useSettingsStore((s) => s.settings?.slobs.enabled ?? false);
   const haEnabled = useSettingsStore((s) => s.settings?.homeAssistant?.enabled ?? false);
+  const clipboard = useUiStore((s) => s.actionClipboard);
+  const copyActions = useUiStore((s) => s.copyActions);
 
   const setList = (key: ListKey, list: Action[]) => onChange({ ...button, [key]: list });
+
+  /** Insert copies of `actions` into a list after position `at` (`-1` = at the end). */
+  const insertClones = (key: ListKey, actions: Action[], at: number) => {
+    const clones = cloneActions(actions);
+    const list = button[key];
+    const index = at < 0 ? list.length : at + 1;
+    setList(key, [...list.slice(0, index), ...clones, ...list.slice(index)]);
+  };
+
+  /** Right-click on an action: copy it (a marker with its block), duplicate, paste after it, remove. */
+  const openRowMenu = (e: React.MouseEvent, key: ListKey, action: Action) => {
+    e.preventDefault();
+    const list = button[key];
+    const block = blockOf(list, action);
+    const blockEnd = list.findIndex((a) => a.id === block[block.length - 1].id);
+    const items: MenuEntry[] = [
+      { label: t(isMarker(action) ? "actions.copyBlock" : "actions.copy"), onSelect: () => copyActions(block) },
+      { label: t("actions.duplicate"), onSelect: () => insertClones(key, block, blockEnd) },
+      { label: clipboard ? t("actions.pasteAfter", { count: clipboard.length }) : t("actions.pasteAfter", { count: 0 }), disabled: !clipboard, onSelect: () => clipboard && insertClones(key, clipboard, list.findIndex((a) => a.id === action.id)) },
+      "divider",
+      { label: t("actions.remove"), danger: true, onSelect: () => setList(key, removeAction(list, action.id)) },
+    ];
+    setMenu({ x: e.clientX, y: e.clientY, items });
+  };
 
   const toggle = (id: string) =>
     setExpanded((prev) => {
@@ -86,6 +113,9 @@ export function ActionsTab({ button, onChange, pages, layout, lists = ["down", "
       },
     });
     const items: MenuEntry[] = [];
+    if (clipboard) {
+      items.push({ label: t("actions.paste", { count: clipboard.length }), onSelect: () => insertClones(key, clipboard, -1) }, "divider");
+    }
     // Integrations that are switched off in the settings stay out of the menu.
     const groups = MENU_GROUPS.filter((g) => (g.group === "obs" ? obsEnabled : g.group === "slobs" ? slobsEnabled : g.group === "homeAssistant" ? haEnabled : true));
     groups.forEach((g, gi) => {
@@ -180,6 +210,7 @@ export function ActionsTab({ button, onChange, pages, layout, lists = ["down", "
                     onToggle={() => toggle(action.id)}
                     onRemove={() => setList(key, removeAction(button[key], action.id))}
                     onChange={(next) => setList(key, button[key].map((a) => (a.id === next.id ? next : a)))}
+                    onContextMenu={(e) => openRowMenu(e, key, action)}
                   />
                 ))}
               </AnimatePresence>
@@ -202,6 +233,7 @@ function ActionRow({
   onToggle,
   onRemove,
   onChange,
+  onContextMenu,
 }: {
   action: Action;
   pages: Page[];
@@ -211,6 +243,7 @@ function ActionRow({
   onToggle: () => void;
   onRemove: () => void;
   onChange: (next: Action) => void;
+  onContextMenu: (e: React.MouseEvent) => void;
 }) {
   const { t } = useTranslation();
   const controls = useDragControls();
@@ -229,6 +262,12 @@ function ActionRow({
       exit={{ opacity: 0, x: 12 }}
       transition={{ type: "spring", stiffness: 500, damping: 40 }}
       whileDrag={{ scale: 1.01, boxShadow: "0 12px 30px -10px rgba(0,0,0,0.8)" }}
+      onContextMenu={(e: React.MouseEvent) => {
+        // The editors' own fields keep the browser menu (paste into a text field, say).
+        const target = e.target as HTMLElement;
+        if (target.closest("input, textarea, [contenteditable]")) return;
+        onContextMenu(e);
+      }}
       className={clsx(
         "rounded-lg border",
         marker ? "border-dashed border-stage-600 bg-stage-900/60" : "border-stage-700 bg-stage-800/70",

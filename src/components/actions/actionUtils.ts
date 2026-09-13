@@ -124,6 +124,53 @@ export function markersOrdered(list: Action[]): boolean {
   });
 }
 
+/**
+ * The actions that travel together when one is copied: a plain action alone, a
+ * marker with its whole block (start to end, including everything between and
+ * any set that overlaps the block).
+ */
+export function blockOf(list: Action[], action: Action): Action[] {
+  const index = list.findIndex((a) => a.id === action.id);
+  if (index < 0) return [action];
+  if (!isMarker(action)) return [action];
+  let from = index;
+  let to = index;
+  // Widen until every marker inside the range has its siblings inside too.
+  for (;;) {
+    let changed = false;
+    for (let i = from; i <= to; i++) {
+      for (const id of siblingIds(list[i])) {
+        const at = list.findIndex((a) => a.id === id);
+        if (at < 0) continue;
+        if (at < from) {
+          from = at;
+          changed = true;
+        }
+        if (at > to) {
+          to = at;
+          changed = true;
+        }
+      }
+    }
+    if (!changed) break;
+  }
+  return list.slice(from, to + 1);
+}
+
+/** Copies with fresh ids; marker references are remapped so a copied set links to itself. */
+export function cloneActions(actions: Action[]): Action[] {
+  const ids = new Map(actions.map((a) => [a.id, newActionId()]));
+  const remap = (id: string) => ids.get(id) ?? id;
+  return actions.map((a) => {
+    const copy = structuredClone(a) as Action & Partial<Record<"startId" | "middleId" | "endId" | "elseId", string>>;
+    copy.id = remap(a.id);
+    for (const key of ["startId", "middleId", "endId", "elseId"] as const) {
+      if (typeof copy[key] === "string") copy[key] = remap(copy[key]);
+    }
+    return copy as Action;
+  });
+}
+
 export function removeAction(list: Action[], id: string): Action[] {
   const target = list.find((a) => a.id === id);
   if (!target) return list;

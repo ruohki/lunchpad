@@ -661,6 +661,14 @@
     "heldEmptyHint": "Add actions here for a long press. A press longer than {{ms}} ms counts as holding.",
     "tapHintImmediate": "These run right away on every press; the held actions come on top after the hold time.",
     "holdWait": "Pressed actions wait until it is clear this is a tap",
+    "copy": "Copy action",
+    "copyBlock": "Copy block",
+    "duplicate": "Duplicate",
+    "pasteAfter_one": "Paste {{count}} action after this",
+    "pasteAfter_other": "Paste {{count}} actions after this",
+    "pasteAfter_zero": "Paste after this",
+    "paste_one": "Paste {{count}} copied action",
+    "paste_other": "Paste {{count}} copied actions",
     "holdWaitHint": "Off: the pressed actions run at once and the held actions are added after the hold time."
   },
   "keys": {
