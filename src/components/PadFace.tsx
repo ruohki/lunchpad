@@ -34,6 +34,9 @@ export function PadFace({ button, cell, active, round, limited = false, noLed = 
     "--pad-a": bg,
     "--pad-b": off ? bg : padCss(alt),
     backgroundColor: bg,
+    // The same bottom edge a fader face draws: the pad button underneath has one too,
+    // but an opaque face covers it.
+    boxShadow: "inset 0 -3px 0 rgba(0,0,0,0.35)",
   };
 
   const textColor = off ? "var(--color-stage-200)" : contrastText(rgb);
