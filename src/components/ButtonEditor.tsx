@@ -152,7 +152,10 @@ function EditorForm({ pageId, x, y, initial, limited, pages, layout, onCancel, o
         </button>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[200px_1fr] gap-6 overflow-y-auto p-5">
+      {/* minmax(0, 1fr): a plain 1fr column grows to its content's min-content width, so one long
+          unbreakable value (a URL in a row summary, say) would widen the dialog and add a horizontal
+          scrollbar instead of being truncated. */}
+      <div className="grid min-h-0 flex-1 grid-cols-[200px_minmax(0,1fr)] gap-6 overflow-y-auto p-5">
         {/* Preview */}
         <div className="flex flex-col items-center gap-3">
           <div
