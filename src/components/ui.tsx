@@ -89,13 +89,11 @@ export function IconRefresh({ className }: { className?: string }) {
 }
 
 export function IconGear({ className }: { className?: string }) {
+  // Eight teeth around the hub, generated as one polygon so the wheel is symmetric.
   return (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" className={clsx("h-4 w-4", className)}>
-      <circle cx="10" cy="10" r="2.6" />
-      <path
-        strokeLinejoin="round"
-        d="M8.4 2.5h3.2l.4 1.9 1.4.8 1.8-.7 1.6 2.8-1.4 1.3v1.6l1.4 1.3-1.6 2.8-1.8-.7-1.4.8-.4 1.9H8.4l-.4-1.9-1.4-.8-1.8.7-1.6-2.8 1.4-1.3V8.6L3.2 7.3l1.6-2.8 1.8.7 1.4-.8z"
-      />
+      <circle cx="10" cy="10" r="2.5" />
+      <path strokeLinejoin="round" d="M8.93 4.50 L9.10 2.66 L10.90 2.66 L11.07 4.50 L13.13 5.36 L14.56 4.17 L15.83 5.44 L14.64 6.87 L15.50 8.93 L17.34 9.10 L17.34 10.90 L15.50 11.07 L14.64 13.13 L15.83 14.56 L14.56 15.83 L13.13 14.64 L11.07 15.50 L10.90 17.34 L9.10 17.34 L8.93 15.50 L6.87 14.64 L5.44 15.83 L4.17 14.56 L5.36 13.13 L4.50 11.07 L2.66 10.90 L2.66 9.10 L4.50 8.93 L5.36 6.87 L4.17 5.44 L5.44 4.17 L6.87 5.36 Z" />
     </svg>
   );
 }
