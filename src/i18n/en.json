@@ -933,6 +933,10 @@
     "binaryBody": "({{bytes}} bytes, not text)",
     "secretHint": "Keep API keys out of the profile: store them under Settings › Secrets and insert them as secret.<name>."
   },
+  "code": {
+    "maximize": "Maximize the editor",
+    "minimize": "Done"
+  },
   "script": {
     "hint": "Read variables as vars.name, shared ones as globals.name; assign to them to change them. velocity, x, y and pageId are available. The last expression (or return) is the result.",
     "saveTo": "Save result to",

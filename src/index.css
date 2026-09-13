@@ -102,3 +102,37 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .pad-flashing::after, .pad-pulsing { animation: none; }
 }
+
+/* Syntax colours of the script field (Prism tokens), from the theme's own palette. */
+.code-field .token.comment,
+.code-field .token.prolog,
+.code-field .token.cdata {
+  color: var(--color-stage-400);
+  font-style: italic;
+}
+.code-field .token.string,
+.code-field .token.template-string,
+.code-field .token.char {
+  color: var(--color-ok);
+}
+.code-field .token.template-string .token.interpolation {
+  color: var(--color-stage-100);
+}
+.code-field .token.keyword {
+  color: var(--color-accent-400);
+}
+.code-field .token.boolean,
+.code-field .token.number,
+.code-field .token.constant,
+.code-field .token.regex {
+  color: var(--color-warn);
+}
+.code-field .token.function,
+.code-field .token.class-name {
+  color: #8cc4ff;
+}
+.code-field .token.operator,
+.code-field .token.punctuation {
+  color: var(--color-stage-300);
+}
+

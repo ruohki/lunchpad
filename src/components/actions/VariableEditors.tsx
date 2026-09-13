@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import { api, COMPARE_OPS, type Action, type Button as ButtonModel, type CompareOp, type ScriptOutcome } from "../../lib/api";
 import { Select } from "../Select";
 import { Button } from "../ui";
-import { monoCls, PlaceholderHint, SaveToFields, ScopeSelect, useVariableSuggestions } from "./VariableFields";
+import { CodeField } from "../CodeField";
+import { PlaceholderHint, SaveToFields, ScopeSelect, useVariableSuggestions } from "./VariableFields";
 import { VariableNameField } from "./VariableNameField";
 import { PlaceholderField } from "./PlaceholderField";
 
@@ -96,13 +97,13 @@ export function ScriptEditor({ action, onChange, button }: { action: ScriptActio
 
   return (
     <div className="flex flex-col gap-3">
-      <textarea
+      <CodeField
         value={action.code}
-        onChange={(e) => onChange({ ...action, code: e.target.value })}
+        onChange={(code) => onChange({ ...action, code })}
         rows={6}
         placeholder={"// vars.temp = JSON.parse(vars.weather).main.temp\n// return vars.temp > 25 ? 'hot' : 'fine'"}
-        className={monoCls + " w-full resize-y leading-relaxed"}
-        spellCheck={false}
+        ariaLabel={t("actions.types.runScript.name")}
+        title={t("actions.types.runScript.name")}
       />
       <p className="text-xs text-stage-500">{t("script.hint")}</p>
       <div className="flex flex-wrap items-end gap-3">
