@@ -1,7 +1,7 @@
 import { clsx } from "clsx";
 import type { CSSProperties } from "react";
 import type { Button, PadColor } from "../lib/api";
-import { contrastText, faceCss, limitedRgb, padColorAltRgb, padColorRgb, padCss } from "../lib/colors";
+import { contrastText, edgeCss, faceCss, limitedRgb, padColorAltRgb, padColorRgb, padCss } from "../lib/colors";
 
 /** Reference pad size the look's font size is relative to (legacy: ~84 px pads). */
 const REFERENCE_CELL = 84;
@@ -30,13 +30,17 @@ export function PadFace({ button, cell, active, round, limited = false, noLed = 
   const off = noLed || (rgb.r === 0 && rgb.g === 0 && rgb.b === 0);
   const bg = off ? "var(--color-stage-700)" : padCss(rgb);
 
+  const edgeA = off ? "rgba(0,0,0,0.45)" : edgeCss(rgb);
+
   const style: CSSProperties & Record<string, string> = {
     "--pad-a": bg,
     "--pad-b": off ? bg : padCss(alt),
     backgroundColor: bg,
-    // The same bottom edge a fader face draws: the pad button underneath has one too,
-    // but an opaque face covers it.
-    boxShadow: "inset 0 -3px 0 rgba(0,0,0,0.35)",
+    // The same bottom edge a fader face draws (the pad button underneath has one too, but an
+    // opaque face covers it), one colour per phase so a flashing face keeps it in both.
+    "--edge-a": edgeA,
+    "--edge-b": off ? edgeA : edgeCss(alt),
+    boxShadow: "inset 0 -3px 0 var(--edge-a)",
   };
 
   const textColor = off ? "var(--color-stage-200)" : contrastText(rgb);

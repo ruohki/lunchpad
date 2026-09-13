@@ -95,6 +95,8 @@ body {
   z-index: -1;
   border-radius: inherit;
   background-color: var(--pad-b);
+  /* The layer covers the face's own edge; 4px because it hangs 1px below the face's clip. */
+  box-shadow: inset 0 -4px 0 var(--edge-b, transparent);
   animation: pad-flash 0.9s steps(1) infinite;
   pointer-events: none;
 }

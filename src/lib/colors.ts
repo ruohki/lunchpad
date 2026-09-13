@@ -61,11 +61,25 @@ export function luminance({ r, g, b }: Rgb): number {
  * CSS colour for drawing a pad on screen. Very dark LED colours are lifted so
  * the button stays visible, like the legacy app did.
  */
-export function padCss(rgb: Rgb): string {
+/** The colour a pad is drawn in: LED colours near black are lifted so a dark pad still reads as a pad. */
+export function padDisplayRgb(rgb: Rgb): Rgb {
   const l = luminance(rgb);
-  if (l >= 0.08) return `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+  if (l >= 0.08) return rgb;
   const lift = 36 * (1 - l / 0.08);
-  return `rgb(${Math.min(255, rgb.r + lift)}, ${Math.min(255, rgb.g + lift)}, ${Math.min(255, rgb.b + lift)})`;
+  return { r: Math.min(255, rgb.r + lift), g: Math.min(255, rgb.g + lift), b: Math.min(255, rgb.b + lift) };
+}
+export function padCss(rgb: Rgb): string {
+  const { r, g, b } = padDisplayRgb(rgb);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+/**
+ * Colour of the raised edge along the bottom of a pad face drawn in `rgb`: a
+ * dark band, stronger on dark faces where a light overlay would vanish, so a
+ * face that flashes between two colours keeps a visible edge in both.
+ */
+export function edgeCss(rgb: Rgb): string {
+  const l = luminance(padDisplayRgb(rgb));
+  return l < 0.1 ? "rgba(0,0,0,0.55)" : l < 0.3 ? "rgba(0,0,0,0.42)" : "rgba(0,0,0,0.35)";
 }
 
 /** Text colour that stays readable on the given background. */
