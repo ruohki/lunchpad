@@ -14,7 +14,8 @@
     "LaunchpadProMk2": "Launchpad Pro MK2",
     "LaunchpadProMk3": "Launchpad Pro MK3",
     "LaunchpadLegacy": "Launchpad (first generation)",
-    "LaunchkeyMiniMk3": "Launchkey Mini MK3"
+    "LaunchkeyMiniMk3": "Launchkey Mini MK3",
+    "LaunchkeyMiniMk4": "Launchkey Mini MK4"
   },
   "integrations": {
     "obs": "OBS Studio",

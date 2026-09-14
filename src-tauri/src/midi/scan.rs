@@ -282,7 +282,7 @@ fn rank_for(model: LaunchpadModel, name: &str, on_windows: bool) -> u8 {
         // Standalone, MIDI).
         let wanted = match model {
             // The Launchkey's DAW interface is its second one.
-            LaunchpadX | LaunchpadMiniMk3 | LaunchpadProMk2 | LaunchkeyMiniMk3 => 2,
+            LaunchpadX | LaunchpadMiniMk3 | LaunchpadProMk2 | LaunchkeyMiniMk3 | LaunchkeyMiniMk4 => 2,
             LaunchpadProMk3 => 1,
             _ => return 0,
         };
@@ -318,7 +318,7 @@ fn rank_for(model: LaunchpadModel, name: &str, on_windows: bool) -> u8 {
             }
         }
         // The Launchkey talks to apps on its DAW interface; the MIDI one carries the keys.
-        LaunchkeyMiniMk3 => {
+        LaunchkeyMiniMk3 | LaunchkeyMiniMk4 => {
             if n.contains("daw") {
                 0
             } else if n.contains("midi") {

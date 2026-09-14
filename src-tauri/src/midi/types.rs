@@ -23,10 +23,12 @@ pub enum LaunchpadModel {
     LaunchpadLegacy,
     /// Launchkey Mini MK3: 16 RGB pads, 8 knobs, two touch strips, a few buttons
     LaunchkeyMiniMk3,
+    /// Launchkey Mini MK4: the same surface with aftertouch on the pads and a screen
+    LaunchkeyMiniMk4,
 }
 
 impl LaunchpadModel {
-    pub const ALL: [LaunchpadModel; 7] = [
+    pub const ALL: [LaunchpadModel; 8] = [
         LaunchpadModel::LaunchpadMk2,
         LaunchpadModel::LaunchpadX,
         LaunchpadModel::LaunchpadMiniMk3,
@@ -34,6 +36,7 @@ impl LaunchpadModel {
         LaunchpadModel::LaunchpadProMk3,
         LaunchpadModel::LaunchpadLegacy,
         LaunchpadModel::LaunchkeyMiniMk3,
+        LaunchpadModel::LaunchkeyMiniMk4,
     ];
 
     pub fn display_name(&self) -> &'static str {
@@ -45,6 +48,7 @@ impl LaunchpadModel {
             LaunchpadModel::LaunchpadProMk3 => "Launchpad Pro MK3",
             LaunchpadModel::LaunchpadLegacy => "Launchpad S / Mini / MK1",
             LaunchpadModel::LaunchkeyMiniMk3 => "Launchkey Mini MK3",
+            LaunchpadModel::LaunchkeyMiniMk4 => "Launchkey Mini MK4",
         }
     }
 
@@ -58,12 +62,13 @@ impl LaunchpadModel {
     /// Model from the two family bytes of the inquiry reply (LSB, MSB). The
     /// X, Mini MK3 and Pro MK3 manuals all print `13 01` and a real Launchpad X
     /// answers `03 01`, so the third generation maps to the X here and the
-    /// scanner refines it by port name.
+    /// scanner refines it by port name. A Launchkey Mini MK4 25 answers `41 01`.
     pub fn from_inquiry_family(family_lsb: u8, family_msb: u8) -> Option<Self> {
         match (family_lsb, family_msb) {
             (0x69, _) => Some(LaunchpadModel::LaunchpadMk2),
             (0x51, _) => Some(LaunchpadModel::LaunchpadProMk2),
             (0x03 | 0x13 | 0x23, 0x01) => Some(LaunchpadModel::LaunchpadX),
+            (0x41, 0x01) => Some(LaunchpadModel::LaunchkeyMiniMk4),
             // Launchpad S and Launchpad Mini (MK1/MK2)
             (0x20, _) | (0x36, _) => Some(LaunchpadModel::LaunchpadLegacy),
             _ => None,
@@ -75,6 +80,9 @@ impl LaunchpadModel {
     /// or when the inquiry times out.
     pub fn from_port_name(name: &str) -> Option<Self> {
         let n = name.to_lowercase();
+        if n.contains("launchkey mini mk4") || n.contains("lkmk4") && n.contains("mini") {
+            return Some(LaunchpadModel::LaunchkeyMiniMk4);
+        }
         if n.contains("launchkey mini") || n.contains("lkmk3") && n.contains("mini") {
             return Some(LaunchpadModel::LaunchkeyMiniMk3);
         }

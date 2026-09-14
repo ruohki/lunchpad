@@ -6,6 +6,7 @@
 //! Drivers are pure: they only build byte vectors and never touch a port.
 
 mod launchkey_mini_mk3;
+mod launchkey_mini_mk4;
 mod legacy;
 mod mini_mk3;
 mod mk2;
@@ -126,6 +127,7 @@ pub fn driver_for(model: LaunchpadModel) -> Box<dyn LaunchpadDriver> {
         LaunchpadModel::LaunchpadProMk3 => Box::new(pro_mk3::ProMk3),
         LaunchpadModel::LaunchpadLegacy => Box::new(legacy::Legacy),
         LaunchpadModel::LaunchkeyMiniMk3 => Box::new(launchkey_mini_mk3::LaunchkeyMiniMk3),
+        LaunchpadModel::LaunchkeyMiniMk4 => Box::new(launchkey_mini_mk4::LaunchkeyMiniMk4),
     }
 }
 

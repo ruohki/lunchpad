@@ -17,7 +17,7 @@ Every pad on the Launchpad becomes a button with a look, a colour and two lists 
 - Launchpad X
 - Launchpad Pro MK2
 - Launchpad Pro MK3
-- Launchkey Mini MK3 (pads, scene buttons, Play and Record, the 25 keys, and the eight knobs and two touch strips as faders)
+- Launchkey Mini MK3 and MK4 (pads, the buttons beside them, the 25 keys, and the eight knobs and two touch strips as faders; the MK4's pads report pressure)
 
 Lunchpad asks every MIDI device to identify itself, so the right Launchpad is found and remembered no matter what the operating system calls its ports. Velocity-sensitive models can feed the press force into macros, for example as the volume of a sound. On a Launchpad Pro that force comes from the pad's own set-up screen (hold Setup): if its velocity option is Off, every press counts as full force.
 

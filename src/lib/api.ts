@@ -12,7 +12,8 @@ export type LaunchpadModel =
   | "LaunchpadProMk2"
   | "LaunchpadProMk3"
   | "LaunchpadLegacy"
-  | "LaunchkeyMiniMk3";
+  | "LaunchkeyMiniMk3"
+  | "LaunchkeyMiniMk4";
 
 export interface MidiPortInfo {
   index: number;
