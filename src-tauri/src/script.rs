@@ -5,7 +5,7 @@
 //! `vars.*` / `globals.*` flow back into the macro's variables.
 
 use boa_engine::property::Attribute;
-use boa_engine::{js_string, Context, JsValue, Source};
+use boa_engine::{js_string, Context, JsValue, Script, Source};
 use serde::Serialize;
 use std::collections::HashMap;
 
@@ -56,13 +56,8 @@ pub fn run(input: ScriptInput<'_>) -> Result<ScriptOutcome, String> {
         ctx.register_global_property(js_string!(*name), js, Attribute::all()).map_err(|e| e.to_string())?;
     }
 
-    // `return` needs a function body; otherwise the completion value is the result.
-    let code = if input.code.contains("return") {
-        format!("(function () {{\n{}\n}})()", input.code)
-    } else {
-        input.code.to_string()
-    };
-    let value = ctx.eval(Source::from_bytes(code.as_bytes())).map_err(|e| e.to_string())?;
+    let script = parse(input.code, &mut ctx)?;
+    let value = script.evaluate(&mut ctx).map_err(|e| e.to_string())?;
     let result = stringify(&value, &mut ctx);
 
     let read_back = |ctx: &mut Context, name: &str| -> HashMap<String, String> {
@@ -79,6 +74,20 @@ pub fn run(input: ScriptInput<'_>) -> Result<ScriptOutcome, String> {
     let locals: HashMap<String, String> = new_vars.into_iter().filter(|(k, v)| merged.get(k) != Some(v) || input.locals.contains_key(k)).collect();
 
     Ok(ScriptOutcome { result, locals, globals: new_globals, elapsed_ms: started.elapsed().as_millis() as u64 })
+}
+
+/// Parse the snippet as a script, so its completion value (the last expression)
+/// is the result. A top-level `return` is a syntax error in a script; then the
+/// snippet is a function body instead and its return value is the result. A
+/// `return` inside a function the snippet declares does not change anything.
+fn parse(code: &str, ctx: &mut Context) -> Result<Script, String> {
+    match Script::parse(Source::from_bytes(code.as_bytes()), None, ctx) {
+        Ok(script) => Ok(script),
+        Err(as_script) => {
+            let wrapped = format!("(function () {{\n{code}\n}})()");
+            Script::parse(Source::from_bytes(wrapped.as_bytes()), None, ctx).map_err(|_| as_script.to_string())
+        }
+    }
 }
 
 fn stringify(value: &JsValue, ctx: &mut Context) -> String {
@@ -139,6 +148,33 @@ mod tests {
         assert_eq!(out.locals.get("count").map(String::as_str), Some("2"));
         assert_eq!(out.globals.get("last").map(String::as_str), Some("x"));
         assert_eq!(out.result, r#"{"a":1}"#);
+    }
+
+    #[test]
+    fn return_inside_a_declared_function_keeps_the_completion_value() {
+        let code = "function twice(n) {\n  return n * 2;\n}\n\ntwice(21);";
+        assert_eq!(run_code(code, &[], &[]).result, "42");
+        // The user's report: a formatter with `return` inside, called as the last expression.
+        let code = r#"function formatDateTime(date) {
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const day = days[date.getDay()];
+  let hours = date.getHours();
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  return `${day} ${hours}:${minutes} ${ampm}`;
+}
+
+formatDateTime(new Date(2026, 8, 13, 15, 5));"#;
+        assert_eq!(run_code(code, &[], &[]).result, "Sun 3:05 PM");
+        // A top-level return still works, and a real syntax error is reported as such.
+        assert_eq!(run_code("const x = 2;\nreturn x * 3;", &[], &[]).result, "6");
+        let locals = HashMap::new();
+        let globals = HashMap::new();
+        let builtins = HashMap::new();
+        let err = run(ScriptInput { code: "const = ;", locals: &locals, globals: &globals, builtins: &builtins }).unwrap_err();
+        assert!(err.contains("SyntaxError"), "{err}");
     }
 
     #[test]
