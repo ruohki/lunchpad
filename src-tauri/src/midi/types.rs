@@ -57,17 +57,18 @@ impl LaunchpadModel {
     /// Reply layout (Novation): `F0 7E <dev> 06 02 00 20 29 <family lsb> <family msb>
     /// <member lsb> <member msb> <v1> <v2> <v3> <v4> F7`
     ///
-    /// Verified on hardware: MK2 replies `69 00 00 00`.
-    /// The other ids come from Novation's programmer references.
-    /// Model from the two family bytes of the inquiry reply (LSB, MSB). The
-    /// X, Mini MK3 and Pro MK3 manuals all print `13 01` and a real Launchpad X
-    /// answers `03 01`, so the third generation maps to the X here and the
-    /// scanner refines it by port name. A Launchkey Mini MK4 25 answers `41 01`.
+    /// Verified on hardware: MK2 replies `69 00 00 00`, a Launchpad X `03 01`
+    /// (its manual prints `13 01`), a Launchkey Mini MK4 25 `41 01`. The Mini
+    /// MK3 and Pro MK3 manuals print `13 01` as well, so the third generation is
+    /// taken as `03` X, `13` Mini MK3, `23` Pro MK3 until a device of each has
+    /// been seen; the scanner lets the port name override any of the three.
     pub fn from_inquiry_family(family_lsb: u8, family_msb: u8) -> Option<Self> {
         match (family_lsb, family_msb) {
             (0x69, _) => Some(LaunchpadModel::LaunchpadMk2),
             (0x51, _) => Some(LaunchpadModel::LaunchpadProMk2),
-            (0x03 | 0x13 | 0x23, 0x01) => Some(LaunchpadModel::LaunchpadX),
+            (0x03, 0x01) => Some(LaunchpadModel::LaunchpadX),
+            (0x13, 0x01) => Some(LaunchpadModel::LaunchpadMiniMk3),
+            (0x23, 0x01) => Some(LaunchpadModel::LaunchpadProMk3),
             (0x41, 0x01) => Some(LaunchpadModel::LaunchkeyMiniMk4),
             // Launchpad S and Launchpad Mini (MK1/MK2)
             (0x20, _) | (0x36, _) => Some(LaunchpadModel::LaunchpadLegacy),

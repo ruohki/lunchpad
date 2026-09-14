@@ -96,9 +96,12 @@ mod tests {
         let reply = parse_inquiry_reply(&msg).expect("novation reply");
         assert_eq!(reply.model(), Some(LaunchpadModel::LaunchpadX));
         assert_eq!(reply.firmware, "0.2.3.8");
-        // The manuals' `13 01` still resolves to the third generation.
+        // The manuals' `13 01` is taken as the Mini MK3 and `23 01` as the Pro MK3 (unverified;
+        // the scanner lets the port name override all three).
         let documented = [0xF0, 0x7E, 0x00, 0x06, 0x02, 0x00, 0x20, 0x29, 0x13, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0xF7];
-        assert_eq!(parse_inquiry_reply(&documented).unwrap().model(), Some(LaunchpadModel::LaunchpadX));
+        assert_eq!(parse_inquiry_reply(&documented).unwrap().model(), Some(LaunchpadModel::LaunchpadMiniMk3));
+        let pro = [0xF0, 0x7E, 0x00, 0x06, 0x02, 0x00, 0x20, 0x29, 0x23, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0xF7];
+        assert_eq!(parse_inquiry_reply(&pro).unwrap().model(), Some(LaunchpadModel::LaunchpadProMk3));
     }
 
     #[test]

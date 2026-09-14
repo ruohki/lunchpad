@@ -53,7 +53,10 @@ velocity ≥ 25 (velocity sensitive pads).
 
 ## Launchpad Mini MK3  (unverified)
 
-Same map as the X. Header `… 02 0D`. Inquiry family `13 0D`. Not velocity sensitive.
+Same map as the X. Header `… 02 0D`. Not velocity sensitive. Its manual prints the same inquiry
+family as the X's (`13 01`) while a real X answers `03 01`, so `13 01` is taken as the Mini MK3
+(and `23 01` as the Pro MK3) until a device confirms it; the port name overrides the inquiry
+between the three either way.
 
 ## Launchpad Pro MK2  (verified on hardware, firmware 0.1.8.2, 2026-09-10)
 
