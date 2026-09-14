@@ -1,4 +1,5 @@
-//! Launchkey Mini MK3 driver (DAW mode over the DAW port).
+//! Launchkey Mini MK3 driver (DAW mode over the DAW port, keys over the MIDI
+//! port).
 //!
 //! References: Novation "Launchkey MK3 Programmer's Reference" (the Mini shares
 //! its DAW protocol) and the community MIDI notes for the Mini; Novation has
@@ -14,32 +15,92 @@
 //! on channel 16. Shift is CC 108 on channel 16 and has no LED. The eight
 //! knobs send CC 21..28 on channel 16 (0..127) and become control events.
 //! Transpose, Octave, Arp and Fixed Chord are keyboard functions that report
-//! nothing in DAW mode; the pitch and modulation strips report on the MIDI
-//! port and are not read yet.
+//! nothing in DAW mode.
 //!
-//! Logical layout (x from the left, y from the bottom), 14 x 4:
-//!   y = 3  strips (0, 1, spanning down)  Shift (2)  knobs (3..10)
-//!   y = 2  Transpose (2)  pads (3..10)  ">" (11)  Arp (12)  Fixed Chord (13)
-//!   y = 1  Octave + (2)   pads (3..10)  SSM (11)  Play (12)  Record (13)
-//!   y = 0  Octave − (2)
+//! The 25 keys play on the device's MIDI interface (the second input the
+//! manager opens), on the keyboard's own channel: Note 48..72 (C2..C4) at the
+//! default octave. An Octave shift moves them out of that range, which the
+//! app cannot see, so shifted keys are ignored; with the Arp on a held key
+//! repeats. The strips report on the same interface: pitch as Pitch Bend
+//! (14 bit, back to the centre when released) and modulation as CC 1; both
+//! become control events on any channel.
+//!
+//! Logical layout (x from the left, y from the bottom), 15 x 7. Each pad row
+//! is two half-rows so the side buttons can sit where they are printed: the
+//! pads and the scene buttons span both halves.
+//!   y = 6  strips (0, 1, spanning down to y = 2)  Shift (2)  knobs (4..11)
+//!   y = 5  Transpose (2)  pads (4..11, 2 rows)  ">" (12, 2 rows)
+//!   y = 4                                        Arp (13)  Fixed Chord (14)
+//!   y = 3  Octave + (2)   pads (4..11, 2 rows)  Stop Solo Mute (12, 2 rows)
+//!   y = 2  Octave − (2)                          Play (13)  Record (14)
+//!   y = 1  black keys, each at the x of the white key to its left
+//!   y = 0  white keys (0..14)
+//! Column 3 is the gap between the keyboard buttons and the pads; the empty
+//! top-right cell takes the settings pad.
 
 use super::{spec, LaunchpadDriver};
 use crate::midi::palette::{nearest_palette_index, palette_color};
 use crate::midi::types::*;
 
-const PAD_X0: u8 = 3;
-const PAD_TOP_Y: u8 = 2;
-const PAD_BOTTOM_Y: u8 = 1;
-const KNOB_Y: u8 = 3;
+const WIDTH: u8 = 15;
+const HEIGHT: u8 = 7;
+const BUTTON_X: u8 = 2;
+const PAD_X0: u8 = 4;
+const PAD_X1: u8 = 11;
+const SCENE_X: u8 = 12;
+const ARP_X: u8 = 13;
+const CHORD_X: u8 = 14;
+const KNOB_Y: u8 = 6;
+/// Anchor (upper half-row) of each pad row; the pads span the half-row below too.
+const PAD_TOP_Y: u8 = 5;
+const PAD_BOTTOM_Y: u8 = 3;
+/// Lower half-row of the bottom pad row: Play and Record.
+const TRANSPORT_Y: u8 = 2;
+const BLACK_Y: u8 = 1;
+const WHITE_Y: u8 = 0;
 const CC_SCENE_UP: u8 = 104;
 const CC_SCENE_DOWN: u8 = 105;
 const CC_SHIFT: u8 = 108;
 const CC_PLAY: u8 = 115;
 const CC_RECORD: u8 = 117;
 const CC_KNOB_FIRST: u8 = 21;
-const KNOB_LABELS: [&str; 8] = ["1", "2", "3", "4", "5", "6", "7", "8"];
+const CC_KNOB_LAST: u8 = 28;
+/// Lowest and highest key at the default octave (C2..C4).
+const KEY_FIRST: u8 = 48;
+const KEY_LAST: u8 = 72;
+const WHITE_KEYS: u8 = 15;
+/// Semitone above C of each white key within an octave.
+const WHITE_OFFSETS: [u8; 7] = [0, 2, 4, 5, 7, 9, 11];
 
 pub struct LaunchkeyMiniMk3;
+
+/// Note of white key `i` (0 = the lowest C).
+fn white_note(i: u8) -> u8 {
+    KEY_FIRST + 12 * (i / 7) + WHITE_OFFSETS[(i % 7) as usize]
+}
+
+/// Note of the black key right of white key `i`, if there is one (none after E and B,
+/// none after the top C).
+fn black_note(i: u8) -> Option<u8> {
+    match i % 7 {
+        0 | 1 | 3 | 4 | 5 if i + 1 < WHITE_KEYS => Some(white_note(i) + 1),
+        _ => None,
+    }
+}
+
+/// Coordinate of the key playing `note` at the default octave.
+fn key_xy(note: u8) -> Option<(u8, u8)> {
+    if !(KEY_FIRST..=KEY_LAST).contains(&note) {
+        return None;
+    }
+    let semitone = note - KEY_FIRST;
+    let (octave, degree) = (semitone / 12, semitone % 12);
+    match WHITE_OFFSETS.iter().position(|o| *o == degree) {
+        Some(i) => Some((7 * octave + i as u8, WHITE_Y)),
+        // A black key sits at the x of the white key below it.
+        None => WHITE_OFFSETS.iter().rposition(|o| *o < degree).map(|i| (7 * octave + i as u8, BLACK_Y)),
+    }
+}
 
 /// Which MIDI channel status a control's LED listens on: note-style pads, CC
 /// buttons on channel 1, or the white CC buttons on channel 16.
@@ -51,12 +112,12 @@ enum Led {
 
 fn led_of(x: u8, y: u8) -> Option<Led> {
     match (x, y) {
-        (PAD_X0..=10, PAD_TOP_Y) => Some(Led::Pad(96 + (x - PAD_X0))),
-        (PAD_X0..=10, PAD_BOTTOM_Y) => Some(Led::Pad(112 + (x - PAD_X0))),
-        (11, PAD_TOP_Y) => Some(Led::SceneButton(CC_SCENE_UP)),
-        (11, PAD_BOTTOM_Y) => Some(Led::SceneButton(CC_SCENE_DOWN)),
-        (12, PAD_BOTTOM_Y) => Some(Led::White(CC_PLAY)),
-        (13, PAD_BOTTOM_Y) => Some(Led::White(CC_RECORD)),
+        (PAD_X0..=PAD_X1, PAD_TOP_Y) => Some(Led::Pad(96 + (x - PAD_X0))),
+        (PAD_X0..=PAD_X1, PAD_BOTTOM_Y) => Some(Led::Pad(112 + (x - PAD_X0))),
+        (SCENE_X, PAD_TOP_Y) => Some(Led::SceneButton(CC_SCENE_UP)),
+        (SCENE_X, PAD_BOTTOM_Y) => Some(Led::SceneButton(CC_SCENE_DOWN)),
+        (ARP_X, TRANSPORT_Y) => Some(Led::White(CC_PLAY)),
+        (CHORD_X, TRANSPORT_Y) => Some(Led::White(CC_RECORD)),
         _ => None,
     }
 }
@@ -72,26 +133,33 @@ impl LaunchpadDriver for LaunchkeyMiniMk3 {
     }
 
     fn layout(&self) -> Layout {
-        let mut pads = Vec::with_capacity(56);
-        for y in (0..4u8).rev() {
-            for x in 0..14u8 {
+        use PadRegion::*;
+        use PadShape::*;
+        let mut pads = Vec::with_capacity((WIDTH * HEIGHT) as usize);
+        for y in (0..HEIGHT).rev() {
+            for x in 0..WIDTH {
                 let p = match (x, y) {
-                    (0, 3) => spec(self, x, y, PadShape::Strip, PadRegion::Left, Some("Pitch")).with_rows(4),
-                    (1, 3) => spec(self, x, y, PadShape::Strip, PadRegion::Left, Some("Mod")).with_rows(4),
-                    (0 | 1, _) => continue,
-                    (2, 3) => spec(self, x, y, PadShape::Small, PadRegion::Left, Some("Shift")).with_led(LedKind::None),
-                    (2, 2) => spec(self, x, y, PadShape::Small, PadRegion::Left, Some("Transpose")).with_led(LedKind::None).without_input(),
-                    (2, 1) => spec(self, x, y, PadShape::Small, PadRegion::Left, Some("Oct +")).with_led(LedKind::None).without_input(),
-                    (2, 0) => spec(self, x, y, PadShape::Small, PadRegion::Left, Some("Oct −")).with_led(LedKind::None).without_input(),
-                    (PAD_X0..=10, KNOB_Y) => spec(self, x, y, PadShape::Knob, PadRegion::Top, Some(KNOB_LABELS[(x - PAD_X0) as usize])),
-                    (PAD_X0..=10, PAD_TOP_Y | PAD_BOTTOM_Y) => spec(self, x, y, PadShape::Pad, PadRegion::Grid, None),
-                    (11, PAD_TOP_Y) => spec(self, x, y, PadShape::Round, PadRegion::Right, Some("▶")),
-                    (11, PAD_BOTTOM_Y) => spec(self, x, y, PadShape::Round, PadRegion::Right, Some("Stop Solo Mute")),
-                    (12, PAD_TOP_Y) => spec(self, x, y, PadShape::Small, PadRegion::Right, Some("Arp")).with_led(LedKind::None).without_input(),
-                    (13, PAD_TOP_Y) => spec(self, x, y, PadShape::Small, PadRegion::Right, Some("Fixed Chord")).with_led(LedKind::None).without_input(),
-                    (12, PAD_BOTTOM_Y) => spec(self, x, y, PadShape::Round, PadRegion::Right, Some("Play")).with_led(LedKind::White),
-                    (13, PAD_BOTTOM_Y) => spec(self, x, y, PadShape::Round, PadRegion::Right, Some("Record")).with_led(LedKind::White),
-                    _ => spec(self, x, y, PadShape::Empty, PadRegion::Other, None),
+                    (0, KNOB_Y) => spec(self, x, y, Strip, Left, Some("Pitch")).with_rows(5),
+                    (1, KNOB_Y) => spec(self, x, y, Strip, Left, Some("Modulation")).with_rows(5),
+                    // Covered by the strips.
+                    (0 | 1, 2..=PAD_TOP_Y) => continue,
+                    (BUTTON_X, KNOB_Y) => spec(self, x, y, Rect, Left, Some("Shift")).with_led(LedKind::None),
+                    (BUTTON_X, PAD_TOP_Y) => spec(self, x, y, Rect, Left, Some("Transpose")).with_led(LedKind::None).without_input(),
+                    (BUTTON_X, PAD_BOTTOM_Y) => spec(self, x, y, Rect, Left, Some("+")).with_led(LedKind::None).without_input(),
+                    (BUTTON_X, 2) => spec(self, x, y, Rect, Left, Some("−")).with_led(LedKind::None).without_input(),
+                    (PAD_X0..=PAD_X1, KNOB_Y) => spec(self, x, y, Knob, Top, None),
+                    (PAD_X0..=PAD_X1, PAD_TOP_Y | PAD_BOTTOM_Y) => spec(self, x, y, Pad, Grid, None).with_rows(2),
+                    (SCENE_X, PAD_TOP_Y) => spec(self, x, y, Pad, Right, Some(">")).with_rows(2),
+                    (SCENE_X, PAD_BOTTOM_Y) => spec(self, x, y, Pad, Right, Some("Stop Solo Mute")).with_rows(2),
+                    // The lower halves of the pad rows, covered by the pads and scene buttons.
+                    (PAD_X0..=SCENE_X, 2 | 4) => continue,
+                    (ARP_X, 4) => spec(self, x, y, Rect, Right, Some("Arp")).with_led(LedKind::None).without_input(),
+                    (CHORD_X, 4) => spec(self, x, y, Rect, Right, Some("Fixed Chord")).with_led(LedKind::None).without_input(),
+                    (ARP_X, TRANSPORT_Y) => spec(self, x, y, Rect, Right, Some("▶")).with_led(LedKind::White),
+                    (CHORD_X, TRANSPORT_Y) => spec(self, x, y, Rect, Right, Some("●")).with_led(LedKind::White),
+                    (_, WHITE_Y) => spec(self, x, y, KeyWhite, Bottom, None),
+                    (_, BLACK_Y) if black_note(x).is_some() => spec(self, x, y, KeyBlack, Bottom, None),
+                    _ => spec(self, x, y, Empty, Other, None),
                 };
                 pads.push(p);
             }
@@ -99,10 +167,11 @@ impl LaunchpadDriver for LaunchkeyMiniMk3 {
         Layout {
             model: self.model(),
             model_name: self.model().display_name().into(),
-            width: 14,
-            height: 4,
-            // The bottom row only holds Octave −; keep it short.
-            row_weights: vec![0.6, 1.0, 1.0, 1.0],
+            width: WIDTH,
+            height: HEIGHT,
+            // Bottom up: white keys, black keys, two half-rows per pad row (a pad spanning
+            // both plus the gap between them comes out square), knobs.
+            row_weights: vec![1.6, 1.1, 0.46, 0.46, 0.46, 0.46, 0.95],
             pads,
             limited_color: false,
             velocity_sensitive: true,
@@ -148,8 +217,8 @@ impl LaunchpadDriver for LaunchkeyMiniMk3 {
                 Led::White(cc) => {
                     let level = match led {
                         LedColor::Off => 0,
-                        LedColor::Palette(i) | LedColor::Pulsing(i) | LedColor::Flashing { index: i, .. } => brightness(palette_color(*i)),
                         LedColor::Rgb(c) => brightness(*c),
+                        LedColor::Palette(i) | LedColor::Pulsing(i) | LedColor::Flashing { index: i, .. } => brightness(palette_color(*i)),
                     };
                     out.push(vec![0xBF, cc, level]);
                 }
@@ -173,14 +242,16 @@ impl LaunchpadDriver for LaunchkeyMiniMk3 {
 
     fn xy_to_note(&self, x: u8, y: u8) -> Option<(u8, bool)> {
         match (x, y) {
-            (PAD_X0..=10, PAD_TOP_Y) => Some((96 + (x - PAD_X0), false)),
-            (PAD_X0..=10, PAD_BOTTOM_Y) => Some((112 + (x - PAD_X0), false)),
-            (PAD_X0..=10, KNOB_Y) => Some((CC_KNOB_FIRST + (x - PAD_X0), true)),
-            (11, PAD_TOP_Y) => Some((CC_SCENE_UP, true)),
-            (11, PAD_BOTTOM_Y) => Some((CC_SCENE_DOWN, true)),
-            (12, PAD_BOTTOM_Y) => Some((CC_PLAY, true)),
-            (13, PAD_BOTTOM_Y) => Some((CC_RECORD, true)),
-            (2, 3) => Some((CC_SHIFT, true)),
+            (PAD_X0..=PAD_X1, PAD_TOP_Y) => Some((96 + (x - PAD_X0), false)),
+            (PAD_X0..=PAD_X1, PAD_BOTTOM_Y) => Some((112 + (x - PAD_X0), false)),
+            (PAD_X0..=PAD_X1, KNOB_Y) => Some((CC_KNOB_FIRST + (x - PAD_X0), true)),
+            (SCENE_X, PAD_TOP_Y) => Some((CC_SCENE_UP, true)),
+            (SCENE_X, PAD_BOTTOM_Y) => Some((CC_SCENE_DOWN, true)),
+            (ARP_X, TRANSPORT_Y) => Some((CC_PLAY, true)),
+            (CHORD_X, TRANSPORT_Y) => Some((CC_RECORD, true)),
+            (BUTTON_X, KNOB_Y) => Some((CC_SHIFT, true)),
+            (x, WHITE_Y) if x < WHITE_KEYS => Some((white_note(x), false)),
+            (x, BLACK_Y) => black_note(x).map(|n| (n, false)),
             _ => None,
         }
     }
@@ -188,18 +259,19 @@ impl LaunchpadDriver for LaunchkeyMiniMk3 {
     fn note_to_xy(&self, note: u8, cc: bool) -> Option<(u8, u8)> {
         if cc {
             match note {
-                CC_SCENE_UP => Some((11, PAD_TOP_Y)),
-                CC_SCENE_DOWN => Some((11, PAD_BOTTOM_Y)),
-                CC_PLAY => Some((12, PAD_BOTTOM_Y)),
-                CC_RECORD => Some((13, PAD_BOTTOM_Y)),
-                CC_SHIFT => Some((2, 3)),
-                21..=28 => Some((PAD_X0 + (note - CC_KNOB_FIRST), KNOB_Y)),
+                CC_SCENE_UP => Some((SCENE_X, PAD_TOP_Y)),
+                CC_SCENE_DOWN => Some((SCENE_X, PAD_BOTTOM_Y)),
+                CC_PLAY => Some((ARP_X, TRANSPORT_Y)),
+                CC_RECORD => Some((CHORD_X, TRANSPORT_Y)),
+                CC_SHIFT => Some((BUTTON_X, KNOB_Y)),
+                CC_KNOB_FIRST..=CC_KNOB_LAST => Some((PAD_X0 + (note - CC_KNOB_FIRST), KNOB_Y)),
                 _ => None,
             }
         } else {
             match note {
                 96..=103 => Some((PAD_X0 + (note - 96), PAD_TOP_Y)),
                 112..=119 => Some((PAD_X0 + (note - 112), PAD_BOTTOM_Y)),
+                KEY_FIRST..=KEY_LAST => key_xy(note),
                 _ => None,
             }
         }
@@ -209,8 +281,9 @@ impl LaunchpadDriver for LaunchkeyMiniMk3 {
         1
     }
 
-    /// Pads are notes on channel 1; only the button CCs count as presses, the
-    /// knob CCs are controls (see `parse_control`), everything else is ignored.
+    /// DAW interface: pads are notes on channel 1; only the button CCs count as
+    /// presses, the knob CCs are controls (see `parse_control`), everything
+    /// else is ignored. The keys never arrive here.
     fn parse_input_with(&self, msg: &[u8], threshold: u8) -> Option<ButtonEvent> {
         if msg.len() < 3 {
             return None;
@@ -234,11 +307,49 @@ impl LaunchpadDriver for LaunchkeyMiniMk3 {
     }
 
     fn parse_control(&self, msg: &[u8]) -> Option<ControlEvent> {
-        if msg.len() < 3 || msg[0] != 0xBF || !(21..=28).contains(&msg[1]) {
+        if msg.len() < 3 || msg[0] != 0xBF || !(CC_KNOB_FIRST..=CC_KNOB_LAST).contains(&msg[1]) {
             return None;
         }
         let (x, y) = self.note_to_xy(msg[1], true)?;
         Some(ControlEvent { x, y, value: msg[2].min(127) as f32 / 127.0 })
+    }
+
+    fn has_secondary_input(&self) -> bool {
+        true
+    }
+
+    /// MIDI interface: the pitch strip as Pitch Bend, the modulation strip as CC 1.
+    fn parse_secondary_control(&self, msg: &[u8]) -> Option<ControlEvent> {
+        if msg.len() < 3 {
+            return None;
+        }
+        match (msg[0] & 0xF0, msg[1]) {
+            (0xE0, lsb) => {
+                let bend = ((msg[2].min(127) as u16) << 7) | lsb.min(127) as u16;
+                Some(ControlEvent { x: 0, y: KNOB_Y, value: bend as f32 / 16383.0 })
+            }
+            (0xB0, 1) => Some(ControlEvent { x: 1, y: KNOB_Y, value: msg[2].min(127) as f32 / 127.0 }),
+            _ => None,
+        }
+    }
+
+    /// MIDI interface: the keys, as notes on whichever channel the keyboard is
+    /// set to. Notes outside the default octave range and everything else
+    /// (sustain, the strips handled by `parse_secondary_control`) are ignored.
+    fn parse_secondary_input(&self, msg: &[u8], threshold: u8) -> Option<ButtonEvent> {
+        if msg.len() < 3 {
+            return None;
+        }
+        let threshold = threshold.max(1);
+        let (status, note, value) = (msg[0] & 0xF0, msg[1], msg[2]);
+        if !matches!(status, 0x90 | 0x80) {
+            return None;
+        }
+        if status == 0x90 && value > 0 && value < threshold {
+            return None;
+        }
+        let (x, y) = key_xy(note)?;
+        Some(ButtonEvent { x, y, pressed: status == 0x90 && value >= threshold, note, cc: false, value })
     }
 }
 
@@ -249,31 +360,82 @@ mod tests {
     #[test]
     fn launchkey_mapping() {
         let d = LaunchkeyMiniMk3;
-        assert_eq!(d.xy_to_note(3, 2), Some((96, false)));
-        assert_eq!(d.xy_to_note(10, 1), Some((119, false)));
-        assert_eq!(d.note_to_xy(112, false), Some((3, 1)));
-        assert_eq!(d.xy_to_note(11, 2), Some((104, true)));
-        assert_eq!(d.note_to_xy(117, true), Some((13, 1)));
-        assert_eq!(d.xy_to_note(2, 2), None, "Transpose has no DAW message");
+        assert_eq!(d.xy_to_note(4, 5), Some((96, false)));
+        assert_eq!(d.xy_to_note(11, 3), Some((119, false)));
+        assert_eq!(d.xy_to_note(4, 4), None, "the lower half of a pad row is covered by the pad");
+        assert_eq!(d.note_to_xy(112, false), Some((4, 3)));
+        assert_eq!(d.xy_to_note(12, 5), Some((104, true)));
+        assert_eq!(d.note_to_xy(117, true), Some((14, 2)));
+        assert_eq!(d.xy_to_note(2, 6), Some((108, true)));
+        assert_eq!(d.xy_to_note(2, 5), None, "Transpose has no DAW message");
+        assert_eq!(d.xy_to_note(3, 5), None, "the gap column is empty");
         // Presses: pads on channel 1, buttons on their channels, knobs never.
         let pad = d.parse_input_with(&[0x90, 100, 90], 1).unwrap();
-        assert_eq!((pad.x, pad.y, pad.pressed, pad.value), (7, 2, true, 90));
+        assert_eq!((pad.x, pad.y, pad.pressed, pad.value), (8, 5, true, 90));
         assert!(!d.parse_input_with(&[0x90, 100, 0], 1).unwrap().pressed);
         let play = d.parse_input_with(&[0xBF, 115, 127], 1).unwrap();
-        assert_eq!((play.x, play.y, play.pressed), (12, 1, true));
+        assert_eq!((play.x, play.y, play.pressed), (13, 2, true));
         assert!(d.parse_input_with(&[0xBF, 24, 100], 1).is_none());
         assert!(d.parse_input_with(&[0xB0, 115, 127], 1).is_none(), "Play lives on channel 16");
+        assert!(d.parse_input_with(&[0x90, 60, 100], 1).is_none(), "keys do not arrive on the DAW interface");
         let knob = d.parse_control(&[0xBF, 24, 127]).unwrap();
-        assert_eq!((knob.x, knob.y), (6, 3));
+        assert_eq!((knob.x, knob.y), (7, 6));
         assert!((knob.value - 1.0).abs() < 1e-6);
         assert!(d.parse_control(&[0xB0, 24, 127]).is_none());
         // LEDs: pads and scene buttons take palette indices, Play/Record a brightness, the rest nothing.
-        let msgs = d.led_messages(&[(3, 2, LedColor::Palette(5)), (11, 1, LedColor::Flashing { index: 5, alt: 21 }), (12, 1, LedColor::Rgb(Color::new(255, 255, 255))), (2, 3, LedColor::Palette(5)), (3, 3, LedColor::Palette(5))]);
+        let msgs = d.led_messages(&[(4, 5, LedColor::Palette(5)), (12, 3, LedColor::Flashing { index: 5, alt: 21 }), (13, 2, LedColor::Rgb(Color::new(255, 255, 255))), (2, 6, LedColor::Palette(5)), (4, 6, LedColor::Palette(5)), (0, 0, LedColor::Palette(5))]);
         assert_eq!(msgs, vec![vec![0x90, 96, 5], vec![0xB0, 105, 5], vec![0xB1, 105, 21], vec![0xBF, 115, 127]]);
         let layout = d.layout();
-        let strip = layout.pads.iter().find(|p| p.x == 0 && p.y == 3).unwrap();
-        assert_eq!((strip.shape, strip.rows, strip.led), (PadShape::Strip, 4, LedKind::None));
-        assert!(layout.pads.iter().find(|p| p.x == 2 && p.y == 2).unwrap().note.is_none());
-        assert_eq!(layout.pads.iter().find(|p| p.x == 12 && p.y == 1).unwrap().led, LedKind::White);
+        let at = |x: u8, y: u8| layout.pads.iter().find(|p| p.x == x && p.y == y).unwrap();
+        assert_eq!((at(0, 6).shape, at(0, 6).rows, at(0, 6).led), (PadShape::Strip, 5, LedKind::None));
+        assert!(at(2, 5).note.is_none());
+        assert_eq!((at(12, 5).shape, at(12, 5).rows, at(12, 5).label.as_deref()), (PadShape::Pad, 2, Some(">")));
+        assert_eq!(at(4, 3).rows, 2, "pads span both half-rows");
+        assert!(layout.pads.iter().all(|p| p.y != 4 || matches!(p.x, 2 | 3 | 13 | 14)), "only side buttons and gaps sit on a lower half-row");
+        assert_eq!((at(13, 4).shape, at(13, 4).label.as_deref()), (PadShape::Rect, Some("Arp")));
+        assert_eq!((at(13, 2).shape, at(13, 2).led), (PadShape::Rect, LedKind::White));
+        assert_eq!(at(14, 6).shape, PadShape::Empty, "the settings pad takes the top-right corner");
+        assert!(at(4, 6).label.is_none(), "nothing is printed on the knobs");
+    }
+
+    #[test]
+    fn launchkey_keys() {
+        let d = LaunchkeyMiniMk3;
+        // Two octaves C2..C4: 15 white keys, 10 black ones between them.
+        assert_eq!(d.xy_to_note(0, 0), Some((48, false)));
+        assert_eq!(d.xy_to_note(14, 0), Some((72, false)));
+        assert_eq!(d.xy_to_note(0, 1), Some((49, false)), "C#2 sits right of C2");
+        assert_eq!(d.xy_to_note(12, 1), Some((70, false)), "A#3 sits right of A3");
+        assert_eq!(d.xy_to_note(2, 1), None, "no black key after E");
+        assert_eq!(d.xy_to_note(6, 1), None, "no black key after B");
+        assert_eq!(d.xy_to_note(14, 1), None, "no black key after the top C");
+        assert_eq!(d.note_to_xy(61, false), Some((7, 1)));
+        assert_eq!(d.note_to_xy(65, false), Some((10, 0)));
+        assert_eq!(d.note_to_xy(73, false), None, "a shifted octave is not seen");
+        let layout = d.layout();
+        assert_eq!(layout.pads.iter().filter(|p| p.shape == PadShape::KeyWhite).count(), 15);
+        assert_eq!(layout.pads.iter().filter(|p| p.shape == PadShape::KeyBlack).count(), 10);
+        assert!(layout.pads.iter().filter(|p| matches!(p.shape, PadShape::KeyWhite | PadShape::KeyBlack)).all(|p| p.led == LedKind::None && p.note.is_some()));
+        // The keys arrive on the second interface, on any channel, with velocity.
+        assert!(d.has_secondary_input());
+        let key = d.parse_secondary_input(&[0x90, 60, 100], 1).unwrap();
+        assert_eq!((key.x, key.y, key.pressed, key.value, key.cc), (7, 0, true, 100, false));
+        assert!(!d.parse_secondary_input(&[0x80, 60, 64], 1).unwrap().pressed);
+        assert!(!d.parse_secondary_input(&[0x90, 60, 0], 1).unwrap().pressed);
+        assert_eq!(d.parse_secondary_input(&[0x91, 49, 100], 1).map(|e| (e.x, e.y)), Some((0, 1)));
+        assert!(d.parse_secondary_input(&[0x90, 60, 10], 20).is_none(), "below the threshold");
+        assert!(d.parse_secondary_input(&[0x90, 96, 100], 1).is_none(), "pad notes are not keys");
+        assert!(d.parse_secondary_input(&[0xB0, 1, 100], 1).is_none(), "the modulation strip is not a key");
+        assert!(d.parse_secondary_input(&[0xE0, 0, 64], 1).is_none(), "the pitch strip is not a key");
+        // The strips are controls on the same interface: pitch bend (centre = half way), CC 1.
+        let pitch = d.parse_secondary_control(&[0xE0, 0x00, 0x40]).unwrap();
+        assert_eq!((pitch.x, pitch.y), (0, 6));
+        assert!((pitch.value - 0.5).abs() < 0.001);
+        assert!((d.parse_secondary_control(&[0xE1, 0x7F, 0x7F]).unwrap().value - 1.0).abs() < 1e-6);
+        let modulation = d.parse_secondary_control(&[0xB0, 1, 127]).unwrap();
+        assert_eq!((modulation.x, modulation.y, modulation.value), (1, 6, 1.0));
+        assert!(d.parse_secondary_control(&[0xB0, 64, 127]).is_none(), "sustain is not a strip");
+        assert!(d.parse_secondary_control(&[0x90, 60, 100]).is_none());
+        assert!(d.parse_control(&[0xE0, 0, 64]).is_none(), "strips do not report on the DAW interface");
     }
 }

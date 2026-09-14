@@ -119,30 +119,42 @@ and `B0 00 28` returns to buffer 0. Pulsing has no hardware equivalent and shows
 
 ## Launchkey Mini MK3  (unverified)
 
-Not a Launchpad: 16 pads, 8 knobs, two touch strips, a few buttons and a keyboard. Driven in
-DAW mode on the DAW port (`9F 0C 7F` on, `9F 0C 00` off, then `BF 03 02` Session pads and
-`BF 09 03` Pan knobs). Novation has no Mini-specific programmer's guide; the DAW protocol of
-the full-size Launchkey MK3 reference applies. Identified by port name ("Launchkey Mini MK3");
-the inquiry reply's family bytes are unknown until a device is seen.
+Not a Launchpad: 16 pads, 8 knobs, two touch strips, a few buttons and 25 keys. Driven in
+DAW mode on the DAW interface (`9F 0C 7F` on, `9F 0C 00` off, then `BF 03 02` Session pads and
+`BF 09 03` Pan knobs). The keys play on the MIDI interface, which the app opens as a second
+input next to the DAW pair: on macOS and Linux the other Launchkey port whose name says MIDI,
+on Windows the port without the `MIDIIN2` ordinal. Novation has no Mini-specific programmer's
+guide; the DAW protocol of the full-size Launchkey MK3 reference applies. Identified by port
+name ("Launchkey Mini MK3"); the inquiry reply's family bytes are unknown until a device is seen.
 
-Logical layout 14 x 4 (x from the left, y from the bottom):
+Logical layout 15 x 7 (x from the left, y from the bottom). Each pad row is two half-rows
+(y 5 + 4 and y 3 + 2) so the side buttons sit where they are printed; the pads and the scene
+buttons span both halves and are addressed by the upper one, so a fader cannot run down across
+the two pad rows. Column 3 is the empty gap left of the pads; the empty top-right cell holds the
+settings pad.
 
 | Region | Coordinates | MIDI | Numbers | LED |
 |---|---|---|---|---|
-| Pitch / Mod strips | (0, 3), (1, 3), 4 rows | not read yet | | none |
-| Shift | (2, 3) | CC ch 16 | 108 | none |
-| Transpose, Octave ± | (2, 2), (2, 1), (2, 0) | none in DAW mode | | none |
-| Knobs 1-8 | x 3-10, y 3 | CC ch 16 | 21..28, value 0-127 → control events | none |
-| Pads top row | x 3-10, y 2 | Note ch 1 | 96..103 | RGB palette |
-| Pads bottom row | x 3-10, y 1 | Note ch 1 | 112..119 | RGB palette |
-| ▶ (scene launch) | (11, 2) | CC ch 1 | 104 | RGB palette |
-| Stop Solo Mute | (11, 1) | CC ch 1 | 105 | RGB palette |
-| Arp, Fixed Chord | (12, 2), (13, 2) | none in DAW mode | | none |
-| Play, Record | (12, 1), (13, 1) | CC ch 16 | 115, 117 | white, brightness on ch 16 |
+| Pitch strip | (0, 6), 5 rows | Pitch Bend, MIDI interface, any channel | 14 bit → control event, centre when released | none |
+| Modulation strip | (1, 6), 5 rows | CC, MIDI interface, any channel | 1, value 0-127 → control event | none |
+| Shift | (2, 6) | CC ch 16 | 108 | none |
+| Transpose, Octave +, Octave − | (2, 5), (2, 3), (2, 2) | none in DAW mode | | none |
+| Knobs 1-8 | x 4-11, y 6 | CC ch 16 | 21..28, value 0-127 → control events | none |
+| Pads top row | x 4-11, y 5, 2 rows | Note ch 1 | 96..103 | RGB palette |
+| Pads bottom row | x 4-11, y 3, 2 rows | Note ch 1 | 112..119 | RGB palette |
+| > (scene launch) | (12, 5), 2 rows | CC ch 1 | 104 | RGB palette |
+| Stop Solo Mute | (12, 3), 2 rows | CC ch 1 | 105 | RGB palette |
+| Arp, Fixed Chord | (13, 4), (14, 4) | none in DAW mode | | none |
+| Play, Record | (13, 2), (14, 2) | CC ch 16 | 115, 117 | white, brightness on ch 16 |
+| White keys | x 0-14, y 0 | Note, MIDI interface, any channel | the white notes of 48..72 (C2..C4) | none |
+| Black keys | y 1, at the x of the white key to their left | Note, MIDI interface, any channel | the black notes of 49..70 | none |
 
 LEDs: a palette index as the velocity / value on channel 1 (solid), 2 (flashing, alternate colour)
-or 3 (pulsing); RGB colours become the nearest palette entry. Knobs feed a single-cell fader
-placed on them; the engine paces the fader's actions to one run per 60 ms while a knob moves.
+or 3 (pulsing); RGB colours become the nearest palette entry. Knobs and strips feed a single-cell
+fader placed on them; the engine paces the fader's actions to one run per 60 ms while one moves.
+The pitch strip springs back to its centre, so a fader on it returns to half way when released.
+Keys are mapped at the default octave: after an Octave shift they send other notes, which are
+ignored because the DAW interface does not report the shift. With the Arp on, a held key repeats.
 
 ## Hardware checklist (run per model)
 

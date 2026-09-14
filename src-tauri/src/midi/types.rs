@@ -166,6 +166,12 @@ pub enum PadShape {
     Knob,
     /// Touch strip: a continuous value along a bar, no LED (Launchkey)
     Strip,
+    /// Rounded rectangular button, wider than tall (Launchkey)
+    Rect,
+    /// White piano key, no LED (Launchkey)
+    KeyWhite,
+    /// Black piano key, no LED; placed at the `x` of the white key to its left (Launchkey)
+    KeyBlack,
 }
 
 /// What a control can show.

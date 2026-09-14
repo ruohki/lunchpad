@@ -331,6 +331,41 @@ fn rank_for(model: LaunchpadModel, name: &str, on_windows: bool) -> u8 {
     }
 }
 
+/// The input port of a device's second interface, for models that report on
+/// two (the Launchkey's keys arrive on its MIDI interface while the app talks
+/// to the DAW one): another port of the same device that is not
+/// `connected_input`, preferring the one whose name says it is the MIDI one.
+pub fn secondary_input_for(model: LaunchpadModel, connected_input: &str) -> Option<String> {
+    let inputs = list_inputs().ok()?;
+    secondary_input_among(model, connected_input, inputs.iter().map(|p| p.name.as_str()), cfg!(target_os = "windows"))
+}
+
+fn secondary_input_among<'a>(model: LaunchpadModel, connected_input: &str, names: impl Iterator<Item = &'a str>, on_windows: bool) -> Option<String> {
+    // Windows numbers the interfaces instead of naming them, so a port of the same
+    // device may not carry the model name; its base name matches the connected one.
+    let same_device = |n: &str| LaunchpadModel::from_port_name(n) == Some(model) || (on_windows && windows_base(n) == windows_base(connected_input));
+    names
+        .filter(|n| *n != connected_input && same_device(n))
+        .map(|n| (rank_for(model, n, on_windows), n))
+        // Rank 0 is the interface the app talks to: on another port it is a second device.
+        .filter(|(rank, _)| *rank != 0)
+        .max_by_key(|(rank, _)| *rank)
+        .map(|(_, n)| n.to_string())
+}
+
+/// `MIDIIN2 (LKMK3 MIDI)` → `lkmk3 midi`: the device part of a Windows port name.
+fn windows_base(name: &str) -> String {
+    let lower = name.to_lowercase();
+    if lower.starts_with("midiin") || lower.starts_with("midiout") {
+        if let (Some(a), Some(b)) = (lower.find('('), lower.rfind(')')) {
+            if a < b {
+                return lower[a + 1..b].to_string();
+            }
+        }
+    }
+    lower
+}
+
 /// `MIDIIN2 (Launchpad X)` → 2; a name without the prefix is the first interface.
 fn windows_ordinal(lower: &str) -> Option<u32> {
     let rest = lower.strip_prefix("midiin").or_else(|| lower.strip_prefix("midiout"))?;
@@ -424,6 +459,20 @@ mod interface_tests {
         assert_eq!(rank_for(LaunchpadProMk2, "MIDIOUT2 (Launchpad Pro)", true), 0);
         assert_eq!(rank_for(LaunchpadProMk2, "Launchpad Pro", true), 2);
         assert_eq!(rank_for(LaunchpadMk2, "Launchpad MK2", true), 0);
+    }
+
+    #[test]
+    fn finds_the_keys_interface_of_a_launchkey() {
+        let mac = ["Launchkey Mini MK3 LKMK3 DAW Out", "Launchkey Mini MK3 LKMK3 MIDI Out", "Launchpad MK2"];
+        assert_eq!(secondary_input_among(LaunchkeyMiniMk3, mac[0], mac.into_iter(), false).as_deref(), Some(mac[1]));
+        // Windows names the first interface after the device and numbers the second; the
+        // first (keys) one does not even say "Mini".
+        let windows = ["LKMK3 MIDI", "MIDIIN2 (LKMK3 MIDI)", "Launchpad MK2"];
+        assert_eq!(secondary_input_among(LaunchkeyMiniMk3, windows[1], windows.into_iter(), true).as_deref(), Some(windows[0]));
+        // A second DAW interface is another device, not the keys.
+        let two = ["Launchkey Mini MK3 LKMK3 DAW Out", "Launchkey Mini MK3 LKMK3 DAW Out #2"];
+        assert_eq!(secondary_input_among(LaunchkeyMiniMk3, two[0], two.into_iter(), false), None);
+        assert_eq!(secondary_input_among(LaunchpadX, "Launchpad X LPX MIDI Out", ["Launchpad X LPX DAW Out"].into_iter(), false).as_deref(), Some("Launchpad X LPX DAW Out"));
     }
 
     #[test]

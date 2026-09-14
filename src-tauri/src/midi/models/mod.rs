@@ -88,6 +88,24 @@ pub trait LaunchpadDriver: Send + Sync {
         None
     }
 
+    /// True when the device reports on a second input interface as well: the
+    /// Launchkey's keys arrive on its MIDI interface while the app talks to
+    /// the DAW one. The manager opens that interface too and feeds its
+    /// messages to [`parse_secondary_input`](Self::parse_secondary_input).
+    fn has_secondary_input(&self) -> bool {
+        false
+    }
+
+    /// Translate a message from the secondary interface into a button event.
+    fn parse_secondary_input(&self, _msg: &[u8], _threshold: u8) -> Option<ButtonEvent> {
+        None
+    }
+
+    /// A control movement reported on the secondary interface (the Launchkey strips).
+    fn parse_secondary_control(&self, _msg: &[u8]) -> Option<ControlEvent> {
+        None
+    }
+
     /// Aftertouch: polyphonic key pressure (`A0`) names the pad, channel
     /// pressure (`D0`) applies to every pad currently held.
     fn parse_pressure(&self, msg: &[u8], held: &[(u8, u8)]) -> Vec<PressureEvent> {
@@ -128,7 +146,7 @@ pub(crate) fn spec(
             .unwrap_or((None, false)),
     };
     let led = match shape {
-        PadShape::Empty | PadShape::Knob | PadShape::Strip => LedKind::None,
+        PadShape::Empty | PadShape::Knob | PadShape::Strip | PadShape::KeyWhite | PadShape::KeyBlack => LedKind::None,
         _ => LedKind::Rgb,
     };
     PadSpec { x, y, shape, region, label: label.map(|s| s.to_string()), note, cc, led, rows: 1 }

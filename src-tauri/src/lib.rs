@@ -276,6 +276,7 @@ pub fn run() {
             get_layout,
             list_models,
             press_pad,
+            control_pad,
             reset_leds,
             send_raw_midi,
             // profile

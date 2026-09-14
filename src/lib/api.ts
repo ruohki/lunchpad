@@ -32,7 +32,7 @@ export interface DiscoveredLaunchpad {
   connected: boolean;
 }
 
-export type PadShape = "pad" | "round" | "small" | "logo" | "empty" | "knob" | "strip";
+export type PadShape = "pad" | "round" | "small" | "logo" | "empty" | "knob" | "strip" | "rect" | "keyWhite" | "keyBlack";
 /** What a control can light: full colour, one white LED (colours become a brightness), or nothing. */
 export type LedKind = "rgb" | "white" | "none";
 export type PadRegion = "grid" | "top" | "right" | "bottom" | "left" | "bottom2" | "other";
@@ -644,6 +644,8 @@ export const api = {
   getLayout: (model: LaunchpadModel) => invoke<Layout>("get_layout", { model }),
   listModels: () => invoke<ModelInfo[]>("list_models"),
   pressPad: (x: number, y: number, pressed: boolean) => invoke<void>("press_pad", { x, y, pressed }),
+  /** A drag on a knob or strip in the UI: `value` runs 0..1 over the control's travel, like a hardware turn. */
+  controlPad: (x: number, y: number, value: number) => invoke<void>("control_pad", { x, y, value }),
   resetLeds: () => invoke<void>("reset_leds"),
   sendRawMidi: (bytes: number[]) => invoke<void>("send_raw_midi", { bytes }),
 

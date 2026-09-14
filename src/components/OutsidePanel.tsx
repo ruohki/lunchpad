@@ -124,7 +124,7 @@ export function OutsidePanel() {
                     className="cursor-grab touch-none rounded-[14%] bg-stage-800 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] active:cursor-grabbing"
                     style={{ width: TILE, height: TILE }}
                   >
-                    <PadFace button={b} cell={TILE - 8} active={false} round={false} limited={layout?.limitedColor ?? false} />
+                    <PadFace button={b} cell={TILE - 8} active={false} limited={layout?.limitedColor ?? false} />
                   </div>
                   <span className="text-[10px] text-stage-500">{t("outside.position", { column: b.x + 1, row: b.y + 1 })}</span>
                 </li>

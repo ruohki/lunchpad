@@ -164,7 +164,7 @@ function EditorForm({ pageId, x, y, initial, limited, pages, layout, onCancel, o
             onPointerUp={() => setPreviewActive(false)}
             onPointerLeave={() => setPreviewActive(false)}
           >
-            <PadFace button={button} cell={144} active={previewActive} round={false} limited={limited} noLed={ledKind === "none"} />
+            <PadFace button={button} cell={144} active={previewActive} limited={limited} noLed={ledKind === "none"} />
           </div>
           <p className="text-center text-xs text-stage-400">{t("editor.previewHint")}</p>
         </div>

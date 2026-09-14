@@ -257,6 +257,7 @@
     "redo": "Redo",
     "outside": "Buttons out of sight… ({{count}})",
     "knob": "Knob {{n}}",
+    "key": "{{name}} key",
     "strip": "{{name}} strip",
     "noInput": "{{name}} (keyboard function, not usable here)",
     "assignFader": "Assign a fader…"

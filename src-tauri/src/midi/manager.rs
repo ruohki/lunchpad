@@ -137,6 +137,9 @@ pub struct FirmwareEvent {
 struct Active {
     /// `None` for a virtual Launchpad.
     _input: Option<MidiInputConnection<()>>,
+    /// The device's second interface, when the model has one (the Launchkey keys).
+    _secondary_input: Option<MidiInputConnection<()>>,
+    secondary_input_name: Option<String>,
     output: OutputHandle,
     info: ConnectedDevice,
     /// Firmware reported over the live connection when the scan got no inquiry reply.
@@ -292,7 +295,7 @@ impl DeviceManager {
 
     pub fn connected_port_names(&self) -> Vec<String> {
         match &self.active {
-            Some(a) => vec![a.info.input_name.clone(), a.info.output_name.clone()],
+            Some(a) => [Some(&a.info.input_name), Some(&a.info.output_name), a.secondary_input_name.as_ref()].into_iter().flatten().cloned().collect(),
             None => Vec::new(),
         }
     }
@@ -367,6 +370,20 @@ impl DeviceManager {
         a.render.repaint();
         let _ = self.app.emit(EVENT_BUTTON, event);
         for listener in self.listeners.lock().iter() {
+            listener(&event);
+        }
+        Ok(())
+    }
+
+    /// Treat a drag on a knob or strip in the UI exactly like a turn of the
+    /// hardware control: `value` runs 0..1 over its travel.
+    pub fn simulate_control(&self, x: u8, y: u8, value: f32) -> MidiResult<()> {
+        if self.active.is_none() {
+            return Err(MidiError::NotConnected);
+        }
+        let event = ControlEvent { x, y, value: if value.is_finite() { value.clamp(0.0, 1.0) } else { 0.0 } };
+        let _ = self.app.emit(EVENT_CONTROL, event);
+        for listener in self.control_listeners.lock().iter() {
             listener(&event);
         }
         Ok(())
@@ -528,7 +545,7 @@ impl DeviceManager {
             is_virtual: true,
         };
         *self.render_slot.lock() = Some(render.clone());
-        self.active = Some(Active { _input: None, output, info, pressed, render, driver, late_firmware: Arc::new(Mutex::new(None)) });
+        self.active = Some(Active { _input: None, _secondary_input: None, secondary_input_name: None, output, info, pressed, render, driver, late_firmware: Arc::new(Mutex::new(None)) });
         self.status = ConnectionStatus::Connected;
         {
             let mut st = self.settings.lock();
@@ -622,75 +639,47 @@ impl DeviceManager {
             },
         );
 
-        // Input callback -----------------------------------------------------
-        let cb_pressed = pressed.clone();
-        let cb_driver = driver.clone();
-        let cb_render = render.clone();
-        let cb_app = self.app.clone();
-        let cb_listeners = self.listeners.clone();
-        let cb_pressure_listeners = self.pressure_listeners.clone();
-        let cb_control_listeners = self.control_listeners.clone();
-        let cb_threshold = self.press_threshold.clone();
-        let late_firmware: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
-        let cb_late_firmware = late_firmware.clone();
+        // Input callbacks ----------------------------------------------------
+        let sink = InputSink {
+            app: self.app.clone(),
+            driver: driver.clone(),
+            pressed: pressed.clone(),
+            render: render.clone(),
+            listeners: self.listeners.clone(),
+            pressure_listeners: self.pressure_listeners.clone(),
+            control_listeners: self.control_listeners.clone(),
+            threshold: self.press_threshold.clone(),
+            late_firmware: Arc::new(Mutex::new(None)),
+        };
+        let late_firmware = sink.late_firmware.clone();
 
+        let primary_sink = sink.clone();
         let input = midi_in
-            .connect(
-                &in_port,
-                "lunchpad-in",
-                move |timestamp, msg, _| {
-                    let _ = cb_app.emit(EVENT_RAW, RawMidiEvent { timestamp, bytes: msg.to_vec(), hex: hex(msg) });
-                    if is_inquiry_reply(msg) {
-                        // The answer to the inquiry sent after connecting (see below).
-                        if let Some(reply) = parse_inquiry_reply(msg) {
-                            tracing::info!(firmware = %reply.firmware, "device answered the inquiry after connecting");
-                            *cb_late_firmware.lock() = Some(reply.firmware.clone());
-                            let _ = cb_app.emit(EVENT_FIRMWARE, FirmwareEvent { firmware: reply.firmware });
-                        }
-                        return;
+            .connect(&in_port, "lunchpad-in", move |timestamp, msg, _| primary_sink.primary(timestamp, msg), ())
+            .map_err(|e| MidiError::Connection(e.to_string()))?;
+
+        // Models that report on a second interface (the Launchkey keys) get it opened
+        // too; without it the rest of the device still works.
+        let (secondary_input, secondary_input_name) = if driver.has_secondary_input() {
+            match scan::secondary_input_for(model, input_name) {
+                Some(name) => match open_secondary_input(&name, sink.clone()) {
+                    Ok(conn) => {
+                        tracing::info!(input = %name, "second interface opened");
+                        (Some(conn), Some(name))
                     }
-                    if let Some(control) = cb_driver.parse_control(msg) {
-                        tracing::trace!(x = control.x, y = control.y, value = control.value, "control");
-                        let _ = cb_app.emit(EVENT_CONTROL, control);
-                        for listener in cb_control_listeners.lock().iter() {
-                            listener(&control);
-                        }
-                        return;
-                    }
-                    let threshold = cb_threshold.lock().unwrap_or_else(|| cb_driver.press_threshold());
-                    let Some(event) = cb_driver.parse_input_with(msg, threshold) else {
-                        // Not a press: maybe aftertouch for the pads being held.
-                        let held: Vec<(u8, u8)> = cb_pressed.lock().iter().copied().collect();
-                        for pressure in cb_driver.parse_pressure(msg, &held) {
-                            tracing::trace!(x = pressure.x, y = pressure.y, value = pressure.value, "aftertouch");
-                            let _ = cb_app.emit(EVENT_PRESSURE, pressure);
-                            for listener in cb_pressure_listeners.lock().iter() {
-                                listener(&pressure);
-                            }
-                        }
-                        return;
-                    };
-                    {
-                        let mut set = cb_pressed.lock();
-                        if event.pressed {
-                            set.insert((event.x, event.y));
-                        } else if !set.remove(&(event.x, event.y)) {
-                            // A release for a pad that never counted as pressed (a brush below
-                            // the velocity threshold): nothing to release, so nothing to run.
-                            tracing::trace!(x = event.x, y = event.y, "release without press ignored");
-                            return;
-                        }
-                    }
-                    tracing::debug!(x = event.x, y = event.y, pressed = event.pressed, note = event.note, cc = event.cc, value = event.value, "button");
-                    cb_render.repaint();
-                    let _ = cb_app.emit(EVENT_BUTTON, event);
-                    for listener in cb_listeners.lock().iter() {
-                        listener(&event);
+                    Err(e) => {
+                        tracing::warn!(input = %name, error = %e, "second interface could not be opened; its controls will not report");
+                        (None, None)
                     }
                 },
-                (),
-            )
-            .map_err(|e| MidiError::Connection(e.to_string()))?;
+                None => {
+                    tracing::warn!(model = %model, "no second interface found; its controls will not report");
+                    (None, None)
+                }
+            }
+        } else {
+            (None, None)
+        };
 
         for msg in driver.init_messages() {
             output.send_raw(msg)?;
@@ -714,6 +703,8 @@ impl DeviceManager {
 
         Ok(Active {
             _input: Some(input),
+            _secondary_input: secondary_input,
+            secondary_input_name,
             render,
             driver: driver.clone(),
             output,
@@ -766,6 +757,113 @@ impl DeviceManager {
         self.next_auto_connect = Instant::now();
         self.emit_state();
     }
+}
+
+/// What the input callbacks need; one per device, cloned into every interface's callback.
+#[derive(Clone)]
+struct InputSink {
+    app: AppHandle,
+    driver: Arc<dyn LaunchpadDriver>,
+    pressed: Arc<Mutex<HashSet<(u8, u8)>>>,
+    render: RenderHandle,
+    listeners: Arc<Mutex<Vec<ButtonListener>>>,
+    pressure_listeners: Arc<Mutex<Vec<PressureListener>>>,
+    control_listeners: Arc<Mutex<Vec<ControlListener>>>,
+    /// Custom press threshold, `None` = the model's default.
+    threshold: Arc<Mutex<Option<u8>>>,
+    /// Firmware reported over the live connection when the scan got no inquiry reply.
+    late_firmware: Arc<Mutex<Option<String>>>,
+}
+
+impl InputSink {
+    fn threshold(&self) -> u8 {
+        self.threshold.lock().unwrap_or_else(|| self.driver.press_threshold())
+    }
+
+    /// A message from the interface the app talks to: inquiry replies, knob and
+    /// strip values, presses and aftertouch.
+    fn primary(&self, timestamp: u64, msg: &[u8]) {
+        let _ = self.app.emit(EVENT_RAW, RawMidiEvent { timestamp, bytes: msg.to_vec(), hex: hex(msg) });
+        if is_inquiry_reply(msg) {
+            // The answer to the inquiry sent after connecting (see `open`).
+            if let Some(reply) = parse_inquiry_reply(msg) {
+                tracing::info!(firmware = %reply.firmware, "device answered the inquiry after connecting");
+                *self.late_firmware.lock() = Some(reply.firmware.clone());
+                let _ = self.app.emit(EVENT_FIRMWARE, FirmwareEvent { firmware: reply.firmware });
+            }
+            return;
+        }
+        if let Some(control) = self.driver.parse_control(msg) {
+            self.control(control);
+            return;
+        }
+        match self.driver.parse_input_with(msg, self.threshold()) {
+            Some(event) => self.button(event),
+            None => {
+                // Not a press: maybe aftertouch for the pads being held.
+                let held: Vec<(u8, u8)> = self.pressed.lock().iter().copied().collect();
+                for pressure in self.driver.parse_pressure(msg, &held) {
+                    tracing::trace!(x = pressure.x, y = pressure.y, value = pressure.value, "aftertouch");
+                    let _ = self.app.emit(EVENT_PRESSURE, pressure);
+                    for listener in self.pressure_listeners.lock().iter() {
+                        listener(&pressure);
+                    }
+                }
+            }
+        }
+    }
+
+    /// A message from the device's second interface (the Launchkey keys and strips).
+    fn secondary(&self, timestamp: u64, msg: &[u8]) {
+        let _ = self.app.emit(EVENT_RAW, RawMidiEvent { timestamp, bytes: msg.to_vec(), hex: hex(msg) });
+        if let Some(control) = self.driver.parse_secondary_control(msg) {
+            self.control(control);
+        } else if let Some(event) = self.driver.parse_secondary_input(msg, self.threshold()) {
+            self.button(event);
+        }
+    }
+
+    fn control(&self, control: ControlEvent) {
+        tracing::trace!(x = control.x, y = control.y, value = control.value, "control");
+        let _ = self.app.emit(EVENT_CONTROL, control);
+        for listener in self.control_listeners.lock().iter() {
+            listener(&control);
+        }
+    }
+
+    fn button(&self, event: ButtonEvent) {
+        {
+            let mut set = self.pressed.lock();
+            if event.pressed {
+                set.insert((event.x, event.y));
+            } else if !set.remove(&(event.x, event.y)) {
+                // A release for a pad that never counted as pressed (a brush below
+                // the velocity threshold): nothing to release, so nothing to run.
+                tracing::trace!(x = event.x, y = event.y, "release without press ignored");
+                return;
+            }
+        }
+        tracing::debug!(x = event.x, y = event.y, pressed = event.pressed, note = event.note, cc = event.cc, value = event.value, "button");
+        self.render.repaint();
+        let _ = self.app.emit(EVENT_BUTTON, event);
+        for listener in self.listeners.lock().iter() {
+            listener(&event);
+        }
+    }
+}
+
+/// Open a device's second input interface with its own MIDI client.
+fn open_secondary_input(name: &str, sink: InputSink) -> MidiResult<MidiInputConnection<()>> {
+    let mut midi_in = MidiInput::new("Lunchpad secondary").map_err(|e| MidiError::Init(e.to_string()))?;
+    midi_in.ignore(Ignore::None);
+    let port = midi_in
+        .ports()
+        .into_iter()
+        .find(|p| midi_in.port_name(p).map(|n| n == name).unwrap_or(false))
+        .ok_or_else(|| MidiError::PortNotFound(name.to_string()))?;
+    midi_in
+        .connect(&port, "lunchpad-in-secondary", move |timestamp, msg, _| sink.secondary(timestamp, msg), ())
+        .map_err(|e| MidiError::Connection(e.to_string()))
 }
 
 /// Short diagonal light sweep across the pads right after connecting: a

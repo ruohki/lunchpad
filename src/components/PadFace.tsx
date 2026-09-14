@@ -2,6 +2,7 @@ import { clsx } from "clsx";
 import type { CSSProperties } from "react";
 import type { Button, PadColor } from "../lib/api";
 import { contrastText, edgeCss, faceCss, limitedRgb, padColorAltRgb, padColorRgb, padCss } from "../lib/colors";
+import { cornerRadius, type Corners } from "../lib/grid";
 
 /** Reference pad size the look's font size is relative to (legacy: ~84 px pads). */
 const REFERENCE_CELL = 84;
@@ -10,11 +11,16 @@ interface Props {
   button: Button;
   cell: number;
   active: boolean;
-  round: boolean;
+  /** Outline of the control the face sits on; a square pad by default. */
+  corners?: Corners;
   /** Connected Launchpad has red/green LEDs only: draw the colours it can show, no pulsing. */
   limited?: boolean;
   /** The pad has no LED: colours do not apply, draw a neutral face with the look on it. */
   noLed?: boolean;
+  /** The neutral face of a control without LED: dark like a button, or light like a white key. */
+  noLedTone?: "dark" | "light";
+  /** Where the look sits: centred, or in the lower part (a white key's top is under the black keys). */
+  align?: "center" | "bottom";
   className?: string;
 }
 
@@ -23,14 +29,15 @@ interface Props {
  * animated), text or image look on top. Shared by the grid and the editor
  * preview.
  */
-export function PadFace({ button, cell, active, round, limited = false, noLed = false, className }: Props) {
+export function PadFace({ button, cell, active, corners = "square", limited = false, noLed = false, noLedTone = "dark", align = "center", className }: Props) {
   const color: PadColor = active && button.activeColor ? button.activeColor : button.color;
   const rgb = limited ? limitedRgb(padColorRgb(color)) : padColorRgb(color);
   const alt = limited ? limitedRgb(padColorAltRgb(color)) : padColorAltRgb(color);
   const off = noLed || (rgb.r === 0 && rgb.g === 0 && rgb.b === 0);
-  const bg = off ? "var(--color-stage-700)" : padCss(rgb);
+  const light = noLed && noLedTone === "light";
+  const bg = off ? (light ? "var(--color-stage-200)" : "var(--color-stage-700)") : padCss(rgb);
 
-  const edgeA = off ? "rgba(0,0,0,0.45)" : edgeCss(rgb);
+  const edgeA = off ? (light ? "rgba(0,0,0,0.18)" : "rgba(0,0,0,0.45)") : edgeCss(rgb);
 
   const style: CSSProperties & Record<string, string> = {
     "--pad-a": bg,
@@ -41,15 +48,16 @@ export function PadFace({ button, cell, active, round, limited = false, noLed = 
     "--edge-a": edgeA,
     "--edge-b": off ? edgeA : edgeCss(alt),
     boxShadow: "inset 0 -3px 0 var(--edge-a)",
+    borderRadius: cornerRadius(corners, cell),
   };
 
-  const textColor = off ? "var(--color-stage-200)" : contrastText(rgb);
+  const textColor = off ? (light ? "var(--color-stage-900)" : "var(--color-stage-200)") : contrastText(rgb);
 
   return (
     <div
       className={clsx(
-        "flex h-full w-full items-center justify-center overflow-hidden",
-        round ? "rounded-full" : "rounded-[14%]",
+        "flex h-full w-full justify-center overflow-hidden",
+        align === "bottom" ? "items-end pb-[10%]" : "items-center",
         !off && color.mode === "flashing" && "pad-flashing",
         !off && !limited && color.mode === "pulsing" && "pad-pulsing",
         className,
@@ -73,7 +81,7 @@ export function PadFace({ button, cell, active, round, limited = false, noLed = 
           src={button.look.uri}
           alt=""
           draggable={false}
-          className="pointer-events-none h-[82%] w-[82%] object-contain"
+          className={clsx("pointer-events-none w-[82%] object-contain", align === "bottom" ? "h-[30%]" : "h-[82%]")}
         />
       )}
     </div>
