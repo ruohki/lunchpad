@@ -59,7 +59,14 @@
     "autoConnect": "Reconnect automatically",
     "autoConnectHintSaved": "Connects to the {{model}} on “{{port}}” when it is plugged in.",
     "autoConnectHintVirtual": "Starts the on-screen {{model}} layout when Lunchpad opens.",
-    "autoConnectHintNew": "The Launchpad you connect will be remembered and reconnected on start."
+    "autoConnectHintNew": "The Launchpad you connect will be remembered and reconnected on start.",
+    "manualTitle": "Not listed? Connect by hand.",
+    "manualHint": "Pick the model to show and the MIDI ports to use, for a device that does not answer the inquiry or ports with unusual names.",
+    "manualModel": "Model",
+    "manualInput": "Input port",
+    "manualOutput": "Output port",
+    "manualConnect": "Connect",
+    "noPorts": "No MIDI ports"
   },
   "side": {
     "previewNote": "On-screen pads: clicks run the macros. Connect a real Launchpad from the device list any time.",

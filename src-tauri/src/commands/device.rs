@@ -3,6 +3,7 @@
 
 use super::{err, AppState, CmdResult};
 use crate::midi::models::driver_for;
+use crate::midi::scan;
 use crate::midi::*;
 use serde::{Deserialize, Serialize};
 use tauri::State;
@@ -22,6 +23,26 @@ pub struct ConnectRequest {
     pub model: LaunchpadModel,
     #[serde(default)]
     pub firmware: Option<String>,
+    /// Chosen by hand: the model is trusted without a device inquiry, now and on reconnect.
+    #[serde(default)]
+    pub manual: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MidiPorts {
+    pub inputs: Vec<MidiPortInfo>,
+    pub outputs: Vec<MidiPortInfo>,
+}
+
+/// Every MIDI port by name, for connecting by hand to a device the scan did not identify.
+#[tauri::command]
+pub async fn list_midi_ports() -> CmdResult<MidiPorts> {
+    tauri::async_runtime::spawn_blocking(|| {
+        Ok(MidiPorts { inputs: scan::list_inputs().map_err(err)?, outputs: scan::list_outputs().map_err(err)? })
+    })
+    .await
+    .map_err(err)?
 }
 
 /// Discover Launchpads via Universal Device Inquiry.
@@ -44,7 +65,7 @@ pub async fn connect_launchpad(request: ConnectRequest, state: State<'_, AppStat
     let manager = state.manager.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let mut m = manager.lock();
-        m.connect(&request.input_name, &request.output_name, request.model, request.firmware).map_err(err)?;
+        m.connect(&request.input_name, &request.output_name, request.model, request.firmware, request.manual).map_err(err)?;
         Ok(m.state())
     })
     .await
