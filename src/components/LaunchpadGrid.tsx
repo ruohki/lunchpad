@@ -676,8 +676,14 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
           onDoubleClick={(e) => {
             if (isMoveModifier(e)) openFaderEditor(pad.x, pad.y);
           }}
-          className={clsx("flex h-full w-full flex-col items-center justify-start gap-0.5 rounded-md focus-visible:outline-2 focus-visible:outline-accent-400", fader && "cursor-ns-resize")}
-          style={{ paddingTop: topInset, paddingBottom: 4 }}
+          // A knob spanning a band of rows sits in its middle (level with the buttons beside
+          // it); a single-row knob and a strip hang from the top edge like the top-row buttons.
+          className={clsx(
+            "flex h-full w-full flex-col items-center gap-0.5 rounded-md focus-visible:outline-2 focus-visible:outline-accent-400",
+            pad.shape === "knob" && pad.rows > 1 ? "justify-center" : "justify-start",
+            fader && "cursor-ns-resize",
+          )}
+          style={pad.shape === "knob" && pad.rows > 1 ? { paddingBottom: 4 } : { paddingTop: topInset, paddingBottom: 4 }}
         >
           {pad.shape === "strip" ? <StripFace fraction={fraction} label={pad.label} cell={cell} centred={pad.centred} /> : <KnobFace fraction={fraction} cell={cell} />}
           {pad.shape === "knob" && <span className="text-[9px] leading-none text-stage-500">{fader ? formatFaderValue(fader, fader.min + (fader.max - fader.min) * (fraction ?? 0)) : pad.label}</span>}
