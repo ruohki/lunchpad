@@ -175,7 +175,11 @@ Reference Guide" (`docs/novation/launchkey_mk4_programmers_reference_guide_v2.md
 by the inquiry reply `F0 7E 00 06 02 00 20 29 41 01 00 00 <v1 v2 v3 v4> F7` (family `41 01`;
 the DAW interface answers with member `00 01`) or by port name ("Launchkey Mini MK4 25 DAW"
 and "… MIDI"). On connect: `9F 0C 7F` (DAW mode), `B6 1D 02` (pads in the DAW layout),
-`B6 1E 02` (encoders in Plugin mode). Logical layout 15 x 8 (x from the left, y from the
+`B6 1E 02` (encoders in Plugin mode), and `9F 0B 7F` so every feature control reports. The device
+keeps acting on its own buttons, so the driver answers its reports on channel 7: a pad layout
+other than DAW (CC 29, also after the Shift menu or Arp) gets `B6 1D 02`, an encoder mode other
+than Plugin (CC 30) gets `B6 1E 02`, Arp or Scale switched on (CC 73 / 74) gets the matching
+off. Logical layout 15 x 8 (x from the left, y from the
 bottom), one column per white key, following the front panel. The control area is three bands
 of two half-rows each: the encoder band (y 7 + 6) with the screen, Arp over Scale, the encoders
 and the mode arrows; the two pad bands (y 5 + 4 and y 3 + 2) with the pads, the Track arrows,
@@ -192,12 +196,12 @@ CCs are not confirmed on hardware are drawn but send nothing.
 | Settings | (3, 5) | not wired (the guide lists CC 63 on ch 1) | | none |
 | ▶, ● | (2, 4), (3, 4), 2 rows | CC ch 1 | 115, 117 | single LED, brightness as CC on ch 4 (unverified) |
 | Oct −, Oct + | (2, 2), (3, 2) | none in DAW mode | | none |
-| Arp, Scale | (4, 7), (4, 6) | none in DAW mode | | none |
+| Arp, Scale | (4, 7), (4, 6) | feature report ch 7 | 73, 74: "on" is the press; the app switches the function off again and the confirmation is the release | none |
 | ∧, ∨ (Track up / down) | (4, 5), (4, 3), 2 rows | CC ch 1 | 106, 107 | RGB palette on the CC (unverified) |
 | Encoders 1-8 | x 5-12, y 7, 2 rows | CC ch 16 | 21..28, absolute 0-127 → control events | none |
 | Pads top row | x 5-12, y 5, 2 rows | Note ch 1 + polyphonic aftertouch | 96..103 | RGB palette |
 | Pads bottom row | x 5-12, y 3, 2 rows | Note ch 1 + polyphonic aftertouch | 112..119 | RGB palette |
-| ∧, ∨ (mode arrows) | (13, 7), (13, 6) | not wired (the guide lists the Mini's mode arrows on 55 / 56) | | none |
+| ∧, ∨ (mode arrows) | (13, 7), (13, 6) | CC ch 1 | 51, 52 (Mode up / down) | none |
 | >, Func | (13, 5), (13, 3), 2 rows | not wired (the guide lists prev / next pad mode 75 / 76) | | none |
 | White keys | x 0-14, y 0 | Note, MIDI interface | the white notes of 48..72 (C2..C4) | none |
 | Black keys | y 1, at the x of the white key to their left | Note, MIDI interface | the black notes of 49..70 | none |
@@ -206,8 +210,8 @@ Differences from the Mini MK3 driver: the transport and arrow buttons report on 
 (not 16) and the arrows are Track up / down (106 / 107, not the scene buttons 104 / 105);
 Shift is CC 63 on channel 7; the pads send aftertouch, which feeds `{{pressure}}`. The
 guide's DAW table names CC 115 "Loop" and 117 "Play", but the Mini's two transport buttons
-send exactly these two. Layout changes from the Shift menu arrive as CC 29 (pads) and CC 30
-(encoders) on channel 7 and are ignored. The MIDI interface streams clock (`F8`).
+send exactly these two. Settings, Oct −/+, > and Func sent nothing in two captures. The MIDI
+interface streams clock (`F8`).
 
 ## Hardware checklist (run per model)
 

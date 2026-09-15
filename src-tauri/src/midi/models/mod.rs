@@ -107,6 +107,13 @@ pub trait LaunchpadDriver: Send + Sync {
         None
     }
 
+    /// Messages to send straight back in answer to one the device sent: a
+    /// Launchkey MK4 reports layout and feature changes made on the device
+    /// itself, and its driver puts them back so the surface stays the app's.
+    fn react(&self, _msg: &[u8]) -> Vec<Vec<u8>> {
+        Vec::new()
+    }
+
     /// Aftertouch: polyphonic key pressure (`A0`) names the pad, channel
     /// pressure (`D0`) applies to every pad currently held.
     fn parse_pressure(&self, msg: &[u8], held: &[(u8, u8)]) -> Vec<PressureEvent> {

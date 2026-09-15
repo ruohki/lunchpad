@@ -13,11 +13,15 @@
 //! channel 1 (solid), 2 (flashing) or 3 (pulsing). The buttons beside the
 //! pads report as CC on channel 1: the Track arrows 106 / 107 with colour LEDs
 //! on the same numbers, ▶ 115 and ● 117 with a single LED whose brightness is
-//! a CC on channel 4. Shift reports as a feature control, CC 63 on channel 7,
-//! and has no LED. The eight encoders send CC 21..28 on channel 16 (0..127)
-//! and become control events. Layout changes made from the Shift menu come
-//! back on channel 7 (CC 29 pads, CC 30 encoders) and are ignored; Octave and
-//! the other keyboard buttons report nothing in DAW mode.
+//! a CC on channel 4, and the mode arrows right of the encoders 51 / 52. With
+//! the feature-control reports switched on (`9F 0B 7F`), Shift, Arp and Scale
+//! report on channel 7 (CC 63, 73, 74; Arp and Scale as on / off). The device
+//! still acts on its own buttons, so the driver answers: a pad layout other
+//! than DAW or an encoder mode other than Plugin (reported as CC 29 / 30 on
+//! channel 7, also after the Shift menu) is put back, and Arp or Scale
+//! switched on is switched off again, its confirmation counting as the
+//! button's release. The eight encoders send CC 21..28 on channel 16 (0..127)
+//! and become control events. Settings, Octave, > and Func report nothing.
 //!
 //! The keys and the two strips arrive on the MIDI interface exactly as on the
 //! Mini MK3: Note 48..72 (C2..C4) at the default octave, Pitch Bend (14 bit,
@@ -40,11 +44,9 @@
 //!   y = 1      black keys, each at the x of the white key to its left
 //!   y = 0      white keys (0..14)
 //!
-//! Only the controls seen in the capture carry input: the pads, the Track
-//! arrows, ▶, ● and Shift. Settings, Scale, Arp, Oct ±, >, Func and the mode
-//! arrows are drawn but send nothing until their CCs are confirmed on hardware
-//! (the guide lists Settings 63, prev/next pad mode 75/76, prev/next encoder
-//! mode 74/77, and the Mini's extra mode arrows on 55/56).
+//! Settings, Oct ±, > and Func are drawn but send nothing: two captures on
+//! hardware showed no message for them, in DAW mode or with the feature
+//! reports on.
 
 use super::{spec, LaunchpadDriver};
 use crate::midi::palette::{nearest_palette_index, palette_color};
@@ -84,9 +86,20 @@ const CC_TRACK_DOWN: u8 = 107;
 /// buttons send these two.
 const CC_PLAY: u8 = 115;
 const CC_RECORD: u8 = 117;
-/// Shift is a feature control: CC 63 on channel 7.
+/// The mode arrows right of the encoders: Mode up / down in the guide's table.
+const CC_MODE_UP: u8 = 51;
+const CC_MODE_DOWN: u8 = 52;
+/// Feature controls report on channel 7: Shift, and (once the reports are
+/// switched on) Arp and Scale as on / off, plus the pad and encoder layouts.
+const FEATURE_CHANNEL: u8 = 6;
 const CC_SHIFT: u8 = 63;
-const SHIFT_CHANNEL: u8 = 6;
+const FEATURE_ARP: u8 = 0x49;
+const FEATURE_SCALE: u8 = 0x4A;
+const FEATURE_PADS: u8 = 0x1D;
+const FEATURE_ENCODERS: u8 = 0x1E;
+/// The layouts the app wants: pads in the DAW layout, encoders in Plugin mode.
+const PADS_DAW: u8 = 0x02;
+const ENCODERS_PLUGIN: u8 = 0x02;
 const CC_KNOB_FIRST: u8 = 21;
 const CC_KNOB_LAST: u8 = 28;
 /// Lowest and highest key at the default octave (C2..C4).
@@ -178,14 +191,14 @@ impl LaunchpadDriver for LaunchkeyMiniMk4 {
                     (BLOCK_L_X | BLOCK_R_X, PAD_BOTTOM_Y) => continue,
                     (BLOCK_L_X, OCT_Y) => spec(self, x, y, Rect, Left, Some("Oct −")).with_led(LedKind::None).without_input(),
                     (BLOCK_R_X, OCT_Y) => spec(self, x, y, Rect, Left, Some("Oct +")).with_led(LedKind::None).without_input(),
-                    (SIDE_X, KNOB_Y) => spec(self, x, y, SmallRect, Left, Some("Arp")).with_led(LedKind::None).without_input(),
-                    (SIDE_X, KNOB_LOW_Y) => spec(self, x, y, SmallRect, Left, Some("Scale")).with_led(LedKind::None).without_input(),
+                    (SIDE_X, KNOB_Y) => spec(self, x, y, SmallRect, Left, Some("Arp")).with_led(LedKind::None),
+                    (SIDE_X, KNOB_LOW_Y) => spec(self, x, y, SmallRect, Left, Some("Scale")).with_led(LedKind::None),
                     (SIDE_X, PAD_TOP_Y) => spec(self, x, y, TallRect, Left, Some("∧")).with_rows(2),
                     (SIDE_X, PAD_BOTTOM_Y) => spec(self, x, y, TallRect, Left, Some("∨")).with_rows(2),
                     (PAD_X0..=PAD_X1, KNOB_Y) => spec(self, x, y, Knob, Top, None).with_rows(2),
                     (PAD_X0..=PAD_X1, PAD_TOP_Y | PAD_BOTTOM_Y) => spec(self, x, y, Pad, Grid, None).with_rows(2),
-                    (RIGHT_X, KNOB_Y) => spec(self, x, y, SmallRect, Right, Some("∧")).with_led(LedKind::None).without_input(),
-                    (RIGHT_X, KNOB_LOW_Y) => spec(self, x, y, SmallRect, Right, Some("∨")).with_led(LedKind::None).without_input(),
+                    (RIGHT_X, KNOB_Y) => spec(self, x, y, SmallRect, Right, Some("∧")).with_led(LedKind::None),
+                    (RIGHT_X, KNOB_LOW_Y) => spec(self, x, y, SmallRect, Right, Some("∨")).with_led(LedKind::None),
                     (RIGHT_X, PAD_TOP_Y) => spec(self, x, y, TallRect, Right, Some(">")).with_led(LedKind::None).without_input().with_rows(2),
                     (RIGHT_X, PAD_BOTTOM_Y) => spec(self, x, y, TallRect, Right, Some("Func")).with_led(LedKind::None).without_input().with_rows(2),
                     // Lower halves covered by the encoders, the pads and the two-row buttons.
@@ -216,16 +229,32 @@ impl LaunchpadDriver for LaunchkeyMiniMk4 {
 
     fn init_messages(&self) -> Vec<Vec<u8>> {
         vec![
-            // DAW mode on.
+            // DAW mode on, and every feature control reporting (Arp and Scale presses).
             vec![0x9F, 0x0C, 0x7F],
+            vec![0x9F, 0x0B, 0x7F],
             // Pads in the DAW layout, encoders in Plugin mode (absolute CC 21..28).
-            vec![0xB6, 0x1D, 0x02],
-            vec![0xB6, 0x1E, 0x02],
+            vec![0xB6, FEATURE_PADS, PADS_DAW],
+            vec![0xB6, FEATURE_ENCODERS, ENCODERS_PLUGIN],
         ]
     }
 
     fn unload_messages(&self) -> Vec<Vec<u8>> {
-        vec![vec![0x9F, 0x0C, 0x00]]
+        vec![vec![0x9F, 0x0B, 0x00], vec![0x9F, 0x0C, 0x00]]
+    }
+
+    /// The device reports what its own buttons changed; put it back so the
+    /// surface stays the app's: the pad and encoder layouts, and Arp or Scale
+    /// switched on (their presses still count as buttons).
+    fn react(&self, msg: &[u8]) -> Vec<Vec<u8>> {
+        if msg.len() < 3 || msg[0] != 0xB0 | FEATURE_CHANNEL {
+            return Vec::new();
+        }
+        match (msg[1], msg[2]) {
+            (FEATURE_PADS, layout) if layout != PADS_DAW => vec![vec![0xB6, FEATURE_PADS, PADS_DAW]],
+            (FEATURE_ENCODERS, mode) if mode != ENCODERS_PLUGIN => vec![vec![0xB6, FEATURE_ENCODERS, ENCODERS_PLUGIN]],
+            (FEATURE_ARP | FEATURE_SCALE, on) if on > 0 => vec![vec![0xB6, msg[1], 0]],
+            _ => Vec::new(),
+        }
     }
 
     fn clear_messages(&self) -> Vec<Vec<u8>> {
@@ -286,6 +315,10 @@ impl LaunchpadDriver for LaunchkeyMiniMk4 {
             (BLOCK_L_X, TRANSPORT_Y) => Some((CC_PLAY, true)),
             (BLOCK_R_X, TRANSPORT_Y) => Some((CC_RECORD, true)),
             (BLOCK_L_X, PAD_TOP_Y) => Some((CC_SHIFT, true)),
+            (SIDE_X, KNOB_Y) => Some((FEATURE_ARP, true)),
+            (SIDE_X, KNOB_LOW_Y) => Some((FEATURE_SCALE, true)),
+            (RIGHT_X, KNOB_Y) => Some((CC_MODE_UP, true)),
+            (RIGHT_X, KNOB_LOW_Y) => Some((CC_MODE_DOWN, true)),
             (x, WHITE_Y) if x < WHITE_KEYS => Some((white_note(x), false)),
             (x, BLACK_Y) => black_note(x).map(|n| (n, false)),
             _ => None,
@@ -300,6 +333,10 @@ impl LaunchpadDriver for LaunchkeyMiniMk4 {
                 CC_PLAY => Some((BLOCK_L_X, TRANSPORT_Y)),
                 CC_RECORD => Some((BLOCK_R_X, TRANSPORT_Y)),
                 CC_SHIFT => Some((BLOCK_L_X, PAD_TOP_Y)),
+                FEATURE_ARP => Some((SIDE_X, KNOB_Y)),
+                FEATURE_SCALE => Some((SIDE_X, KNOB_LOW_Y)),
+                CC_MODE_UP => Some((RIGHT_X, KNOB_Y)),
+                CC_MODE_DOWN => Some((RIGHT_X, KNOB_LOW_Y)),
                 CC_KNOB_FIRST..=CC_KNOB_LAST => Some((PAD_X0 + (note - CC_KNOB_FIRST), KNOB_Y)),
                 _ => None,
             }
@@ -317,10 +354,12 @@ impl LaunchpadDriver for LaunchkeyMiniMk4 {
         1
     }
 
-    /// DAW interface: pads are notes on channel 1, the arrow and transport
-    /// buttons CCs on channel 1, Shift a CC on channel 7. The encoder CCs are
-    /// controls (see `parse_control`); layout reports and everything else are
-    /// ignored. The keys never arrive here.
+    /// DAW interface: pads are notes on channel 1; the Track and mode arrows
+    /// and the transport are CCs on channel 1; Shift, Arp and Scale report on
+    /// channel 7 (Arp and Scale as "on", which `react` turns off again, so the
+    /// confirmation is the release). The encoder CCs are controls (see
+    /// `parse_control`); layout reports and everything else are ignored. The
+    /// keys never arrive here.
     fn parse_input_with(&self, msg: &[u8], threshold: u8) -> Option<ButtonEvent> {
         if msg.len() < 3 {
             return None;
@@ -335,7 +374,7 @@ impl LaunchpadDriver for LaunchkeyMiniMk4 {
                 let (x, y) = self.note_to_xy(number, false)?;
                 Some(ButtonEvent { x, y, pressed: status == 0x90 && value >= threshold, note: number, cc: false, value })
             }
-            (0xB0, 0, CC_TRACK_UP | CC_TRACK_DOWN | CC_PLAY | CC_RECORD) | (0xB0, SHIFT_CHANNEL, CC_SHIFT) => {
+            (0xB0, 0, CC_TRACK_UP | CC_TRACK_DOWN | CC_PLAY | CC_RECORD | CC_MODE_UP | CC_MODE_DOWN) | (0xB0, FEATURE_CHANNEL, CC_SHIFT | FEATURE_ARP | FEATURE_SCALE) => {
                 let (x, y) = self.note_to_xy(number, true)?;
                 Some(ButtonEvent { x, y, pressed: value > 0, note: number, cc: true, value })
             }
@@ -407,7 +446,8 @@ mod tests {
         assert_eq!(d.note_to_xy(117, true), Some((BLOCK_R_X, TRANSPORT_Y)), "● between the pad rows");
         assert_eq!(d.xy_to_note(BLOCK_L_X, PAD_TOP_Y), Some((63, true)), "Shift");
         assert_eq!(d.xy_to_note(BLOCK_R_X, PAD_TOP_Y), None, "Settings has no DAW message yet");
-        assert_eq!(d.xy_to_note(SIDE_X, KNOB_Y), None, "Arp is a keyboard function");
+        assert_eq!(d.xy_to_note(SIDE_X, KNOB_Y), Some((0x49, true)), "Arp reports as a feature control");
+        assert_eq!(d.xy_to_note(RIGHT_X, KNOB_LOW_Y), Some((52, true)), "the lower mode arrow is Mode down");
         assert_eq!(d.xy_to_note(RIGHT_X, PAD_TOP_Y), None, "> has no DAW message yet");
         assert_eq!(d.xy_to_note(LOGO_X, KNOB_Y), None, "the logo's corner is free");
         assert_eq!(d.xy_to_note(BLOCK_L_X, KNOB_Y), None, "the screen sends nothing");
@@ -434,6 +474,20 @@ mod tests {
         let shift = d.parse_input_with(&[0xB6, 0x3F, 0x7F], 1).unwrap();
         assert_eq!((shift.x, shift.y, shift.pressed), (BLOCK_L_X, PAD_TOP_Y, true));
         assert!(d.parse_input_with(&[0xBF, 0x73, 0x7F], 1).is_none(), "the MK3's channel 16 transport is not the MK4's");
+        // Second capture: the mode arrows on channel 1, Arp and Scale as feature reports.
+        assert_eq!(d.parse_input_with(&[0xB0, 0x33, 0x7F], 1).map(|e| (e.x, e.y, e.pressed)), Some((RIGHT_X, KNOB_Y, true)));
+        assert_eq!(d.parse_input_with(&[0xB0, 0x34, 0x00], 1).map(|e| (e.x, e.y, e.pressed)), Some((RIGHT_X, KNOB_LOW_Y, false)));
+        assert_eq!(d.parse_input_with(&[0xB6, 0x49, 0x7F], 1).map(|e| (e.x, e.y, e.pressed)), Some((SIDE_X, KNOB_Y, true)));
+        assert_eq!(d.parse_input_with(&[0xB6, 0x4A, 0x00], 1).map(|e| (e.x, e.y, e.pressed)), Some((SIDE_X, KNOB_LOW_Y, false)));
+        // The driver puts the device back: Arp on → off, a foreign pad layout → DAW, a foreign encoder mode → Plugin.
+        assert_eq!(d.react(&[0xB6, 0x49, 0x7F]), vec![vec![0xB6, 0x49, 0x00]]);
+        assert_eq!(d.react(&[0xB6, 0x4A, 0x7F]), vec![vec![0xB6, 0x4A, 0x00]]);
+        assert!(d.react(&[0xB6, 0x49, 0x00]).is_empty(), "the off confirmation needs no answer");
+        assert_eq!(d.react(&[0xB6, 0x1D, 0x0D]), vec![vec![0xB6, 0x1D, 0x02]]);
+        assert!(d.react(&[0xB6, 0x1D, 0x02]).is_empty());
+        assert_eq!(d.react(&[0xB6, 0x1E, 0x05]), vec![vec![0xB6, 0x1E, 0x02]]);
+        assert!(d.react(&[0xB0, 0x33, 0x7F]).is_empty(), "channel 1 buttons are not feature reports");
+        assert!(d.react(&[0x90, 0x60, 0x7F]).is_empty());
         assert!(d.parse_input_with(&[0xB6, 0x1D, 0x02], 1).is_none(), "layout reports are not presses");
         assert!(d.parse_input_with(&[0x90, 60, 100], 1).is_none(), "keys do not arrive on the DAW interface");
         // Encoders: absolute CC 21..28 on channel 16, never presses.
@@ -468,6 +522,8 @@ mod tests {
         ]);
         assert_eq!(msgs, vec![vec![0x90, 96, 5], vec![0xB0, 107, 5], vec![0xB1, 107, 21], vec![0xB2, 106, 45], vec![0xB3, 115, 127], vec![0xB3, 117, 0]]);
         assert_eq!(d.init_messages()[0], vec![0x9F, 0x0C, 0x7F]);
+        assert!(d.init_messages().contains(&vec![0x9F, 0x0B, 0x7F]), "feature reports on, so Arp and Scale presses arrive");
+        assert_eq!(d.unload_messages().last(), Some(&vec![0x9F, 0x0C, 0x00]));
         assert!(d.clear_messages().contains(&vec![0xB3, 115, 0]));
         let layout = d.layout();
         assert_eq!((layout.width, layout.height), (15, 8), "one column per white key, three bands of two half-rows");
@@ -483,7 +539,7 @@ mod tests {
         );
         assert_eq!(at(BLOCK_L_X, PAD_TOP_Y).label.as_deref(), Some("Shift"));
         assert_eq!(at(BLOCK_R_X, PAD_TOP_Y).label.as_deref(), Some("Settings"));
-        assert!(at(BLOCK_R_X, PAD_TOP_Y).note.is_none(), "Settings sends nothing yet");
+        assert!(at(BLOCK_R_X, PAD_TOP_Y).note.is_none(), "Settings sends nothing");
         assert_eq!((at(BLOCK_L_X, OCT_Y).label.as_deref(), at(BLOCK_R_X, OCT_Y).label.as_deref()), (Some("Oct −"), Some("Oct +")));
         assert_eq!((at(RIGHT_X, KNOB_Y).label.as_deref(), at(RIGHT_X, KNOB_LOW_Y).label.as_deref()), (Some("∧"), Some("∨")));
         assert_eq!((at(RIGHT_X, PAD_TOP_Y).shape, at(RIGHT_X, PAD_TOP_Y).label.as_deref(), at(RIGHT_X, PAD_TOP_Y).rows), (PadShape::TallRect, Some(">"), 2));

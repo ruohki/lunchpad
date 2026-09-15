@@ -643,6 +643,7 @@ impl DeviceManager {
         let sink = InputSink {
             app: self.app.clone(),
             driver: driver.clone(),
+            output: output.clone(),
             pressed: pressed.clone(),
             render: render.clone(),
             listeners: self.listeners.clone(),
@@ -764,6 +765,8 @@ impl DeviceManager {
 struct InputSink {
     app: AppHandle,
     driver: Arc<dyn LaunchpadDriver>,
+    /// For the driver's immediate answers to what the device reports.
+    output: OutputHandle,
     pressed: Arc<Mutex<HashSet<(u8, u8)>>>,
     render: RenderHandle,
     listeners: Arc<Mutex<Vec<ButtonListener>>>,
@@ -792,6 +795,11 @@ impl InputSink {
                 let _ = self.app.emit(EVENT_FIRMWARE, FirmwareEvent { firmware: reply.firmware });
             }
             return;
+        }
+        for reply in self.driver.react(msg) {
+            if let Err(e) = self.output.send_raw(reply) {
+                tracing::warn!(error = %e, "could not answer the device");
+            }
         }
         if let Some(control) = self.driver.parse_control(msg) {
             self.control(control);
