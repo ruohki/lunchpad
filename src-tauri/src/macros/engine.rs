@@ -155,9 +155,10 @@ impl MacroEngine {
     }
 
     /// A knob or touch strip moved: the fader sitting on that cell takes the value.
-    /// Knobs stream many values a second, so one worker per fader applies the latest
-    /// value every `CONTROL_INTERVAL` and runs the fader's actions with it, ending on
-    /// the last value received.
+    /// Knobs stream many values a second, so one worker per fader shows the latest
+    /// value every `CONTROL_INTERVAL` (LEDs, the on-screen level and `fader.<name>`
+    /// follow the hand) and runs the fader's actions once, with the value the
+    /// movement came to rest on, after `CONTROL_SETTLE` without a newer one.
     pub fn on_control(&self, event: &ControlEvent) {
         let (page_id, hit) = {
             let store = self.inner.profile.lock();
@@ -173,9 +174,7 @@ impl MacroEngine {
             let mut pending = self.inner.pending_controls.lock();
             let slot = pending.entry(id.clone()).or_default();
             slot.latest = Some((page_id, event.x, event.y, hit));
-            let now = Instant::now();
-            slot.changed = Some(now);
-            slot.waiting_since.get_or_insert(now);
+            slot.changed = Some(Instant::now());
             !std::mem::replace(&mut slot.busy, true)
         };
         if !start_worker {
@@ -185,30 +184,34 @@ impl MacroEngine {
         self.inner.runtime.spawn(async move {
             loop {
                 tokio::time::sleep(CONTROL_INTERVAL).await;
-                let next = {
+                let step = {
                     let mut pending = engine.inner.pending_controls.lock();
                     let slot = pending.entry(id.clone()).or_default();
-                    let settled = slot.changed.map(|t| t.elapsed() >= CONTROL_SETTLE).unwrap_or(true);
-                    let held_long_enough = slot.waiting_since.map(|t| t.elapsed() >= CONTROL_MAX_HOLD).unwrap_or(false);
-                    if slot.latest.is_some() && !settled && !held_long_enough {
-                        // Still moving: give it one more tick to come to rest.
-                        continue;
-                    }
+                    let rested = slot.changed.map(|t| t.elapsed() >= CONTROL_SETTLE).unwrap_or(true);
                     match slot.latest.take() {
+                        // A newer value: show it now; its actions wait for the hand to rest.
                         Some(v) => {
-                            slot.waiting_since = None;
-                            Some(v)
+                            slot.resting = Some(v.clone());
+                            ControlStep::Show(v)
                         }
-                        None => {
-                            slot.busy = false;
-                            slot.changed = None;
-                            slot.waiting_since = None;
-                            None
-                        }
+                        None if !rested => ControlStep::Wait,
+                        // Rested: the actions run once, with the value it came to rest on.
+                        None => match slot.resting.take() {
+                            Some(v) => ControlStep::Run(v),
+                            None => {
+                                slot.busy = false;
+                                slot.changed = None;
+                                ControlStep::Done
+                            }
+                        },
                     }
                 };
-                let Some((page_id, x, y, hit)) = next else { break };
-                engine.fader_pressed(&page_id, x, y, hit, 127, true);
+                match step {
+                    ControlStep::Show((page_id, x, y, hit)) => engine.fader_pressed(&page_id, x, y, hit, 127, false),
+                    ControlStep::Run((page_id, x, y, hit)) => engine.fader_pressed(&page_id, x, y, hit, 127, true),
+                    ControlStep::Wait => {}
+                    ControlStep::Done => break,
+                }
             }
         });
     }
@@ -716,25 +719,40 @@ fn snapshot(ctx: &RunContext, list: ActionList) -> Option<(Vec<Action>, bool)> {
     Some((actions, button.loop_down))
 }
 
-/// Shortest gap between two action runs of a fader driven by a knob or strip.
+/// How often a fader driven by a knob or strip shows the newest value.
 const CONTROL_INTERVAL: Duration = Duration::from_millis(60);
-/// A fader that is still moving waits this long for the next value before its
-/// actions run, so a sweep does not fire an action per step. A control that
-/// keeps moving is applied anyway every `CONTROL_MAX_HOLD`.
-const CONTROL_SETTLE: Duration = Duration::from_millis(40);
-const CONTROL_MAX_HOLD: Duration = Duration::from_millis(240);
+/// How long the hand has to rest on a knob or strip before the fader's actions
+/// run: the level follows every movement, the actions fire once per stop.
+const CONTROL_SETTLE: Duration = Duration::from_millis(150);
+
+type ControlValue = (String, u8, u8, FaderHit);
+
+/// One tick of a fader's control worker.
+enum ControlStep {
+    /// Show a newer value (LEDs, level, variables), no actions yet.
+    Show(ControlValue),
+    /// The movement rested: run the actions with the value it stopped on.
+    Run(ControlValue),
+    /// Still moving, nothing new to show.
+    Wait,
+    /// Rested and everything is applied.
+    Done,
+}
 
 #[derive(Default)]
 struct PendingControl {
-    latest: Option<(String, u8, u8, FaderHit)>,
+    /// The newest value not shown yet.
+    latest: Option<ControlValue>,
     busy: bool,
-    /// When the value waiting in `latest` arrived, and when the oldest value of
-    /// this movement did: together they debounce a sweep without stalling it.
+    /// When the newest value arrived; the movement has rested once that is
+    /// `CONTROL_SETTLE` ago.
     changed: Option<Instant>,
-    waiting_since: Option<Instant>,
+    /// The last value shown whose actions have not run yet.
+    resting: Option<ControlValue>,
 }
 
 /// What the engine needs from a fader pad press, copied out of the profile lock.
+#[derive(Clone)]
 struct FaderHit {
     id: String,
     /// `fader.<key>` is what macros read; see `Fader::variable_key`.
@@ -1064,6 +1082,39 @@ mod tests {
         assert_eq!(globals.get("applied").map(String::as_str), Some("75"));
         let value = profile.lock().profile.page(DEFAULT_PAGE_ID).unwrap().faders[0].value;
         assert!((value - 75.0).abs() < 1e-9);
+    }
+
+    /// While a knob keeps moving the fader's level follows it, but its actions do
+    /// not run; they run once, with the final value, after the movement rests.
+    #[tokio::test]
+    async fn a_sweep_shows_every_value_and_runs_the_actions_once_it_rests() {
+        let (engine, profile) = engine();
+        profile.lock().profile.page_mut(DEFAULT_PAGE_ID).unwrap().set_fader(Fader {
+            id: "knob1".into(),
+            name: "gain".into(),
+            x: 3,
+            y: 3,
+            length: 1,
+            min: 0.0,
+            max: 100.0,
+            on_change: vec![a(ActionKind::AddToVariable { name: "runs".into(), amount: "1".into(), scope: VarScope::Global })],
+            ..Fader::default()
+        });
+        // A sweep: a value every 40 ms for 400 ms.
+        for i in 1..=10u32 {
+            engine.on_control(&ControlEvent { x: 3, y: 3, value: i as f32 / 10.0 });
+            tokio::time::sleep(Duration::from_millis(40)).await;
+        }
+        // Mid-sweep: the level has been following, the actions have not run.
+        let globals = engine.globals();
+        let shown: f64 = globals.get("fader.gain").and_then(|v| v.parse().ok()).expect("the level follows the knob");
+        assert!(shown >= 50.0, "the level is well into the sweep, got {shown}");
+        assert_eq!(globals.get("runs"), None, "no actions while the knob is moving");
+        // The hand rests: the actions run once, with the value it stopped on.
+        tokio::time::sleep(Duration::from_millis(400)).await;
+        let globals = engine.globals();
+        assert_eq!(globals.get("fader.gain").map(String::as_str), Some("100"));
+        assert_eq!(globals.get("runs").map(String::as_str), Some("1"));
     }
 
     /// Setting a knob's fader by hand (the on-screen control, "Set fader", a
