@@ -698,7 +698,8 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
    * fills the rows it spans; the Pro MK3's small ones take half a cell; the rest fill their cell.
    */
   const sizeClass = pad.shape === "small" ? "h-1/2 w-1/2" : pad.shape === "rect" ? "shrink-0" : pad.shape === "tallRect" ? "h-full shrink-0" : "h-full w-full";
-  const sizeStyle = pad.shape === "rect" ? { width: cell * 0.7, height: cell * 0.38 } : pad.shape === "tallRect" ? { width: cell * 0.7 } : undefined;
+  // Rounded buttons take most of their column, as on the Launchkey's panel.
+  const sizeStyle = pad.shape === "rect" ? { width: cell * 0.86, height: cell * 0.4 } : pad.shape === "tallRect" ? { width: cell * 0.86 } : undefined;
 
   if (decorative) {
     return (
