@@ -764,27 +764,8 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
    * Rect buttons keep one size whatever their row's height; a tall rect keeps that width but
    * fills the rows it spans; the Pro MK3's small ones take half a cell; the rest fill their cell.
    */
-  /**
-   * A square function button beside or above the grid is a true square, smaller than a pad,
-   * set against the grid's side of its cell (the ring hugs the grid, with the slack on the
-   * outside). The Pro MK3's two half-height rows under the grid fill their cells instead, so
-   * the gaps there stay even.
-   */
-  const square = pad.shape === "square";
-  const sideways = square && (pad.region === "left" || pad.region === "right");
-  const underGrid = square && (pad.region === "bottom" || pad.region === "bottom2");
-  const sizeClass =
-    pad.shape === "small"
-      ? "h-1/2 w-1/2"
-      : pad.shape === "rect" || pad.shape === "smallRect"
-        ? "shrink-0"
-        : pad.shape === "tallRect"
-          ? "h-full shrink-0"
-          : square && !underGrid
-            ? sideways
-              ? "aspect-square w-[82%] shrink-0"
-              : "aspect-square h-[82%] shrink-0"
-            : "h-full w-full";
+  // A square function button around the grid is the size of a pad: it fills its cell like one.
+  const sizeClass = pad.shape === "small" ? "h-1/2 w-1/2" : pad.shape === "rect" || pad.shape === "smallRect" ? "shrink-0" : pad.shape === "tallRect" ? "h-full shrink-0" : "h-full w-full";
   // Rounded buttons: a block of three rows over two pad rows (the middle one spanning the
   // two middle half-rows, the outer ones against the band's edges) fills its box with the
   // same gap between the buttons across and down. The buttons beside the encoders are
@@ -793,13 +774,7 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
     pad.shape === "rect" ? { width: cell * 0.9, height: cell * 0.57 } : pad.shape === "smallRect" ? { width: cell * 0.54, height: cell * 0.46 } : pad.shape === "tallRect" ? { width: cell * 0.54 } : undefined;
   /** Where a small button sits in its cell: against an edge when the layout says so. */
   const edge = pad.edge ?? "free";
-  const alignClass =
-    hangTop || edge === "top" || underGrid
-      ? "items-start"
-      : edge === "bottom" || (square && pad.region === "top")
-        ? "items-end"
-        : "items-center";
-  const justifyClass = square && pad.region === "left" ? "justify-end" : square && pad.region === "right" ? "justify-start" : "justify-center";
+  const alignClass = hangTop || edge === "top" ? "items-start" : edge === "bottom" ? "items-end" : "items-center";
 
   if (decorative) {
     // Works on the device only: drawn where it is, but plainly not for use here.
@@ -835,9 +810,8 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
     <div
       data-pad={`${pad.x},${pad.y}`}
       className={clsx(
-        "relative flex h-full w-full transition-opacity",
+        "relative flex h-full w-full justify-center transition-opacity",
         alignClass,
-        justifyClass,
         dropTarget === "move" && "ring-2 ring-accent-400",
         dropTarget === "copy" && "ring-2 ring-ok",
         dropTarget === "blocked" && "ring-2 ring-danger",

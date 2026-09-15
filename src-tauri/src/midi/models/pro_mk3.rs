@@ -3,9 +3,9 @@
 //! Reference: Novation "Launchpad Pro [MK3] Programmer's Reference Manual".
 //! Not yet verified on hardware in this rewrite; mirrors the legacy app.
 //!
-//! The ring of function buttons around the grid is `Square`: black buttons with
-//! barely rounded corners whose printed symbol lights up, drawn against the
-//! grid's side of their cell (the smaller Shift keeps `Small`).
+//! The ring of function buttons around the grid is `Square`: pad-sized black
+//! buttons with barely rounded corners whose printed symbol lights up (the
+//! smaller Shift keeps `Small`).
 //!
 //! Layout is 10 columns x 11 rows (y = 0 bottom):
 //!   y = 0   bottom function row      CC 1..8

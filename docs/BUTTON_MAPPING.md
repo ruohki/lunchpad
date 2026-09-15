@@ -40,8 +40,8 @@ Programmer mode (`… 02 0C 0E 01`, layout `… 02 0C 00 7F` = Programmer). Inqu
 accepted). The X, Mini MK3 and Pro MK3 manuals all print the same reply, so the scanner lets
 the port name ("LPX", "LPMiniMK3", "LPProMK3") decide between
 the three when the reply says third generation. The buttons around the grid are `Square` in
-the layout: black buttons with barely rounded corners whose printed symbol the LED lights
-(`mask`), drawn against the grid's side of their cell so the ring hugs the grid.
+the layout: pad-sized black buttons with barely rounded corners whose printed symbol the LED
+lights (`mask`).
 
 | Region | Coordinates | MIDI | Numbers |
 |---|---|---|---|
@@ -93,8 +93,8 @@ the device answers on all three ports with `F0 7E 00 06 02 00 20 29 23 01 00 00 
 with `cargo run --example promk3mode`: after `10 01` (DAW mode) the Programmer toggle alone does not take,
 with `10 00` first the pads light and presses arrive in programmer numbering. The app drives the MIDI
 interface (`LPProMK3 MIDI`), which also carries the clock (`F8`) the device sends. Grid is 10 wide, 11 tall; the two
-bottom rows are half height. The ring of buttons on all four sides is `Square` as on the X (black,
-symbol lit, hugging the grid); Shift is `Small` with the same look.
+bottom rows are half height. The ring of buttons on all four sides is `Square` as on the X (pad-sized,
+black, symbol lit; verified against the device 2026-09-15); Shift is `Small` with the same look.
 
 | Region | Coordinates | MIDI | Numbers |
 |---|---|---|---|
