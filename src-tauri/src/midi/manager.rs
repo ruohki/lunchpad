@@ -465,7 +465,10 @@ impl DeviceManager {
     // ----- connecting ------------------------------------------------------
 
     /// Open the given port pair as `model`, remember it, and light it up.
-    pub fn connect(&mut self, input_name: &str, output_name: &str, model: LaunchpadModel, firmware: Option<String>) -> MidiResult<()> {
+    /// Open the ports as the given model. `manual` marks a device chosen by
+    /// hand in the picker: it is remembered as such, so reconnecting trusts
+    /// the model instead of demanding an inquiry reply.
+    pub fn connect(&mut self, input_name: &str, output_name: &str, model: LaunchpadModel, firmware: Option<String>, manual: bool) -> MidiResult<()> {
         self.disconnect_quiet();
         self.status = ConnectionStatus::Connecting;
         self.last_error = None;
@@ -485,6 +488,7 @@ impl DeviceManager {
                         model: info.model,
                         firmware: info.firmware.clone(),
                         is_virtual: false,
+                        manual,
                     });
                     if let Err(e) = st.save() {
                         tracing::warn!(error = %e, "could not persist device selection");
@@ -549,7 +553,7 @@ impl DeviceManager {
         self.status = ConnectionStatus::Connected;
         {
             let mut st = self.settings.lock();
-            st.settings.device = Some(SavedDevice { input_name: String::new(), output_name: String::new(), model, firmware: None, is_virtual: true });
+            st.settings.device = Some(SavedDevice { input_name: String::new(), output_name: String::new(), model, firmware: None, is_virtual: true, manual: false });
             if let Err(e) = st.save() {
                 tracing::warn!(error = %e, "could not persist device selection");
             }
@@ -573,13 +577,18 @@ impl DeviceManager {
         let matching = found.into_iter().find(|d| d.input.name == saved.input_name && d.output.name == saved.output_name);
         match matching {
             Some(d) if d.model == saved.model => {
-                self.connect(&d.input.name, &d.output.name, d.model, d.firmware)?;
+                self.connect(&d.input.name, &d.output.name, d.model, d.firmware, saved.manual)?;
                 Ok(true)
             }
             Some(d) => Err(MidiError::Verification(format!(
                 "ports of the remembered {} now belong to a {}",
                 saved.model, d.model
             ))),
+            // A device chosen by hand may not answer the inquiry at all; its ports are back, so trust the model.
+            None if saved.manual => {
+                self.connect(&saved.input_name, &saved.output_name, saved.model, None, true)?;
+                Ok(true)
+            }
             None => Err(MidiError::Verification("remembered device did not answer the device inquiry".into())),
         }
     }

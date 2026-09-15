@@ -275,6 +275,7 @@ pub fn run() {
             forget_device,
             get_layout,
             list_models,
+            list_midi_ports,
             press_pad,
             control_pad,
             reset_leds,

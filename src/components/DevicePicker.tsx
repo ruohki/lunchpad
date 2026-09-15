@@ -2,9 +2,17 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDeviceStore } from "../store/device";
-import { api, type DiscoveredLaunchpad, type LaunchpadModel, type ModelInfo } from "../lib/api";
+import { api, type DiscoveredLaunchpad, type LaunchpadModel, type MidiPorts, type ModelInfo } from "../lib/api";
 import { Select } from "./Select";
 import { Button, IconRefresh, Spinner, Toggle } from "./ui";
+
+const NO_PORTS: MidiPorts = { inputs: [], outputs: [] };
+
+/** The port to offer first: the remembered one, else one that sounds like a Novation device, else the first. */
+function preferredPort(names: string[], saved: string | undefined): string | null {
+  if (saved && names.includes(saved)) return saved;
+  return names.find((n) => /launch/i.test(n)) ?? names[0] ?? null;
+}
 
 export function DevicePicker() {
   const { t } = useTranslation();
@@ -22,6 +30,10 @@ export function DevicePicker() {
   const connectVirtual = useDeviceStore((s) => s.connectVirtual);
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [virtualModel, setVirtualModel] = useState<LaunchpadModel>(savedDevice?.model ?? "LaunchpadMk2");
+  const [ports, setPorts] = useState<MidiPorts>(NO_PORTS);
+  const [manualModel, setManualModel] = useState<LaunchpadModel>(savedDevice?.model ?? "LaunchpadMk2");
+  const [manualInput, setManualInput] = useState<string | null>(null);
+  const [manualOutput, setManualOutput] = useState<string | null>(null);
 
   useEffect(() => {
     api
@@ -30,7 +42,29 @@ export function DevicePicker() {
       .catch(() => setModels([]));
   }, []);
 
+  // The ports change with every scan (plugging a device in starts one), so read them after each.
+  useEffect(() => {
+    let live = true;
+    api
+      .listMidiPorts()
+      .then((p) => live && setPorts(p))
+      .catch(() => live && setPorts(NO_PORTS));
+    return () => {
+      live = false;
+    };
+  }, [discovered]);
+
+  // Keep the hand-picked ports valid as the list changes.
+  useEffect(() => {
+    const inputs = ports.inputs.map((p) => p.name);
+    const outputs = ports.outputs.map((p) => p.name);
+    setManualInput((cur) => (cur && inputs.includes(cur) ? cur : preferredPort(inputs, savedDevice?.inputName)));
+    setManualOutput((cur) => (cur && outputs.includes(cur) ? cur : preferredPort(outputs, savedDevice?.outputName)));
+  }, [ports, savedDevice]);
+
   const connecting = status === "connecting" || busy;
+  const modelOptions = models.map((m) => ({ value: m.model, label: t(`models.${m.model}`) }));
+  const portOptions = (list: MidiPorts["inputs"]) => list.map((p) => ({ value: p.name, label: p.name }));
 
   return (
     <div className="flex h-full items-center justify-center overflow-y-auto p-8">
@@ -90,16 +124,40 @@ export function DevicePicker() {
           <div className="mt-3 flex flex-wrap items-end gap-3">
             <label className="flex min-w-48 flex-col gap-1 text-xs text-stage-400">
               {t("picker.virtualLayout")}
-              <Select<LaunchpadModel>
-                size="sm"
-                value={virtualModel}
-                options={models.map((m) => ({ value: m.model, label: t(`models.${m.model}`) }))}
-                onChange={setVirtualModel}
-              />
+              <Select<LaunchpadModel> size="sm" value={virtualModel} options={modelOptions} onChange={setVirtualModel} />
             </label>
             <Button size="sm" variant="primary" onClick={() => void connectVirtual(virtualModel)} disabled={connecting || models.length === 0}>
               {t("picker.virtualStart")}
             </Button>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-xl bg-stage-900/60 px-4 py-3">
+          <p className="text-sm text-stage-200">{t("picker.manualTitle")}</p>
+          <p className="mt-1 text-xs text-stage-400">{t("picker.manualHint")}</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="flex min-w-0 flex-col gap-1 text-xs text-stage-400">
+              {t("picker.manualModel")}
+              <Select<LaunchpadModel> size="sm" value={manualModel} options={modelOptions} onChange={setManualModel} />
+            </label>
+            <label className="flex min-w-0 flex-col gap-1 text-xs text-stage-400">
+              {t("picker.manualInput")}
+              <Select size="sm" value={manualInput} options={portOptions(ports.inputs)} onChange={setManualInput} placeholder={t("picker.noPorts")} disabled={ports.inputs.length === 0} />
+            </label>
+            <label className="flex min-w-0 flex-col gap-1 text-xs text-stage-400">
+              {t("picker.manualOutput")}
+              <Select size="sm" value={manualOutput} options={portOptions(ports.outputs)} onChange={setManualOutput} placeholder={t("picker.noPorts")} disabled={ports.outputs.length === 0} />
+            </label>
+            <div className="flex items-end justify-end">
+              <Button
+                size="sm"
+                variant="primary"
+                disabled={connecting || models.length === 0 || !manualInput || !manualOutput}
+                onClick={() => manualInput && manualOutput && void connect({ inputName: manualInput, outputName: manualOutput, model: manualModel, firmware: null, manual: true })}
+              >
+                {t("picker.manualConnect")}
+              </Button>
+            </div>
           </div>
         </div>
 

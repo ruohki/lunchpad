@@ -112,6 +112,8 @@ export interface SavedDevice {
   model: LaunchpadModel;
   firmware: string | null;
   virtual: boolean;
+  /** Chosen by hand in the picker: reconnects trust the model without a device inquiry. */
+  manual: boolean;
 }
 
 export interface Diagnostics {
@@ -157,6 +159,12 @@ export interface DeviceState {
 export interface ModelInfo {
   model: LaunchpadModel;
   name: string;
+}
+
+/** Every MIDI port by name, for connecting by hand. */
+export interface MidiPorts {
+  inputs: MidiPortInfo[];
+  outputs: MidiPortInfo[];
 }
 
 export interface PushToTalkSettings {
@@ -657,6 +665,8 @@ export interface ConnectRequest {
   outputName: string;
   model: LaunchpadModel;
   firmware?: string | null;
+  /** Chosen by hand: the model is trusted without a device inquiry, now and on reconnect. */
+  manual?: boolean;
 }
 
 export const api = {
@@ -671,6 +681,7 @@ export const api = {
   forgetDevice: () => invoke<DeviceState>("forget_device"),
   getLayout: (model: LaunchpadModel) => invoke<Layout>("get_layout", { model }),
   listModels: () => invoke<ModelInfo[]>("list_models"),
+  listMidiPorts: () => invoke<MidiPorts>("list_midi_ports"),
   pressPad: (x: number, y: number, pressed: boolean) => invoke<void>("press_pad", { x, y, pressed }),
   /** A drag on a knob or strip in the UI: `value` runs 0..1 over the control's travel, like a hardware turn. */
   /** Work a knob or strip from the interface; `released` = a sprung strip let go (it springs to `value`). */

@@ -25,6 +25,9 @@ pub struct SavedDevice {
     /// A Launchpad-less session: the on-screen pads stand in for the device.
     #[serde(default, rename = "virtual")]
     pub is_virtual: bool,
+    /// Chosen by hand in the picker: reconnects trust the model without a device inquiry.
+    #[serde(default)]
+    pub manual: bool,
 }
 
 /// Key held while a push-to-talk section of a macro runs.
