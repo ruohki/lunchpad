@@ -57,6 +57,8 @@ export interface PadSpec {
   mask: boolean;
   /** springs back to the middle when released (a pitch strip): drawn as a bar, not a fill */
   centred: boolean;
+  /** reports a press only (the app adds the release): no released or held actions */
+  momentary: boolean;
 }
 
 export interface Layout {

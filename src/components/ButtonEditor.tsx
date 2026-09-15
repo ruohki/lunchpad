@@ -97,7 +97,10 @@ function EditorForm({ pageId, x, y, initial, limited, pages, layout, onCancel, o
   const [button, setButton] = useState<Button>(() => initial ?? randomNewButton());
   const [tab, setTab] = useState<Tab>("appearance");
   const [previewActive, setPreviewActive] = useState(false);
-  const ledKind = layout?.pads.find((p) => p.x === x && p.y === y)?.led ?? "rgb";
+  const pad = layout?.pads.find((p) => p.x === x && p.y === y);
+  const ledKind = pad?.led ?? "rgb";
+  /** A tap-only button (Arp, Scale): the device reports no release, so only the pressed list. */
+  const momentary = pad?.momentary ?? false;
   const [imageError, setImageError] = useState<string | null>(null);
   const dirty = JSON.stringify(button) !== JSON.stringify(initial);
 
@@ -171,7 +174,10 @@ function EditorForm({ pageId, x, y, initial, limited, pages, layout, onCancel, o
 
         {/* Form */}
         {tab === "actions" ? (
-          <ActionsTab button={button} onChange={setButton} pages={pages} layout={layout} />
+          <div className="flex flex-col gap-3">
+            {momentary && <p className="text-xs text-stage-500">{t("editor.tapOnly")}</p>}
+            <ActionsTab button={button} onChange={setButton} pages={pages} layout={layout} lists={momentary ? ["down"] : undefined} />
+          </div>
         ) : (
         <div className="flex flex-col gap-6">
           <section className="flex flex-col gap-3">

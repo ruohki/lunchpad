@@ -167,7 +167,7 @@ pub(crate) fn spec(
     };
     // The Launchkey's function buttons light their printed symbol only; pads light all over.
     let mask = matches!(shape, PadShape::Rect | PadShape::SmallRect | PadShape::TallRect);
-    PadSpec { x, y, shape, region, label: label.map(|s| s.to_string()), note, cc, led, rows: 1, cols: 1, edge: PadEdge::Free, mask, centred: false }
+    PadSpec { x, y, shape, region, label: label.map(|s| s.to_string()), note, cc, led, rows: 1, cols: 1, edge: PadEdge::Free, mask, centred: false, momentary: false }
 }
 
 /// Shared LED builder for MK2 / Pro MK2 (`0A` solid, `23` flash, `28` pulse,

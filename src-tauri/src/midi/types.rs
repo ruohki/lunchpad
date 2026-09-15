@@ -260,6 +260,10 @@ pub struct PadSpec {
     /// slider). The interface draws its level as a bar rather than a fill.
     #[serde(default)]
     pub centred: bool,
+    /// Reports a press only (the app adds the release itself): the button has
+    /// no released or held actions to speak of.
+    #[serde(default)]
+    pub momentary: bool,
 }
 
 fn one() -> u8 {
@@ -291,6 +295,12 @@ impl PadSpec {
     /// Marks a button whose LED lights only its printed symbol.
     pub fn masked(mut self) -> Self {
         self.mask = true;
+        self
+    }
+
+    /// A button that only ever taps (see `momentary`).
+    pub fn tap(mut self) -> Self {
+        self.momentary = true;
         self
     }
 

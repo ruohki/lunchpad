@@ -199,7 +199,7 @@ CCs are not confirmed on hardware are drawn but send nothing.
 | Settings | (3, 5) | not wired (the guide lists CC 63 on ch 1) | | none |
 | ▶, ● | (2, 4), (3, 4), 2 rows | CC ch 1 | 115, 117 | single LED under the symbol (`mask`), brightness as CC on ch 4 (unverified) |
 | Oct −, Oct + | (2, 2), (3, 2) | none in DAW mode | | none |
-| Arp, Scale | (4, 7), (4, 6) | feature report ch 7 | 73, 74: "on" is the press; the app switches the function off again and, as the device confirms nothing, adds the release itself, so each press is a tap | none |
+| Arp, Scale | (4, 7), (4, 6) | feature report ch 7 | 73, 74: "on" is the press; the app switches the function off again and, as the device confirms nothing, adds the release itself, so each press is a tap (`momentary` in the layout: the editor offers the pressed list only) | none |
 | ∧, ∨ (Track up / down) | (4, 5), (4, 3), 2 rows | CC ch 1 | 106, 107 | RGB palette on the CC (unverified) |
 | Encoders 1-8 | x 5-12, y 7, 2 rows | CC ch 16 | 21..28, absolute 0-127 → control events | none |
 | Pads top row | x 5-12, y 5, 2 rows | Note ch 1 + polyphonic aftertouch | 96..103 | RGB palette |

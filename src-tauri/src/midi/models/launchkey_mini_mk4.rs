@@ -219,8 +219,8 @@ impl LaunchpadDriver for LaunchkeyMiniMk4 {
                     (BLOCK_L_X | BLOCK_R_X, PAD_BOTTOM_Y) => continue,
                     (BLOCK_L_X, OCT_Y) => spec(self, x, y, Rect, Left, Some("Oct −")).with_led(LedKind::None).without_input().at_bottom(),
                     (BLOCK_R_X, OCT_Y) => spec(self, x, y, Rect, Left, Some("Oct +")).with_led(LedKind::None).without_input().at_bottom(),
-                    (SIDE_X, KNOB_Y) => spec(self, x, y, SmallRect, Left, Some("Arp")).with_led(LedKind::None),
-                    (SIDE_X, KNOB_LOW_Y) => spec(self, x, y, SmallRect, Left, Some("Scale")).with_led(LedKind::None),
+                    (SIDE_X, KNOB_Y) => spec(self, x, y, SmallRect, Left, Some("Arp")).with_led(LedKind::None).tap(),
+                    (SIDE_X, KNOB_LOW_Y) => spec(self, x, y, SmallRect, Left, Some("Scale")).with_led(LedKind::None).tap(),
                     (SIDE_X, PAD_TOP_Y) => spec(self, x, y, TallRect, Left, Some("∧")).with_rows(2),
                     (SIDE_X, PAD_BOTTOM_Y) => spec(self, x, y, TallRect, Left, Some("∨")).with_rows(2),
                     (PAD_X0..=PAD_X1, KNOB_Y) => spec(self, x, y, Knob, Top, None).with_rows(2),
@@ -588,6 +588,8 @@ mod tests {
             (PadShape::Rect, 2, LedKind::White, Some("▶"))
         );
         assert!(at(BLOCK_L_X, TRANSPORT_Y).mask && at(BLOCK_R_X, TRANSPORT_Y).mask, "▶ and ● light their symbols only");
+        assert!(at(SIDE_X, KNOB_Y).momentary && at(SIDE_X, KNOB_LOW_Y).momentary, "Arp and Scale are taps in the layout too");
+        assert!(!at(SIDE_X, PAD_TOP_Y).momentary, "the Track arrows have a real release");
         assert!(!at(PAD_X0, PAD_TOP_Y).mask);
         assert_eq!(at(BLOCK_L_X, PAD_TOP_Y).label.as_deref(), Some("Shift"));
         assert_eq!(at(BLOCK_R_X, PAD_TOP_Y).label.as_deref(), Some("Settings"));

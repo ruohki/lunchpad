@@ -268,6 +268,7 @@
     "titleNew": "New button",
     "position": "column {{column}}, row {{row}}",
     "previewHint": "Hold the preview to see the active colour.",
+    "tapOnly": "This button reports a tap only: the device sends no release, so there are no released or held actions.",
     "label": "Label",
     "text": "Text",
     "image": "Image",
