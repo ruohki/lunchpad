@@ -183,7 +183,17 @@ export function HttpEditor({ action, onChange, button }: { action: HttpAction; o
           )}
 
           {kind !== "file" && kind !== "multipart" && kind !== "none" && (
-            <PlaceholderField mono multiline rows={4} value={action.body} onChange={(body) => onChange({ ...action, body })} suggestions={suggestions} placeholder={kind === "json" ? '{ "velocity": {{velocity}} }' : ""} ariaLabel={t("http.body")} />
+            <PlaceholderField
+              mono
+              multiline
+              rows={4}
+              language={kind === "json" ? "json" : undefined}
+              value={action.body}
+              onChange={(body) => onChange({ ...action, body })}
+              suggestions={suggestions}
+              placeholder={kind === "json" ? '{ "velocity": {{velocity}} }' : ""}
+              ariaLabel={t("http.body")}
+            />
           )}
         </div>
       )}

@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../../icons/Icon";
 import { Popover } from "../Popover";
@@ -17,22 +17,77 @@ interface Props {
   mono?: boolean;
   spellCheck?: boolean;
   ariaLabel?: string;
+  /** Colour the text as code as well as the placeholders. */
+  language?: "json";
 }
 
-const baseCls = "w-full rounded-md bg-stage-800 px-2.5 py-1.5 text-sm text-stage-100 outline-none placeholder:text-stage-500 focus:ring-1 focus:ring-accent-400";
+/** Padding, size and radius are shared by the field and the layer behind it, or the two drift apart. */
+const fieldCls = "w-full rounded-md px-2.5 py-1.5 text-sm outline-none";
+const wrapCls = "relative min-w-0 flex-1 rounded-md bg-stage-800 focus-within:ring-1 focus-within:ring-accent-400";
+
+/** `{{name}}`, the thing the engine replaces. */
+const PLACEHOLDER = /\{\{[^{}\s]*\}\}/g;
+/** JSON pieces: a string (with an optional colon, which makes it a key), a number, a literal, punctuation. */
+const JSON_TOKEN = /("(?:[^"\\]|\\.)*"\s*:)|("(?:[^"\\]|\\.)*")|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|\b(true|false|null)\b|([{}[\],:])/g;
+
+function jsonParts(text: string, out: ReactNode[], key: () => number) {
+  let last = 0;
+  for (const m of text.matchAll(JSON_TOKEN)) {
+    const at = m.index!;
+    if (at > last) out.push(text.slice(last, at));
+    const cls = m[1] ? "text-stage-100" : m[2] ? "text-ok" : m[3] ? "text-warn" : m[4] ? "text-accent-400" : "text-stage-400";
+    out.push(
+      <span key={key()} className={cls}>
+        {m[0]}
+      </span>,
+    );
+    last = at + m[0].length;
+  }
+  if (last < text.length) out.push(text.slice(last));
+}
+
+/** The value split into coloured pieces: placeholders always, code tokens when a language is set. */
+function highlight(value: string, language: Props["language"]): ReactNode[] {
+  const out: ReactNode[] = [];
+  let n = 0;
+  const key = () => ++n;
+  let last = 0;
+  for (const m of value.matchAll(PLACEHOLDER)) {
+    const at = m.index!;
+    const before = value.slice(last, at);
+    if (language === "json") jsonParts(before, out, key);
+    else if (before) out.push(before);
+    out.push(
+      <span key={key()} className="rounded-sm bg-accent-500/15 text-accent-300">
+        {m[0]}
+      </span>,
+    );
+    last = at + m[0].length;
+  }
+  const rest = value.slice(last);
+  if (language === "json") jsonParts(rest, out, key);
+  else if (rest) out.push(rest);
+  return out;
+}
 
 /**
  * Text field for values the engine expands: typing `{{` opens the variable
  * list at the caret, Enter or Tab inserts `{{name}}`, and the button at the
  * end offers the whole list. Works as a single line or a textarea.
+ *
+ * The text is drawn twice: the input itself is transparent (its caret and
+ * selection are not) and a layer behind it shows the same text with the
+ * placeholders, and optionally JSON, in colour. Both use the same font and
+ * padding and scroll together.
  */
-export function PlaceholderField({ value, onChange, suggestions, multiline = false, rows = 2, placeholder, className, mono = false, spellCheck = false, ariaLabel }: Props) {
+export function PlaceholderField({ value, onChange, suggestions, multiline = false, rows = 2, placeholder, className, mono = false, spellCheck = false, ariaLabel, language }: Props) {
   const { t } = useTranslation();
   const ref = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  const layer = useRef<HTMLDivElement | null>(null);
   const [caret, setCaret] = useState<number | null>(null);
   const [typing, setTyping] = useState(false);
   const [browsing, setBrowsing] = useState(false);
-  const [highlight, setHighlight] = useState(0);
+  const [highlighted, setHighlighted] = useState(0);
 
   // An unfinished `{{name` right before the caret.
   const token = useMemo(() => {
@@ -51,6 +106,9 @@ export function PlaceholderField({ value, onChange, suggestions, multiline = fal
     return suggestions.filter((s) => s.toLowerCase().includes(q)).slice(0, 40);
   }, [suggestions, token, browsing]);
   const open = ((typing && !!token) || browsing) && matches.length > 0;
+  // A caller may hand us a field that is not set yet; the plain input tolerated it.
+  const text = value ?? "";
+  const parts = useMemo(() => highlight(text, language), [text, language]);
 
   const close = () => {
     setTyping(false);
@@ -94,37 +152,65 @@ export function PlaceholderField({ value, onChange, suggestions, multiline = fal
       setCaret(e.target.selectionStart);
       setTyping(true);
       setBrowsing(false);
-      setHighlight(0);
+      setHighlighted(0);
     },
     onClick: track,
     onKeyUp: track,
     onSelect: track,
+    // The layer behind has no scrollbar of its own; it follows the field.
+    onScroll: (e: React.UIEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const el = layer.current;
+      if (!el) return;
+      el.scrollTop = e.currentTarget.scrollTop;
+      el.scrollLeft = e.currentTarget.scrollLeft;
+    },
     onKeyDown: (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       if (!open) return;
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setHighlight((h) => Math.min(matches.length - 1, h + 1));
+        setHighlighted((h) => Math.min(matches.length - 1, h + 1));
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setHighlight((h) => Math.max(0, h - 1));
+        setHighlighted((h) => Math.max(0, h - 1));
       } else if (e.key === "Enter" || e.key === "Tab") {
         e.preventDefault();
-        insert(matches[highlight]);
+        insert(matches[highlighted]);
       } else if (e.key === "Escape") {
         e.stopPropagation();
         close();
       }
     },
-    className: clsx(baseCls, mono && "font-mono", multiline && "resize-y", className),
+    className: clsx(
+      fieldCls,
+      "relative bg-transparent text-transparent caret-stage-100 placeholder:text-stage-500 selection:bg-accent-500/30 selection:text-stage-100",
+      mono && "font-mono",
+      multiline && "resize-y",
+    ),
   };
 
   return (
     <div className={clsx("flex min-w-0 flex-1 gap-0.5", multiline ? "items-start" : "items-center")}>
-      {multiline ? (
-        <textarea ref={ref as React.RefObject<HTMLTextAreaElement>} rows={rows} {...shared} />
-      ) : (
-        <input ref={ref as React.RefObject<HTMLInputElement>} type="text" {...shared} />
-      )}
+      <div className={clsx(wrapCls, className)}>
+        <div
+          ref={layer}
+          aria-hidden
+          className={clsx(
+            fieldCls,
+            "pointer-events-none absolute inset-0 overflow-hidden text-stage-100",
+            mono && "font-mono",
+            multiline ? "whitespace-pre-wrap break-words" : "whitespace-pre",
+          )}
+        >
+          {parts}
+          {/* Keeps the last line's height when the value ends in a newline. */}
+          {"​"}
+        </div>
+        {multiline ? (
+          <textarea ref={ref as React.RefObject<HTMLTextAreaElement>} rows={rows} {...shared} />
+        ) : (
+          <input ref={ref as React.RefObject<HTMLInputElement>} type="text" {...shared} />
+        )}
+      </div>
       <Tooltip content={t("vars.insertVariable")}>
         <button
           type="button"
@@ -132,7 +218,7 @@ export function PlaceholderField({ value, onChange, suggestions, multiline = fal
           onClick={() => {
             setBrowsing((b) => !b);
             setTyping(false);
-            setHighlight(0);
+            setHighlighted(0);
           }}
           className="flex h-8 w-7 shrink-0 items-center justify-center rounded-md text-stage-400 hover:bg-stage-700 hover:text-stage-100"
         >
@@ -145,13 +231,13 @@ export function PlaceholderField({ value, onChange, suggestions, multiline = fal
             <li
               key={name}
               role="option"
-              aria-selected={i === highlight}
-              onMouseEnter={() => setHighlight(i)}
+              aria-selected={i === highlighted}
+              onMouseEnter={() => setHighlighted(i)}
               onMouseDown={(e) => {
                 e.preventDefault();
                 insert(name);
               }}
-              className={clsx("cursor-pointer rounded-md px-2.5 py-1.5 font-mono text-sm", i === highlight ? "bg-stage-700 text-stage-100" : "text-stage-200")}
+              className={clsx("cursor-pointer rounded-md px-2.5 py-1.5 font-mono text-sm", i === highlighted ? "bg-stage-700 text-stage-100" : "text-stage-200")}
             >
               {`{{${name}}}`}
             </li>
