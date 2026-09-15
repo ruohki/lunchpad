@@ -29,8 +29,8 @@
 //! two half-rows each, so the small buttons can sit where they are printed:
 //! the encoder band (y 7 + 6) holds the screen, Arp over Scale, the encoders
 //! and the mode arrows; the two pad bands (y 5 + 4, y 3 + 2) hold the pads,
-//! the Track arrows, > and Func, and the button block with ▶ and ● between
-//! the pad rows and Oct −/+ under them.
+//! the Track arrows, > and Func (tall rounded buttons, a pad row high), and
+//! the button block with ▶ and ● between the pad rows and Oct −/+ under them.
 //!   x = 0, 1   Pitch and Modulation strips, from the top down to y = 2
 //!   x = 2, 3   screen (y 7, 6)  Shift  Settings (y 5)  ▶  ● (y 4 + 3)  Oct −  Oct + (y 2)
 //!   x = 4      Arp (y 7)  Scale (y 6)  ∧ Track (y 5 + 4)  ∨ Track (y 3 + 2)
@@ -179,14 +179,14 @@ impl LaunchpadDriver for LaunchkeyMiniMk4 {
                     (BLOCK_R_X, OCT_Y) => spec(self, x, y, Rect, Left, Some("Oct +")).with_led(LedKind::None).without_input(),
                     (SIDE_X, KNOB_Y) => spec(self, x, y, Rect, Left, Some("Arp")).with_led(LedKind::None).without_input(),
                     (SIDE_X, KNOB_LOW_Y) => spec(self, x, y, Rect, Left, Some("Scale")).with_led(LedKind::None).without_input(),
-                    (SIDE_X, PAD_TOP_Y) => spec(self, x, y, Pad, Left, Some("∧")).with_rows(2),
-                    (SIDE_X, PAD_BOTTOM_Y) => spec(self, x, y, Pad, Left, Some("∨")).with_rows(2),
+                    (SIDE_X, PAD_TOP_Y) => spec(self, x, y, TallRect, Left, Some("∧")).with_rows(2),
+                    (SIDE_X, PAD_BOTTOM_Y) => spec(self, x, y, TallRect, Left, Some("∨")).with_rows(2),
                     (PAD_X0..=PAD_X1, KNOB_Y) => spec(self, x, y, Knob, Top, None).with_rows(2),
                     (PAD_X0..=PAD_X1, PAD_TOP_Y | PAD_BOTTOM_Y) => spec(self, x, y, Pad, Grid, None).with_rows(2),
                     (RIGHT_X, KNOB_Y) => spec(self, x, y, Rect, Right, Some("∧")).with_led(LedKind::None).without_input(),
                     (RIGHT_X, KNOB_LOW_Y) => spec(self, x, y, Rect, Right, Some("∨")).with_led(LedKind::None).without_input(),
-                    (RIGHT_X, PAD_TOP_Y) => spec(self, x, y, Rect, Right, Some(">")).with_led(LedKind::None).without_input().with_rows(2),
-                    (RIGHT_X, PAD_BOTTOM_Y) => spec(self, x, y, Rect, Right, Some("Func")).with_led(LedKind::None).without_input().with_rows(2),
+                    (RIGHT_X, PAD_TOP_Y) => spec(self, x, y, TallRect, Right, Some(">")).with_led(LedKind::None).without_input().with_rows(2),
+                    (RIGHT_X, PAD_BOTTOM_Y) => spec(self, x, y, TallRect, Right, Some("Func")).with_led(LedKind::None).without_input().with_rows(2),
                     // Lower halves covered by the encoders, the pads and the two-row buttons.
                     (PAD_X0..=PAD_X1, KNOB_LOW_Y) | (SIDE_X..=RIGHT_X, OCT_Y | 4) => continue,
                     // The logo column: the settings pad takes the corner, nothing below it.
@@ -473,7 +473,7 @@ mod tests {
         assert!(!at(1, KNOB_Y).centred, "the modulation strip fills from the bottom");
         assert_eq!((at(PAD_X0, KNOB_Y).shape, at(PAD_X0, KNOB_Y).rows), (PadShape::Knob, 2), "encoders span the band");
         assert_eq!((at(SIDE_X, KNOB_Y).label.as_deref(), at(SIDE_X, KNOB_LOW_Y).label.as_deref()), (Some("Arp"), Some("Scale")));
-        assert_eq!((at(SIDE_X, PAD_TOP_Y).shape, at(SIDE_X, PAD_TOP_Y).rows, at(SIDE_X, PAD_TOP_Y).label.as_deref()), (PadShape::Pad, 2, Some("∧")));
+        assert_eq!((at(SIDE_X, PAD_TOP_Y).shape, at(SIDE_X, PAD_TOP_Y).rows, at(SIDE_X, PAD_TOP_Y).led, at(SIDE_X, PAD_TOP_Y).label.as_deref()), (PadShape::TallRect, 2, LedKind::Rgb, Some("∧")));
         assert_eq!(
             (at(BLOCK_L_X, TRANSPORT_Y).shape, at(BLOCK_L_X, TRANSPORT_Y).rows, at(BLOCK_L_X, TRANSPORT_Y).led, at(BLOCK_L_X, TRANSPORT_Y).label.as_deref()),
             (PadShape::Rect, 2, LedKind::White, Some("▶"))
@@ -483,7 +483,7 @@ mod tests {
         assert!(at(BLOCK_R_X, PAD_TOP_Y).note.is_none(), "Settings sends nothing yet");
         assert_eq!((at(BLOCK_L_X, OCT_Y).label.as_deref(), at(BLOCK_R_X, OCT_Y).label.as_deref()), (Some("Oct −"), Some("Oct +")));
         assert_eq!((at(RIGHT_X, KNOB_Y).label.as_deref(), at(RIGHT_X, KNOB_LOW_Y).label.as_deref()), (Some("∧"), Some("∨")));
-        assert_eq!((at(RIGHT_X, PAD_TOP_Y).label.as_deref(), at(RIGHT_X, PAD_TOP_Y).rows), (Some(">"), 2));
+        assert_eq!((at(RIGHT_X, PAD_TOP_Y).shape, at(RIGHT_X, PAD_TOP_Y).label.as_deref(), at(RIGHT_X, PAD_TOP_Y).rows), (PadShape::TallRect, Some(">"), 2));
         assert_eq!((at(RIGHT_X, PAD_BOTTOM_Y).label.as_deref(), at(RIGHT_X, PAD_BOTTOM_Y).rows), (Some("Func"), 2));
         assert_eq!(at(BLOCK_L_X, KNOB_Y).shape, PadShape::Empty, "the screen is not a control");
         assert_eq!(at(LOGO_X, KNOB_Y).shape, PadShape::Empty, "the settings pad takes the logo's corner");

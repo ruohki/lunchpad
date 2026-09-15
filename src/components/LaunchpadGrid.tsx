@@ -693,9 +693,12 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
   const white = pad.shape === "keyWhite";
   const black = pad.shape === "keyBlack";
   const pianoKey = white || black;
-  /** Rect buttons keep one size whatever their row's height; the Pro MK3's small ones take half a cell; the rest fill their cell. */
-  const sizeClass = pad.shape === "small" ? "h-1/2 w-1/2" : pad.shape === "rect" ? "shrink-0" : "h-full w-full";
-  const sizeStyle = pad.shape === "rect" ? { width: cell * 0.7, height: cell * 0.38 } : undefined;
+  /**
+   * Rect buttons keep one size whatever their row's height; a tall rect keeps that width but
+   * fills the rows it spans; the Pro MK3's small ones take half a cell; the rest fill their cell.
+   */
+  const sizeClass = pad.shape === "small" ? "h-1/2 w-1/2" : pad.shape === "rect" ? "shrink-0" : pad.shape === "tallRect" ? "h-full shrink-0" : "h-full w-full";
+  const sizeStyle = pad.shape === "rect" ? { width: cell * 0.7, height: cell * 0.38 } : pad.shape === "tallRect" ? { width: cell * 0.7 } : undefined;
 
   if (decorative) {
     return (
