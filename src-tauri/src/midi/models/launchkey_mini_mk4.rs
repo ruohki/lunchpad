@@ -11,64 +11,67 @@
 //! 96..103 (top row) and 112..119 (bottom row) on channel 1 and send
 //! polyphonic aftertouch; their LEDs take a palette index as the velocity on
 //! channel 1 (solid), 2 (flashing) or 3 (pulsing). The buttons beside the
-//! pads report as CC on channel 1: ▲ / ▼ (Track up / down) 106 / 107 with
-//! colour LEDs on the same numbers, ▶ 115 and ● 117 with a single LED whose
-//! brightness is a CC on channel 4. Shift reports as a feature control, CC 63
-//! on channel 7, and has no LED. The eight encoders send CC 21..28 on channel
-//! 16 (0..127) and become control events. Layout changes made from the Shift
-//! menu come back on channel 7 (CC 29 pads, CC 30 encoders) and are ignored;
-//! Octave and the other keyboard buttons report nothing in DAW mode.
+//! pads report as CC on channel 1: the Track arrows 106 / 107 with colour LEDs
+//! on the same numbers, ▶ 115 and ● 117 with a single LED whose brightness is
+//! a CC on channel 4. Shift reports as a feature control, CC 63 on channel 7,
+//! and has no LED. The eight encoders send CC 21..28 on channel 16 (0..127)
+//! and become control events. Layout changes made from the Shift menu come
+//! back on channel 7 (CC 29 pads, CC 30 encoders) and are ignored; Octave and
+//! the other keyboard buttons report nothing in DAW mode.
 //!
 //! The keys and the two strips arrive on the MIDI interface exactly as on the
 //! Mini MK3: Note 48..72 (C2..C4) at the default octave, Pitch Bend (14 bit,
 //! back to the centre when released) and CC 1. That interface also streams
 //! MIDI clock, which the manager drops.
 //!
-//! Logical layout, 16 x 7 (x from the left, y from the bottom), following the
-//! front panel: the two sliders, the screen over the button block, Arp and
-//! Scale, the track arrows, encoders over the pads, and > / Func / the mode
-//! arrows on the right. Two half-rows per pad row so the buttons beside the
-//! pads sit where they are printed:
-//!   y = 6  sliders (0, 1, spanning down to y = 2)  screen (2, 3)  Arp (4)  encoders (6..13)  settings pad (15)
-//!   y = 5  Shift (2)  Settings (3)  Scale (4)  ▲ (5, 2 rows)  pads (6..13, 2 rows)  > (14)  ∧ (15)
-//!   y = 4
-//!   y = 3  ▶ (2)  ● (3)  ▼ (5, 2 rows)  pads (6..13, 2 rows)  Func (14)  ∨ (15)
-//!   y = 2  Oct − (2)  Oct + (3)
-//!   y = 1  black keys, each at the x of the white key to its left
-//!   y = 0  white keys (0..14)
+//! Logical layout 15 x 8 (x from the left, y from the bottom), one column per
+//! white key, following the front panel. The control area is three bands of
+//! two half-rows each, so the small buttons can sit where they are printed:
+//! the encoder band (y 7 + 6) holds the screen, Arp over Scale, the encoders
+//! and the mode arrows; the two pad bands (y 5 + 4, y 3 + 2) hold the pads,
+//! the Track arrows, > and Func, and the button block with ▶ and ● between
+//! the pad rows and Oct −/+ under them.
+//!   x = 0, 1   Pitch and Modulation strips, from the top down to y = 2
+//!   x = 2, 3   screen (y 7, 6)  Shift  Settings (y 5)  ▶  ● (y 4 + 3)  Oct −  Oct + (y 2)
+//!   x = 4      Arp (y 7)  Scale (y 6)  ∧ Track (y 5 + 4)  ∨ Track (y 3 + 2)
+//!   x = 5..12  encoders (y 7 + 6)  pads (y 5 + 4 and y 3 + 2)
+//!   x = 13     ∧ (y 7)  ∨ (y 6)  > (y 5 + 4)  Func (y 3 + 2)
+//!   x = 14     the logo: the settings pad, nothing below it
+//!   y = 1      black keys, each at the x of the white key to its left
+//!   y = 0      white keys (0..14)
 //!
-//! Only the controls that were seen in the capture carry input: the pads, the
-//! track arrows, ▶, ● and Shift. Settings, Scale, Arp, Oct ±, > , Func and the
-//! mode arrows are drawn but send nothing until their CCs are confirmed on
-//! hardware (the guide lists Settings 63, prev/next pad mode 75/76, prev/next
-//! encoder mode 74/77, and the Mini's extra mode arrows on 55/56).
+//! Only the controls seen in the capture carry input: the pads, the Track
+//! arrows, ▶, ● and Shift. Settings, Scale, Arp, Oct ±, >, Func and the mode
+//! arrows are drawn but send nothing until their CCs are confirmed on hardware
+//! (the guide lists Settings 63, prev/next pad mode 75/76, prev/next encoder
+//! mode 74/77, and the Mini's extra mode arrows on 55/56).
 
 use super::{spec, LaunchpadDriver};
 use crate::midi::palette::{nearest_palette_index, palette_color};
 use crate::midi::types::*;
 
-const WIDTH: u8 = 16;
-const HEIGHT: u8 = 7;
-/// The button block left of the pads, two columns wide: Shift / Settings,
-/// ▶ / ●, Oct − / Oct +, with the screen above it.
+const WIDTH: u8 = 15;
+const HEIGHT: u8 = 8;
+/// The button block under the screen, two columns: Shift / Settings, ▶ / ●, Oct − / Oct +.
 const BLOCK_L_X: u8 = 2;
 const BLOCK_R_X: u8 = 3;
-/// Arp and Scale.
-const MODE_X: u8 = 4;
-/// The Track arrows between the mode buttons and the pads.
-const TRACK_X: u8 = 5;
-const PAD_X0: u8 = 6;
-const PAD_X1: u8 = 13;
-/// Right of the pads: > and Func.
-const SCENE_X: u8 = 14;
-/// The outer edge: the mode arrows, with the settings pad in the corner above.
-const EDGE_X: u8 = 15;
-const KNOB_Y: u8 = 6;
+/// Arp, Scale and the Track arrows.
+const SIDE_X: u8 = 4;
+const PAD_X0: u8 = 5;
+const PAD_X1: u8 = 12;
+/// Right of the pads: the mode arrows, > and Func.
+const RIGHT_X: u8 = 13;
+/// The logo column: the settings pad in the corner, nothing else.
+const LOGO_X: u8 = 14;
+/// Upper half-row of the encoder band; the encoders and the screen span both.
+const KNOB_Y: u8 = 7;
+const KNOB_LOW_Y: u8 = 6;
 /// Anchor (upper half-row) of each pad row; the pads span the half-row below too.
 const PAD_TOP_Y: u8 = 5;
 const PAD_BOTTOM_Y: u8 = 3;
-/// ▶ and ● sit beside the lower pad row.
-const TRANSPORT_Y: u8 = PAD_BOTTOM_Y;
+/// ▶ and ● sit between the pad rows: anchored on the lower half of the top
+/// row, spanning into the upper half of the bottom row.
+const TRANSPORT_Y: u8 = 4;
 /// Lower half-row of the bottom pad row: Oct − and Oct +.
 const OCT_Y: u8 = 2;
 const BLACK_Y: u8 = 1;
@@ -135,8 +138,8 @@ fn led_of(x: u8, y: u8) -> Option<Led> {
     match (x, y) {
         (PAD_X0..=PAD_X1, PAD_TOP_Y) => Some(Led::Pad(PAD_TOP_FIRST + (x - PAD_X0))),
         (PAD_X0..=PAD_X1, PAD_BOTTOM_Y) => Some(Led::Pad(PAD_BOTTOM_FIRST + (x - PAD_X0))),
-        (TRACK_X, PAD_TOP_Y) => Some(Led::ColorButton(CC_TRACK_UP)),
-        (TRACK_X, PAD_BOTTOM_Y) => Some(Led::ColorButton(CC_TRACK_DOWN)),
+        (SIDE_X, PAD_TOP_Y) => Some(Led::ColorButton(CC_TRACK_UP)),
+        (SIDE_X, PAD_BOTTOM_Y) => Some(Led::ColorButton(CC_TRACK_DOWN)),
         (BLOCK_L_X, TRANSPORT_Y) => Some(Led::White(CC_PLAY)),
         (BLOCK_R_X, TRANSPORT_Y) => Some(Led::White(CC_RECORD)),
         _ => None,
@@ -160,32 +163,35 @@ impl LaunchpadDriver for LaunchkeyMiniMk4 {
         for y in (0..HEIGHT).rev() {
             for x in 0..WIDTH {
                 let p = match (x, y) {
-                    (0, KNOB_Y) => spec(self, x, y, Strip, Left, Some("Pitch")).with_rows(5).centred(),
-                    (1, KNOB_Y) => spec(self, x, y, Strip, Left, Some("Modulation")).with_rows(5),
+                    (0, KNOB_Y) => spec(self, x, y, Strip, Left, Some("Pitch")).with_rows(6).centred(),
+                    (1, KNOB_Y) => spec(self, x, y, Strip, Left, Some("Modulation")).with_rows(6),
                     // Covered by the strips.
-                    (0 | 1, 2..=PAD_TOP_Y) => continue,
-                    // The screen sits above the button block; nothing to press there.
-                    (BLOCK_L_X | BLOCK_R_X, KNOB_Y) => spec(self, x, y, Empty, Other, None),
+                    (0 | 1, OCT_Y..=KNOB_LOW_Y) => continue,
+                    // The screen sits over the button block; nothing to press there.
+                    (BLOCK_L_X | BLOCK_R_X, KNOB_Y | KNOB_LOW_Y) => spec(self, x, y, Empty, Other, None),
                     (BLOCK_L_X, PAD_TOP_Y) => spec(self, x, y, Rect, Left, Some("Shift")).with_led(LedKind::None),
                     (BLOCK_R_X, PAD_TOP_Y) => spec(self, x, y, Rect, Left, Some("Settings")).with_led(LedKind::None).without_input(),
-                    (BLOCK_L_X, TRANSPORT_Y) => spec(self, x, y, Rect, Left, Some("▶")).with_led(LedKind::White),
-                    (BLOCK_R_X, TRANSPORT_Y) => spec(self, x, y, Rect, Left, Some("●")).with_led(LedKind::White),
+                    (BLOCK_L_X, TRANSPORT_Y) => spec(self, x, y, Rect, Left, Some("▶")).with_led(LedKind::White).with_rows(2),
+                    (BLOCK_R_X, TRANSPORT_Y) => spec(self, x, y, Rect, Left, Some("●")).with_led(LedKind::White).with_rows(2),
+                    // Covered by ▶ and ●.
+                    (BLOCK_L_X | BLOCK_R_X, PAD_BOTTOM_Y) => continue,
                     (BLOCK_L_X, OCT_Y) => spec(self, x, y, Rect, Left, Some("Oct −")).with_led(LedKind::None).without_input(),
                     (BLOCK_R_X, OCT_Y) => spec(self, x, y, Rect, Left, Some("Oct +")).with_led(LedKind::None).without_input(),
-                    (MODE_X, KNOB_Y) => spec(self, x, y, Rect, Left, Some("Arp")).with_led(LedKind::None).without_input(),
-                    (MODE_X, PAD_TOP_Y) => spec(self, x, y, Rect, Left, Some("Scale")).with_led(LedKind::None).without_input(),
-                    (TRACK_X, PAD_TOP_Y) => spec(self, x, y, Pad, Left, Some("▲")).with_rows(2),
-                    (TRACK_X, PAD_BOTTOM_Y) => spec(self, x, y, Pad, Left, Some("▼")).with_rows(2),
-                    (PAD_X0..=PAD_X1, KNOB_Y) => spec(self, x, y, Knob, Top, None),
+                    (SIDE_X, KNOB_Y) => spec(self, x, y, Rect, Left, Some("Arp")).with_led(LedKind::None).without_input(),
+                    (SIDE_X, KNOB_LOW_Y) => spec(self, x, y, Rect, Left, Some("Scale")).with_led(LedKind::None).without_input(),
+                    (SIDE_X, PAD_TOP_Y) => spec(self, x, y, Pad, Left, Some("∧")).with_rows(2),
+                    (SIDE_X, PAD_BOTTOM_Y) => spec(self, x, y, Pad, Left, Some("∨")).with_rows(2),
+                    (PAD_X0..=PAD_X1, KNOB_Y) => spec(self, x, y, Knob, Top, None).with_rows(2),
                     (PAD_X0..=PAD_X1, PAD_TOP_Y | PAD_BOTTOM_Y) => spec(self, x, y, Pad, Grid, None).with_rows(2),
-                    (SCENE_X, PAD_TOP_Y) => spec(self, x, y, Rect, Right, Some(">")).with_led(LedKind::None).without_input(),
-                    (SCENE_X, PAD_BOTTOM_Y) => spec(self, x, y, Rect, Right, Some("Func")).with_led(LedKind::None).without_input(),
-                    (EDGE_X, PAD_TOP_Y) => spec(self, x, y, Rect, Right, Some("∧")).with_led(LedKind::None).without_input(),
-                    (EDGE_X, PAD_BOTTOM_Y) => spec(self, x, y, Rect, Right, Some("∨")).with_led(LedKind::None).without_input(),
-                    // The lower halves of the pad rows, covered by the pads and the track arrows.
-                    (TRACK_X | PAD_X0..=PAD_X1, 2 | 4) => continue,
-                    // 15 white keys across a 16-column board; the last column stays free.
-                    (_, WHITE_Y) if x < WHITE_KEYS => spec(self, x, y, KeyWhite, Bottom, None),
+                    (RIGHT_X, KNOB_Y) => spec(self, x, y, Rect, Right, Some("∧")).with_led(LedKind::None).without_input(),
+                    (RIGHT_X, KNOB_LOW_Y) => spec(self, x, y, Rect, Right, Some("∨")).with_led(LedKind::None).without_input(),
+                    (RIGHT_X, PAD_TOP_Y) => spec(self, x, y, Rect, Right, Some(">")).with_led(LedKind::None).without_input().with_rows(2),
+                    (RIGHT_X, PAD_BOTTOM_Y) => spec(self, x, y, Rect, Right, Some("Func")).with_led(LedKind::None).without_input().with_rows(2),
+                    // Lower halves covered by the encoders, the pads and the two-row buttons.
+                    (PAD_X0..=PAD_X1, KNOB_LOW_Y) | (SIDE_X..=RIGHT_X, OCT_Y | 4) => continue,
+                    // The logo column: the settings pad takes the corner, nothing below it.
+                    (LOGO_X, OCT_Y..=KNOB_Y) => spec(self, x, y, Empty, Other, None),
+                    (_, WHITE_Y) => spec(self, x, y, KeyWhite, Bottom, None),
                     (_, BLACK_Y) if black_note(x).is_some() => spec(self, x, y, KeyBlack, Bottom, None),
                     _ => spec(self, x, y, Empty, Other, None),
                 };
@@ -198,8 +204,8 @@ impl LaunchpadDriver for LaunchkeyMiniMk4 {
             width: WIDTH,
             height: HEIGHT,
             // Bottom up: white keys, black keys, two half-rows per pad row (a pad spanning
-            // both plus the gap between them comes out square), encoders.
-            row_weights: vec![1.6, 1.1, 0.46, 0.46, 0.46, 0.46, 0.95],
+            // both plus the gap between them comes out square), two for the encoder band.
+            row_weights: vec![1.6, 1.1, 0.46, 0.46, 0.46, 0.46, 0.5, 0.5],
             pads,
             limited_color: false,
             velocity_sensitive: true,
@@ -273,8 +279,8 @@ impl LaunchpadDriver for LaunchkeyMiniMk4 {
             (PAD_X0..=PAD_X1, PAD_TOP_Y) => Some((PAD_TOP_FIRST + (x - PAD_X0), false)),
             (PAD_X0..=PAD_X1, PAD_BOTTOM_Y) => Some((PAD_BOTTOM_FIRST + (x - PAD_X0), false)),
             (PAD_X0..=PAD_X1, KNOB_Y) => Some((CC_KNOB_FIRST + (x - PAD_X0), true)),
-            (TRACK_X, PAD_TOP_Y) => Some((CC_TRACK_UP, true)),
-            (TRACK_X, PAD_BOTTOM_Y) => Some((CC_TRACK_DOWN, true)),
+            (SIDE_X, PAD_TOP_Y) => Some((CC_TRACK_UP, true)),
+            (SIDE_X, PAD_BOTTOM_Y) => Some((CC_TRACK_DOWN, true)),
             (BLOCK_L_X, TRANSPORT_Y) => Some((CC_PLAY, true)),
             (BLOCK_R_X, TRANSPORT_Y) => Some((CC_RECORD, true)),
             (BLOCK_L_X, PAD_TOP_Y) => Some((CC_SHIFT, true)),
@@ -287,8 +293,8 @@ impl LaunchpadDriver for LaunchkeyMiniMk4 {
     fn note_to_xy(&self, note: u8, cc: bool) -> Option<(u8, u8)> {
         if cc {
             match note {
-                CC_TRACK_UP => Some((TRACK_X, PAD_TOP_Y)),
-                CC_TRACK_DOWN => Some((TRACK_X, PAD_BOTTOM_Y)),
+                CC_TRACK_UP => Some((SIDE_X, PAD_TOP_Y)),
+                CC_TRACK_DOWN => Some((SIDE_X, PAD_BOTTOM_Y)),
                 CC_PLAY => Some((BLOCK_L_X, TRANSPORT_Y)),
                 CC_RECORD => Some((BLOCK_R_X, TRANSPORT_Y)),
                 CC_SHIFT => Some((BLOCK_L_X, PAD_TOP_Y)),
@@ -393,15 +399,16 @@ mod tests {
         assert_eq!(d.xy_to_note(PAD_X1, PAD_BOTTOM_Y), Some((119, false)), "bottom-right pad");
         assert_eq!(d.xy_to_note(PAD_X0, 4), None, "the lower half of a pad row is covered by the pad");
         assert_eq!(d.note_to_xy(112, false), Some((PAD_X0, PAD_BOTTOM_Y)));
-        assert_eq!(d.xy_to_note(TRACK_X, PAD_TOP_Y), Some((106, true)), "▲ is Track up");
-        assert_eq!(d.xy_to_note(TRACK_X, PAD_BOTTOM_Y), Some((107, true)), "▼ is Track down");
-        assert_eq!(d.note_to_xy(115, true), Some((BLOCK_L_X, TRANSPORT_Y)), "▶ beside the lower pad row");
-        assert_eq!(d.note_to_xy(117, true), Some((BLOCK_R_X, TRANSPORT_Y)), "● beside the lower pad row");
+        assert_eq!(d.xy_to_note(SIDE_X, PAD_TOP_Y), Some((106, true)), "∧ is Track up");
+        assert_eq!(d.xy_to_note(SIDE_X, PAD_BOTTOM_Y), Some((107, true)), "∨ is Track down");
+        assert_eq!(d.note_to_xy(115, true), Some((BLOCK_L_X, TRANSPORT_Y)), "▶ between the pad rows");
+        assert_eq!(d.note_to_xy(117, true), Some((BLOCK_R_X, TRANSPORT_Y)), "● between the pad rows");
         assert_eq!(d.xy_to_note(BLOCK_L_X, PAD_TOP_Y), Some((63, true)), "Shift");
         assert_eq!(d.xy_to_note(BLOCK_R_X, PAD_TOP_Y), None, "Settings has no DAW message yet");
-        assert_eq!(d.xy_to_note(MODE_X, KNOB_Y), None, "Arp is a keyboard function");
-        assert_eq!(d.xy_to_note(SCENE_X, PAD_TOP_Y), None, "> has no DAW message yet");
-        assert_eq!(d.xy_to_note(EDGE_X, KNOB_Y), None, "the settings corner is free");
+        assert_eq!(d.xy_to_note(SIDE_X, KNOB_Y), None, "Arp is a keyboard function");
+        assert_eq!(d.xy_to_note(RIGHT_X, PAD_TOP_Y), None, "> has no DAW message yet");
+        assert_eq!(d.xy_to_note(LOGO_X, KNOB_Y), None, "the settings corner is free");
+        assert_eq!(d.xy_to_note(PAD_X0 + 7, KNOB_Y), Some((28, true)), "the eighth encoder");
     }
 
     #[test]
@@ -419,8 +426,8 @@ mod tests {
         let play = d.parse_input_with(&[0xB0, 0x73, 0x7F], 1).unwrap();
         assert_eq!((play.x, play.y, play.pressed), (BLOCK_L_X, TRANSPORT_Y, true));
         assert!(!d.parse_input_with(&[0xB0, 0x75, 0x00], 1).unwrap().pressed);
-        assert_eq!(d.parse_input_with(&[0xB0, 0x6A, 0x7F], 1).map(|e| (e.x, e.y)), Some((TRACK_X, PAD_TOP_Y)));
-        assert_eq!(d.parse_input_with(&[0xB0, 0x6B, 0x7F], 1).map(|e| (e.x, e.y)), Some((TRACK_X, PAD_BOTTOM_Y)));
+        assert_eq!(d.parse_input_with(&[0xB0, 0x6A, 0x7F], 1).map(|e| (e.x, e.y)), Some((SIDE_X, PAD_TOP_Y)));
+        assert_eq!(d.parse_input_with(&[0xB0, 0x6B, 0x7F], 1).map(|e| (e.x, e.y)), Some((SIDE_X, PAD_BOTTOM_Y)));
         let shift = d.parse_input_with(&[0xB6, 0x3F, 0x7F], 1).unwrap();
         assert_eq!((shift.x, shift.y, shift.pressed), (BLOCK_L_X, PAD_TOP_Y, true));
         assert!(d.parse_input_with(&[0xBF, 0x73, 0x7F], 1).is_none(), "the MK3's channel 16 transport is not the MK4's");
@@ -436,7 +443,7 @@ mod tests {
         let pitch = d.parse_secondary_control(&[0xE0, 0x00, 0x40]).unwrap();
         assert!((pitch.value - 0.5).abs() < 0.001, "released pitch strip sits at the centre");
         let modulation = d.parse_secondary_control(&[0xB0, 0x01, 0x7F]).unwrap();
-        assert_eq!((modulation.x, modulation.y), (1, 6));
+        assert_eq!((modulation.x, modulation.y), (1, KNOB_Y));
         let key = d.parse_secondary_input(&[0x90, 0x30, 0x06], 1).unwrap();
         assert_eq!((key.x, key.y, key.value), (0, 0, 6));
         assert!(d.parse_secondary_input(&[0xF8], 1).is_none(), "clock is ignored");
@@ -447,30 +454,40 @@ mod tests {
         let d = LaunchkeyMiniMk4;
         let msgs = d.led_messages(&[
             (PAD_X0, PAD_TOP_Y, LedColor::Palette(5)),
-            (TRACK_X, PAD_BOTTOM_Y, LedColor::Flashing { index: 5, alt: 21 }),
-            (TRACK_X, PAD_TOP_Y, LedColor::Pulsing(45)),
+            (SIDE_X, PAD_BOTTOM_Y, LedColor::Flashing { index: 5, alt: 21 }),
+            (SIDE_X, PAD_TOP_Y, LedColor::Pulsing(45)),
             (BLOCK_L_X, TRANSPORT_Y, LedColor::Rgb(Color::new(255, 255, 255))),
             (BLOCK_R_X, TRANSPORT_Y, LedColor::Off),
             // Nothing to light: Shift, Arp and the keys.
             (BLOCK_L_X, PAD_TOP_Y, LedColor::Palette(5)),
-            (MODE_X, KNOB_Y, LedColor::Palette(5)),
+            (SIDE_X, KNOB_Y, LedColor::Palette(5)),
             (0, 0, LedColor::Palette(5)),
         ]);
         assert_eq!(msgs, vec![vec![0x90, 96, 5], vec![0xB0, 107, 5], vec![0xB1, 107, 21], vec![0xB2, 106, 45], vec![0xB3, 115, 127], vec![0xB3, 117, 0]]);
         assert_eq!(d.init_messages()[0], vec![0x9F, 0x0C, 0x7F]);
         assert!(d.clear_messages().contains(&vec![0xB3, 115, 0]));
         let layout = d.layout();
+        assert_eq!((layout.width, layout.height), (15, 8), "one column per white key, three bands of two half-rows");
         let at = |x: u8, y: u8| layout.pads.iter().find(|p| p.x == x && p.y == y).unwrap();
-        assert_eq!((at(0, 6).shape, at(0, 6).rows, at(0, 6).led), (PadShape::Strip, 5, LedKind::None));
-        assert_eq!((at(TRACK_X, PAD_TOP_Y).shape, at(TRACK_X, PAD_TOP_Y).rows, at(TRACK_X, PAD_TOP_Y).label.as_deref()), (PadShape::Pad, 2, Some("▲")));
+        assert_eq!((at(0, KNOB_Y).shape, at(0, KNOB_Y).rows, at(0, KNOB_Y).led, at(0, KNOB_Y).centred), (PadShape::Strip, 6, LedKind::None, true));
+        assert!(!at(1, KNOB_Y).centred, "the modulation strip fills from the bottom");
+        assert_eq!((at(PAD_X0, KNOB_Y).shape, at(PAD_X0, KNOB_Y).rows), (PadShape::Knob, 2), "encoders span the band");
+        assert_eq!((at(SIDE_X, KNOB_Y).label.as_deref(), at(SIDE_X, KNOB_LOW_Y).label.as_deref()), (Some("Arp"), Some("Scale")));
+        assert_eq!((at(SIDE_X, PAD_TOP_Y).shape, at(SIDE_X, PAD_TOP_Y).rows, at(SIDE_X, PAD_TOP_Y).label.as_deref()), (PadShape::Pad, 2, Some("∧")));
         assert_eq!(
-            (at(BLOCK_L_X, TRANSPORT_Y).shape, at(BLOCK_L_X, TRANSPORT_Y).led, at(BLOCK_L_X, TRANSPORT_Y).label.as_deref()),
-            (PadShape::Rect, LedKind::White, Some("▶"))
+            (at(BLOCK_L_X, TRANSPORT_Y).shape, at(BLOCK_L_X, TRANSPORT_Y).rows, at(BLOCK_L_X, TRANSPORT_Y).led, at(BLOCK_L_X, TRANSPORT_Y).label.as_deref()),
+            (PadShape::Rect, 2, LedKind::White, Some("▶"))
         );
         assert_eq!(at(BLOCK_L_X, PAD_TOP_Y).label.as_deref(), Some("Shift"));
         assert_eq!(at(BLOCK_R_X, PAD_TOP_Y).label.as_deref(), Some("Settings"));
         assert!(at(BLOCK_R_X, PAD_TOP_Y).note.is_none(), "Settings sends nothing yet");
-        assert_eq!(at(EDGE_X, KNOB_Y).shape, PadShape::Empty, "the settings pad needs the top-right corner");
+        assert_eq!((at(BLOCK_L_X, OCT_Y).label.as_deref(), at(BLOCK_R_X, OCT_Y).label.as_deref()), (Some("Oct −"), Some("Oct +")));
+        assert_eq!((at(RIGHT_X, KNOB_Y).label.as_deref(), at(RIGHT_X, KNOB_LOW_Y).label.as_deref()), (Some("∧"), Some("∨")));
+        assert_eq!((at(RIGHT_X, PAD_TOP_Y).label.as_deref(), at(RIGHT_X, PAD_TOP_Y).rows), (Some(">"), 2));
+        assert_eq!((at(RIGHT_X, PAD_BOTTOM_Y).label.as_deref(), at(RIGHT_X, PAD_BOTTOM_Y).rows), (Some("Func"), 2));
+        assert_eq!(at(BLOCK_L_X, KNOB_Y).shape, PadShape::Empty, "the screen is not a control");
+        assert_eq!(at(LOGO_X, KNOB_Y).shape, PadShape::Empty, "the settings pad takes the logo's corner");
+        assert!(layout.pads.iter().all(|p| p.x != LOGO_X || p.y <= BLACK_Y || p.shape == PadShape::Empty), "nothing but keys under the logo");
         assert_eq!(layout.pads.iter().filter(|p| p.shape == PadShape::KeyWhite).count(), 15);
         assert_eq!(layout.pads.iter().filter(|p| p.shape == PadShape::KeyBlack).count(), 10);
         assert!(layout.velocity_sensitive);
