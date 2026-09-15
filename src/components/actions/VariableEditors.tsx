@@ -7,6 +7,8 @@ import { CodeField } from "../CodeField";
 import { PlaceholderHint, SaveToFields, ScopeSelect, useVariableSuggestions } from "./VariableFields";
 import { VariableNameField } from "./VariableNameField";
 import { PlaceholderField } from "./PlaceholderField";
+import { useVariablesStore } from "../../store/variables";
+import { useShallow } from "zustand/react/shallow";
 
 type SetVarAction = Extract<Action, { type: "setVariable" }>;
 type AddAction = Extract<Action, { type: "addToVariable" }>;
@@ -86,6 +88,8 @@ export function BranchEditor({ action, onChange, button }: { action: IfAction; o
 export function ScriptEditor({ action, onChange, button }: { action: ScriptAction; onChange: (next: Action) => void; button: ButtonModel }) {
   const { t } = useTranslation();
   const [outcome, setOutcome] = useState<ScriptOutcome | { error: string } | null>(null);
+  const suggestions = useVariableSuggestions(button);
+  const globalNames = useVariablesStore(useShallow((s) => Object.keys(s.globals).sort()));
 
   const test = async () => {
     try {
@@ -104,6 +108,8 @@ export function ScriptEditor({ action, onChange, button }: { action: ScriptActio
         placeholder={"// vars.temp = JSON.parse(vars.weather).main.temp\n// return vars.temp > 25 ? 'hot' : 'fine'"}
         ariaLabel={t("actions.types.runScript.name")}
         title={t("actions.types.runScript.name")}
+        suggestions={suggestions}
+        globals={globalNames}
       />
       <p className="text-xs text-stage-500">{t("script.hint")}</p>
       <div className="flex flex-wrap items-end gap-3">
