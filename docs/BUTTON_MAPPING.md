@@ -191,7 +191,7 @@ CCs are not confirmed on hardware are drawn but send nothing.
 |---|---|---|---|---|
 | Pitch strip (sprung, drawn as a bar) | (0, 7), 6 rows | Pitch Bend, MIDI interface | 14 bit → control event, centre when released | none |
 | Modulation strip | (1, 7), 6 rows | CC, MIDI interface | 1, value 0-127 → control event | none |
-| Screen | (2, 7), 2 rows × 2 columns | none: the app's settings pad sits there | | |
+| Screen | (2, 7), 2 rows × 2 columns | none: the app's settings pad sits there | shows the Lunchpad logo while connected: bitmap SysEx `… 02 13 09 20 <1216 bytes> F7` (128 × 64, 19 bytes per row, 7 pixels each; the device answers `… 02 13 09 F7`), handed back with `… 02 13 04 20 00 F7` on unload | |
 | Shift | (2, 5) | CC ch 7 | 63 (a feature-control report) | none |
 | Settings | (3, 5) | not wired (the guide lists CC 63 on ch 1) | | none |
 | ▶, ● | (2, 4), (3, 4), 2 rows | CC ch 1 | 115, 117 | single LED, brightness as CC on ch 4 (unverified) |

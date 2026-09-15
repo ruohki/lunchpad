@@ -22,6 +22,9 @@
 //! switched on is switched off again, its confirmation counting as the
 //! button's release. The eight encoders send CC 21..28 on channel 16 (0..127)
 //! and become control events. Settings, Octave, > and Func report nothing.
+//! On connect the Lunchpad logo goes to the screen's stationary display
+//! (bitmap message `09 20 <1216 bytes>`, generated into `launchkey_screen.rs`)
+//! and on unload the display is handed back (`04 20 00`).
 //!
 //! The keys and the two strips arrive on the MIDI interface exactly as on the
 //! Mini MK3: Note 48..72 (C2..C4) at the default octave, Pitch Bend (14 bit,
@@ -48,9 +51,32 @@
 //! hardware showed no message for them, in DAW mode or with the feature
 //! reports on.
 
-use super::{spec, LaunchpadDriver};
+use super::{launchkey_screen, spec, LaunchpadDriver};
 use crate::midi::palette::{nearest_palette_index, palette_color};
 use crate::midi::types::*;
+
+/// SysEx header of the Mini SKUs.
+const SYSEX: [u8; 6] = [0xF0, 0x00, 0x20, 0x29, 0x02, 0x13];
+/// The screen's stationary display: what it shows when nothing temporary is up.
+const SCREEN_STATIONARY: u8 = 0x20;
+
+/// The Lunchpad logo for the stationary display: `09 <target> <1216 bytes>`.
+fn logo_message() -> Vec<u8> {
+    let mut msg = Vec::with_capacity(SYSEX.len() + 2 + launchkey_screen::LOGO.len() + 1);
+    msg.extend_from_slice(&SYSEX);
+    msg.push(0x09);
+    msg.push(SCREEN_STATIONARY);
+    msg.extend_from_slice(&launchkey_screen::LOGO);
+    msg.push(0xF7);
+    msg
+}
+
+/// Configure a display: `04 <target> <config>`; config 0 cancels it.
+fn screen_config(target: u8, config: u8) -> Vec<u8> {
+    let mut msg = SYSEX.to_vec();
+    msg.extend_from_slice(&[0x04, target, config, 0xF7]);
+    msg
+}
 
 const WIDTH: u8 = 15;
 const HEIGHT: u8 = 8;
@@ -237,11 +263,14 @@ impl LaunchpadDriver for LaunchkeyMiniMk4 {
             // Pads in the DAW layout, encoders in Plugin mode (absolute CC 21..28).
             vec![0xB6, FEATURE_PADS, PADS_DAW],
             vec![0xB6, FEATURE_ENCODERS, ENCODERS_PLUGIN],
+            // The logo on the screen while the app has the device.
+            logo_message(),
         ]
     }
 
     fn unload_messages(&self) -> Vec<Vec<u8>> {
-        vec![vec![0x9F, 0x0B, 0x00], vec![0x9F, 0x0C, 0x00]]
+        // The screen back to its own display, then out of DAW mode.
+        vec![screen_config(SCREEN_STATIONARY, 0), vec![0x9F, 0x0B, 0x00], vec![0x9F, 0x0C, 0x00]]
     }
 
     /// The device reports what its own buttons changed; put it back so the
@@ -525,6 +554,13 @@ mod tests {
         assert_eq!(msgs, vec![vec![0x90, 96, 5], vec![0xB0, 107, 5], vec![0xB1, 107, 21], vec![0xB2, 106, 45], vec![0xB3, 115, 127], vec![0xB3, 117, 0]]);
         assert_eq!(d.init_messages()[0], vec![0x9F, 0x0C, 0x7F]);
         assert!(d.init_messages().contains(&vec![0x9F, 0x0B, 0x7F]), "feature reports on, so Arp and Scale presses arrive");
+        let logo = d.init_messages().into_iter().find(|m| m.len() > 100).expect("the logo bitmap");
+        assert_eq!(&logo[..8], &[0xF0, 0x00, 0x20, 0x29, 0x02, 0x13, 0x09, 0x20]);
+        assert_eq!(logo.len(), 8 + 1216 + 1);
+        assert_eq!(logo.last(), Some(&0xF7));
+        assert!(logo[8..8 + 1216].iter().all(|b| *b < 0x80), "seven bits per data byte");
+        assert!(logo[8..8 + 1216].iter().any(|b| *b != 0), "the logo is not blank");
+        assert_eq!(d.unload_messages()[0], vec![0xF0, 0x00, 0x20, 0x29, 0x02, 0x13, 0x04, 0x20, 0x00, 0xF7], "the screen is handed back first");
         assert_eq!(d.unload_messages().last(), Some(&vec![0x9F, 0x0C, 0x00]));
         assert!(d.clear_messages().contains(&vec![0xB3, 115, 0]));
         let layout = d.layout();

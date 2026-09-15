@@ -7,6 +7,7 @@
 
 mod launchkey_mini_mk3;
 mod launchkey_mini_mk4;
+mod launchkey_screen;
 mod legacy;
 mod mini_mk3;
 mod mk2;
