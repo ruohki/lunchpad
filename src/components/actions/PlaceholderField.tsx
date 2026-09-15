@@ -184,7 +184,9 @@ export function PlaceholderField({ value, onChange, suggestions, multiline = fal
       fieldCls,
       "relative bg-transparent text-transparent caret-stage-100 placeholder:text-stage-500 selection:bg-accent-500/30 selection:text-stage-100",
       mono && "font-mono",
-      multiline && "resize-y",
+      // The scrollbar is always there (its track is transparent) so the text is never
+      // wrapped for one width while the layer behind wraps it for another.
+      multiline && "resize-y overflow-y-scroll",
     ),
   };
 
@@ -196,9 +198,11 @@ export function PlaceholderField({ value, onChange, suggestions, multiline = fal
           aria-hidden
           className={clsx(
             fieldCls,
-            "pointer-events-none absolute inset-0 overflow-hidden text-stage-100",
+            "pointer-events-none absolute inset-0 text-stage-100",
             mono && "font-mono",
-            multiline ? "whitespace-pre-wrap break-words" : "whitespace-pre",
+            // Same scrollbar as the field so both wrap the text at the same width; the
+            // field's own scrollbar sits on top of it.
+            multiline ? "overflow-x-hidden overflow-y-scroll whitespace-pre-wrap break-words" : "overflow-hidden whitespace-pre",
           )}
         >
           {parts}
