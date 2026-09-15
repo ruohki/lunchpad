@@ -4,6 +4,7 @@ import Prism from "prismjs";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import { typedRect } from "../lib/caret";
 import { Popover } from "./Popover";
 import { Button } from "./ui";
 
@@ -30,8 +31,9 @@ const TEXT = "code-field font-mono text-sm leading-relaxed whitespace-pre-wrap b
  * underneath a transparent textarea, so typing, selection and the caret work
  * exactly as in a plain textarea while the colours come from the copy. The
  * copy is in the flow and sizes the field, so nothing ever scrolls out of
- * step. Typing `vars.` or `globals.` offers the variable names. A button in
- * the corner opens the same text in a view that fills the window.
+ * step. Typing `vars.` or `globals.` offers the variable names under the
+ * caret. A button in the corner opens the same text in a view that fills the
+ * window.
  */
 export function CodeField({ value, onChange, rows = 6, placeholder, className, ariaLabel, title, suggestions = [], globals = [] }: Props) {
   const { t } = useTranslation();
@@ -162,6 +164,7 @@ function Surface({
 }) {
   const html = useMemo(() => Prism.highlight(value, Prism.languages.javascript, "javascript"), [value]);
   const pad = extraPadding ? "pr-9" : "";
+  const copy = useRef<HTMLPreElement>(null);
   const [caret, setCaret] = useState<number | null>(null);
   const [typing, setTyping] = useState(false);
   const [highlighted, setHighlighted] = useState(0);
@@ -174,6 +177,8 @@ function Surface({
     return pool.filter((n) => n.toLowerCase().startsWith(q) && n !== access.partial).slice(0, 12);
   }, [access, suggestions, globals]);
   const open = typing && !!access && matches.length > 0;
+  // The list sits under the caret's line; the copy is laid out like the textarea, so it knows where that is.
+  const at = () => (access && caret !== null ? typedRect(copy.current, access.from, caret) : null);
 
   const track = (e: React.SyntheticEvent<HTMLTextAreaElement>) => setCaret(e.currentTarget.selectionStart);
 
@@ -196,6 +201,7 @@ function Surface({
   return (
     <div className="relative min-h-full w-full">
       <pre
+        ref={copy}
         aria-hidden
         className={clsx(TEXT, pad, "m-0 overflow-hidden text-stage-100")}
         style={{ minHeight }}
@@ -241,7 +247,7 @@ function Surface({
         aria-expanded={open}
         className={clsx(TEXT, pad, "absolute inset-0 h-full w-full resize-none overflow-hidden bg-transparent text-transparent caret-stage-100 outline-none placeholder:text-stage-500")}
       />
-      <Popover open={open} anchor={textareaRef} onClose={() => setTyping(false)} width={280} className="p-1.5">
+      <Popover open={open} anchor={textareaRef} at={at} onClose={() => setTyping(false)} width={280} className="p-1.5">
         <ul role="listbox" className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
           {matches.map((name, i) => (
             <li
