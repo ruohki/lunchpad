@@ -51,6 +51,8 @@ export interface PadSpec {
   rows: number;
   /** columns the control spans rightwards from x (the Launchkey MK4's screen); 1 otherwise */
   cols: number;
+  /** for a button smaller than its cell: the edge it sits against, so a stack lines up with the pads */
+  edge: "free" | "top" | "bottom";
   /** springs back to the middle when released (a pitch strip): drawn as a bar, not a fill */
   centred: boolean;
 }
@@ -245,6 +247,13 @@ export interface Settings {
   developerMode: boolean;
   /** Names of the user's secrets, used as `{{secret.<name>}}`; the values stay in the credential store. */
   secrets: string[];
+}
+
+/** A knob or touch strip at a position (0..1), bound to a fader or not. */
+export interface ControlEvent {
+  x: number;
+  y: number;
+  value: number;
 }
 
 export interface AudioDevices {
@@ -751,6 +760,8 @@ export const events = {
     listen<DeviceState>("device:state", (e) => cb(e.payload)),
   onButton: (cb: (event: ButtonEvent) => void): Promise<UnlistenFn> =>
     listen<ButtonEvent>("device:button", (e) => cb(e.payload)),
+  /** A knob or strip moved on the device, bound to a fader or not: its position, 0..1. */
+  onControl: (cb: (event: ControlEvent) => void): Promise<UnlistenFn> => listen<ControlEvent>("device:control", (e) => cb(e.payload)),
   onPressure: (cb: (event: PressureEvent) => void): Promise<UnlistenFn> =>
     listen<PressureEvent>("device:pressure", (e) => cb(e.payload)),
   /** Firmware learned after connecting, for a device that did not answer the scan. */

@@ -29,6 +29,8 @@ interface DeviceStore extends DeviceState {
   lastButton: ButtonEvent | null;
   /** latest aftertouch of the last pressed pad */
   lastPressure: PressureEvent | null;
+  /** Last known position (0..1) of every knob and strip, by "x,y", bound to a fader or not. */
+  controls: Record<string, number>;
   midiLog: MidiLogEntry[];
 
   init: () => Promise<() => void>;
@@ -42,6 +44,8 @@ interface DeviceStore extends DeviceState {
   setPressFeedback: (enabled: boolean) => Promise<void>;
   setPressThreshold: (threshold: number | null) => Promise<void>;
   clearLog: () => void;
+  /** A knob or strip worked with the pointer: remember where it was left. */
+  setControlPosition: (x: number, y: number, value: number) => void;
 }
 
 const MAX_LOG = 60;
@@ -95,6 +99,7 @@ export const useDeviceStore = create<DeviceStore>((set, get) => ({
   pressedSet: new Set(),
   lastButton: null,
   lastPressure: null,
+  controls: {},
   midiLog: [],
 
   init: async () => {
@@ -110,6 +115,7 @@ export const useDeviceStore = create<DeviceStore>((set, get) => ({
         });
       }),
       events.onPressure((event) => set({ lastPressure: event })),
+      events.onControl((event) => set((s) => ({ controls: { ...s.controls, [padKey(event.x, event.y)]: event.value } }))),
       events.onFirmware((firmware) => set((s) => (s.device ? { device: { ...s.device, firmware } } : {}))),
       events.onRawMidi((raw: RawMidiEvent) => {
         set((s) => {
@@ -207,4 +213,5 @@ export const useDeviceStore = create<DeviceStore>((set, get) => ({
   },
 
   clearLog: () => set({ midiLog: [] }),
+  setControlPosition: (x, y, value) => set((s) => ({ controls: { ...s.controls, [padKey(x, y)]: value } })),
 }));

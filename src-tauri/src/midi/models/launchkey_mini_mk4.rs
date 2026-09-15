@@ -183,14 +183,16 @@ impl LaunchpadDriver for LaunchkeyMiniMk4 {
                     // The screen over the button block: the app's settings pad sits there.
                     (BLOCK_L_X, KNOB_Y) => spec(self, x, y, Logo, Other, None).with_rows(2).with_cols(2),
                     (BLOCK_R_X, KNOB_Y) | (BLOCK_L_X | BLOCK_R_X, KNOB_LOW_Y) => continue,
-                    (BLOCK_L_X, PAD_TOP_Y) => spec(self, x, y, Rect, Left, Some("Shift")).with_led(LedKind::None),
-                    (BLOCK_R_X, PAD_TOP_Y) => spec(self, x, y, Rect, Left, Some("Settings")).with_led(LedKind::None).without_input(),
+                    // The block lines up with the pad rows: its top row against the top of the
+                    // band, its bottom row against the bottom, ▶ and ● centred between.
+                    (BLOCK_L_X, PAD_TOP_Y) => spec(self, x, y, Rect, Left, Some("Shift")).with_led(LedKind::None).at_top(),
+                    (BLOCK_R_X, PAD_TOP_Y) => spec(self, x, y, Rect, Left, Some("Settings")).with_led(LedKind::None).without_input().at_top(),
                     (BLOCK_L_X, TRANSPORT_Y) => spec(self, x, y, Rect, Left, Some("▶")).with_led(LedKind::White).with_rows(2),
                     (BLOCK_R_X, TRANSPORT_Y) => spec(self, x, y, Rect, Left, Some("●")).with_led(LedKind::White).with_rows(2),
                     // Covered by ▶ and ●.
                     (BLOCK_L_X | BLOCK_R_X, PAD_BOTTOM_Y) => continue,
-                    (BLOCK_L_X, OCT_Y) => spec(self, x, y, Rect, Left, Some("Oct −")).with_led(LedKind::None).without_input(),
-                    (BLOCK_R_X, OCT_Y) => spec(self, x, y, Rect, Left, Some("Oct +")).with_led(LedKind::None).without_input(),
+                    (BLOCK_L_X, OCT_Y) => spec(self, x, y, Rect, Left, Some("Oct −")).with_led(LedKind::None).without_input().at_bottom(),
+                    (BLOCK_R_X, OCT_Y) => spec(self, x, y, Rect, Left, Some("Oct +")).with_led(LedKind::None).without_input().at_bottom(),
                     (SIDE_X, KNOB_Y) => spec(self, x, y, SmallRect, Left, Some("Arp")).with_led(LedKind::None),
                     (SIDE_X, KNOB_LOW_Y) => spec(self, x, y, SmallRect, Left, Some("Scale")).with_led(LedKind::None),
                     (SIDE_X, PAD_TOP_Y) => spec(self, x, y, TallRect, Left, Some("∧")).with_rows(2),
@@ -540,6 +542,7 @@ mod tests {
         assert_eq!(at(BLOCK_L_X, PAD_TOP_Y).label.as_deref(), Some("Shift"));
         assert_eq!(at(BLOCK_R_X, PAD_TOP_Y).label.as_deref(), Some("Settings"));
         assert!(at(BLOCK_R_X, PAD_TOP_Y).note.is_none(), "Settings sends nothing");
+        assert_eq!((at(BLOCK_L_X, PAD_TOP_Y).edge, at(BLOCK_L_X, TRANSPORT_Y).edge, at(BLOCK_L_X, OCT_Y).edge), (PadEdge::Top, PadEdge::Free, PadEdge::Bottom));
         assert_eq!((at(BLOCK_L_X, OCT_Y).label.as_deref(), at(BLOCK_R_X, OCT_Y).label.as_deref()), (Some("Oct −"), Some("Oct +")));
         assert_eq!((at(RIGHT_X, KNOB_Y).label.as_deref(), at(RIGHT_X, KNOB_LOW_Y).label.as_deref()), (Some("∧"), Some("∨")));
         assert_eq!((at(RIGHT_X, PAD_TOP_Y).shape, at(RIGHT_X, PAD_TOP_Y).label.as_deref(), at(RIGHT_X, PAD_TOP_Y).rows), (PadShape::TallRect, Some(">"), 2));

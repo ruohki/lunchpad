@@ -216,6 +216,16 @@ pub enum PadRegion {
     Other,
 }
 
+/// Where a button smaller than its cell sits: centred, or against the top or bottom edge.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum PadEdge {
+    #[default]
+    Free,
+    Top,
+    Bottom,
+}
+
 /// One control of a model layout.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -239,6 +249,10 @@ pub struct PadSpec {
     /// Columns the control spans rightwards from `x` (the Launchkey MK4's screen); 1 otherwise.
     #[serde(default = "one")]
     pub cols: u8,
+    /// For a button smaller than its cell: the edge of the cell it sits against, so a
+    /// stack of them lines up with the pad rows beside it.
+    #[serde(default)]
+    pub edge: PadEdge,
     /// Rests in the middle and springs back when released (a pitch strip or
     /// slider). The interface draws its level as a bar rather than a fill.
     #[serde(default)]
@@ -268,6 +282,16 @@ impl PadSpec {
 
     pub fn with_cols(mut self, cols: u8) -> Self {
         self.cols = cols.max(1);
+        self
+    }
+
+    pub fn at_top(mut self) -> Self {
+        self.edge = PadEdge::Top;
+        self
+    }
+
+    pub fn at_bottom(mut self) -> Self {
+        self.edge = PadEdge::Bottom;
         self
     }
 

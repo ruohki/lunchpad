@@ -145,11 +145,11 @@ impl LaunchpadDriver for LaunchkeyMiniMk3 {
                     // Covered by the strips.
                     (0 | 1, 2..=PAD_TOP_Y) => continue,
                     (BUTTON_X, KNOB_Y) => spec(self, x, y, Rect, Left, Some("Shift")).with_led(LedKind::None),
-                    (BUTTON_X, PAD_TOP_Y) => spec(self, x, y, Rect, Left, Some("Transpose")).with_led(LedKind::None).without_input(),
+                    (BUTTON_X, PAD_TOP_Y) => spec(self, x, y, Rect, Left, Some("Transpose")).with_led(LedKind::None).without_input().at_top(),
                     // Octave + sits between the pad rows, so the three buttons are evenly spaced.
                     (BUTTON_X, 4) => spec(self, x, y, Rect, Left, Some("+")).with_led(LedKind::None).without_input().with_rows(2),
                     (BUTTON_X, PAD_BOTTOM_Y) => continue,
-                    (BUTTON_X, 2) => spec(self, x, y, Rect, Left, Some("−")).with_led(LedKind::None).without_input(),
+                    (BUTTON_X, 2) => spec(self, x, y, Rect, Left, Some("−")).with_led(LedKind::None).without_input().at_bottom(),
                     (PAD_X0..=PAD_X1, KNOB_Y) => spec(self, x, y, Knob, Top, None),
                     (PAD_X0..=PAD_X1, PAD_TOP_Y | PAD_BOTTOM_Y) => spec(self, x, y, Pad, Grid, None).with_rows(2),
                     (SCENE_X, PAD_TOP_Y) => spec(self, x, y, Pad, Right, Some(">")).with_rows(2),

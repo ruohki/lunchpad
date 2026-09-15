@@ -19,6 +19,9 @@ import { IconGear } from "./ui";
 import { limitedRgb } from "../lib/colors";
 import { padAt, sameRef, useDragStore } from "../lib/drag";
 import { buttonsOutside, cornerRadius, cornersOf, isControl, isKey, noteName, type Corners } from "../lib/grid";
+import { Icon } from "../icons/Icon";
+import type { IconName } from "../icons/icons";
+import { Tooltip } from "./Tooltip";
 
 interface Props {
   layout: Layout;
@@ -465,6 +468,21 @@ function DragGhost({ button, cell, copy, corners, limited }: { button: Button; c
  * The app's own button: a round pad in a corner, or, on a Launchkey MK4, the screen: a dark
  * OLED-like panel as wide as the button block under it, with the gear glowing on it.
  */
+/** A printed label: chevrons as icons, everything else as text. */
+const CHEVRONS: Record<string, IconName> = { "∧": "ChevronUp", "∨": "ChevronDown", ">": "ChevronRight", "<": "ChevronLeft" };
+
+function PadLabel({ label, size }: { label: string | null; size: number }) {
+  if (!label) return null;
+  const icon = CHEVRONS[label];
+  return icon ? (
+    <span className="inline-flex" style={{ fontSize: size * 1.15 }}>
+      <Icon name={icon} />
+    </span>
+  ) : (
+    <>{label}</>
+  );
+}
+
 function SettingsPad({ cell, wide = false }: { cell: number; wide?: boolean }) {
   const { t } = useTranslation();
   const toggle = useUiStore((s) => s.toggleSettings);
@@ -484,8 +502,6 @@ function SettingsPad({ cell, wide = false }: { cell: number; wide?: boolean }) {
             open ? "text-accent-300" : "text-[#cfe3ff] hover:text-white",
           )}
         >
-          {/* The faint line pattern of a small display. */}
-          <span aria-hidden className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(0deg,rgba(255,255,255,0.035)_0px,rgba(255,255,255,0.035)_1px,transparent_1px,transparent_3px)]" />
           <IconGear className="relative h-[46%] w-[46%] drop-shadow-[0_0_5px_rgba(160,200,255,0.55)] transition-transform group-hover:rotate-12" />
         </motion.button>
       </div>
@@ -589,8 +605,12 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
 
   // Working a knob or strip with the pointer: the value shown follows the pointer at once,
   // the device path (paced by the engine) catches up and then takes over again.
-  const controlDrag = useRef<{ pointerId: number; startY: number; startFraction: number } | null>(null);
+  const controlDrag = useRef<{ pointerId: number; startY: number; startFraction: number; moved: boolean } | null>(null);
+  /** Whether the last pointer drag on the control moved it (a click then does not open the editor). */
+  const movedRef = useRef(false);
   const [dragFraction, setDragFraction] = useState<number | null>(null);
+  const hardwarePosition = useDeviceStore((s) => s.controls[padKey(pad.x, pad.y)]);
+  const setControlPosition = useDeviceStore((s) => s.setControlPosition);
   const faderValue = fader?.value;
   useEffect(() => {
     if (controlDrag.current === null) setDragFraction(null);
@@ -599,13 +619,16 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
     (raw: number) => {
       const value = Math.max(0, Math.min(1, raw));
       setDragFraction(value);
+      // The position outlives the drag whether or not a fader takes the value.
+      setControlPosition(pad.x, pad.y, value);
       if (!preview) void api.controlPad(pad.x, pad.y, value).catch(() => undefined);
     },
-    [preview, pad],
+    [preview, pad, setControlPosition],
   );
   const endControlDrag = useCallback((e: React.PointerEvent) => {
     const d = controlDrag.current;
     if (!d || d.pointerId !== e.pointerId) return;
+    movedRef.current = d.moved;
     controlDrag.current = null;
     if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
     // The last value reaches the profile within the engine's pacing interval.
@@ -657,7 +680,10 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
   }
 
   if (control) {
-    const fraction = dragFraction ?? (fader ? faderFraction(fader) : null);
+    // Without a fader the control still shows and takes its position: the last one the
+    // hardware reported, or where the pointer left it.
+    const resting = fader ? faderFraction(fader) : (hardwarePosition ?? (pad.centred ? 0.5 : null));
+    const fraction = dragFraction ?? resting;
     const name = pad.shape === "strip" ? t("grid.strip", { name: pad.label ?? "" }) : t("grid.knob", { n: controlNumber ?? pad.x + 1 });
     return (
       <div
@@ -675,16 +701,18 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
           aria-label={fader ? `${name}: ${formatFaderValue(fader)}` : name}
           onPointerDown={(e) => {
             const primary = e.button === 0 || (e.button === 2 && e.ctrlKey);
-            if (!primary || !fader) return;
+            if (!primary) return;
             // A modifier press moves the bound fader, as on a button.
             if (isMoveModifier(e) || isCopyModifier(e)) {
-              e.preventDefault();
-              onDragStart(pad, false, e.clientX, e.clientY);
+              if (fader) {
+                e.preventDefault();
+                onDragStart(pad, false, e.clientX, e.clientY);
+              }
               return;
             }
             // Otherwise the pointer works the control: a strip takes the touched position, a
             // knob turns with the vertical travel.
-            controlDrag.current = { pointerId: e.pointerId, startY: e.clientY, startFraction: faderFraction(fader) };
+            controlDrag.current = { pointerId: e.pointerId, startY: e.clientY, startFraction: resting ?? 0, moved: false };
             if (pad.shape === "strip") setControl(stripFraction(e));
             try {
               e.currentTarget.setPointerCapture(e.pointerId);
@@ -695,13 +723,14 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
           onPointerMove={(e) => {
             const d = controlDrag.current;
             if (!d || d.pointerId !== e.pointerId) return;
+            if (Math.abs(e.clientY - d.startY) > 2) d.moved = true;
             setControl(pad.shape === "strip" ? stripFraction(e) : d.startFraction + (d.startY - e.clientY) / (cell * 3));
           }}
           onPointerUp={endControlDrag}
           onPointerCancel={endControlDrag}
           onClick={(e) => {
-            // Nothing to work on an unbound control: a plain click assigns a fader.
-            if (!fader && !isMoveModifier(e) && !isCopyModifier(e)) openFaderEditor(pad.x, pad.y);
+            // A plain click on an unbound knob (a strip takes the click as a position) assigns a fader.
+            if (!fader && pad.shape === "knob" && !movedRef.current && !isMoveModifier(e) && !isCopyModifier(e)) openFaderEditor(pad.x, pad.y);
           }}
           onDoubleClick={(e) => {
             if (isMoveModifier(e)) openFaderEditor(pad.x, pad.y);
@@ -711,7 +740,7 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
           className={clsx(
             "flex h-full w-full flex-col items-center gap-0.5 rounded-md focus-visible:outline-2 focus-visible:outline-accent-400",
             pad.shape === "knob" && pad.rows > 1 ? "justify-center" : "justify-start",
-            fader && "cursor-ns-resize",
+            "cursor-ns-resize",
           )}
           style={pad.shape === "knob" && pad.rows > 1 ? { paddingBottom: 4 } : { paddingTop: topInset, paddingBottom: 4 }}
         >
@@ -734,22 +763,32 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
    * fills the rows it spans; the Pro MK3's small ones take half a cell; the rest fill their cell.
    */
   const sizeClass = pad.shape === "small" ? "h-1/2 w-1/2" : pad.shape === "rect" || pad.shape === "smallRect" ? "shrink-0" : pad.shape === "tallRect" ? "h-full shrink-0" : "h-full w-full";
-  // Rounded buttons take most of their column and exactly a half-row in height, so a block
-  // of three (one of them spanning the two middle half-rows) is flush with the pad rows
-  // beside it. The buttons beside the encoders are narrower, as on the Launchkey's panel.
+  // Rounded buttons: a block of three rows over two pad rows (the middle one spanning the
+  // two middle half-rows, the outer ones against the band's edges) fills its box with the
+  // same gap between the buttons across and down. The buttons beside the encoders are
+  // narrower, as on the Launchkey's panel.
   const sizeStyle =
-    pad.shape === "rect" ? { width: cell * 0.86, height: cell * 0.46 } : pad.shape === "smallRect" ? { width: cell * 0.54, height: cell * 0.46 } : pad.shape === "tallRect" ? { width: cell * 0.54 } : undefined;
+    pad.shape === "rect" ? { width: cell * 0.9, height: cell * 0.57 } : pad.shape === "smallRect" ? { width: cell * 0.54, height: cell * 0.46 } : pad.shape === "tallRect" ? { width: cell * 0.54 } : undefined;
+  /** Where a small button sits in its cell: against an edge when the layout says so. */
+  const edge = pad.edge ?? "free";
+  const alignClass = hangTop || edge === "top" ? "items-start" : edge === "bottom" ? "items-end" : "items-center";
 
   if (decorative) {
+    // Works on the device only: drawn where it is, but plainly not for use here.
     return (
-      <div className={clsx("flex h-full w-full justify-center", hangTop ? "items-start" : "items-center")} style={hangTop ? { paddingTop: topInset } : undefined}>
-        <span
-          aria-label={t("grid.noInput", { name: pad.label ?? "" })}
-          className={clsx("flex items-center justify-center bg-stage-800/60 px-1 text-center text-[9px] leading-tight text-stage-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]", sizeClass)}
-          style={{ ...sizeStyle, borderRadius: radius }}
-        >
-          {pad.label}
-        </span>
+      <div className={clsx("flex h-full w-full justify-center", alignClass)} style={hangTop ? { paddingTop: topInset } : undefined}>
+        <Tooltip content={t("grid.noInput", { name: pad.label ?? "" })}>
+          <span
+            aria-label={t("grid.noInput", { name: pad.label ?? "" })}
+            className={clsx(
+              "flex cursor-not-allowed items-center justify-center border border-dashed border-stage-600/70 bg-stage-900/40 px-1 text-center text-[9px] leading-tight text-stage-600",
+              sizeClass,
+            )}
+            style={{ ...sizeStyle, borderRadius: radius }}
+          >
+            <PadLabel label={pad.label} size={Math.max(8, Math.min(12, cell * 0.16))} />
+          </span>
+        </Tooltip>
       </div>
     );
   }
@@ -769,7 +808,7 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
       data-pad={`${pad.x},${pad.y}`}
       className={clsx(
         "relative flex h-full w-full justify-center transition-opacity",
-        hangTop ? "items-start" : "items-center",
+        alignClass,
         dropTarget === "move" && "ring-2 ring-accent-400",
         dropTarget === "copy" && "ring-2 ring-ok",
         dropTarget === "blocked" && "ring-2 ring-danger",
@@ -840,7 +879,7 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
         ) : (
           pad.label && (
             <span className="px-1 font-medium" style={{ fontSize: legendSize }}>
-              {pad.label}
+              <PadLabel label={pad.label} size={legendSize} />
             </span>
           )
         )}
