@@ -239,7 +239,7 @@
     "export": "Export page…",
     "removeDefault": "The first page cannot be removed",
     "all": "All pages ({{count}})",
-    "dragHandle": "Drag to reorder",
+    "dragHandle": "Drag to reorder, or into another list",
     "outside": "{{count}} outside the grid"
   },
   "grid": {
@@ -659,7 +659,7 @@
     },
     "flipFlop": "Flip flop",
     "pushToTalk": "Push-to-talk",
-    "dragHandle": "Drag to reorder",
+    "dragHandle": "Drag to reorder, or into another list",
     "heldEmptyHint": "Add actions here for a long press. A press longer than {{ms}} ms counts as holding.",
     "tapHintImmediate": "These run right away on every press; the held actions come on top after the hold time.",
     "holdWait": "Pressed actions wait until it is clear this is a tap",

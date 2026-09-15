@@ -1,6 +1,6 @@
 import { clsx } from "clsx";
-import { AnimatePresence, Reorder, motion, useDragControls } from "framer-motion";
-import { useState } from "react";
+import { AnimatePresence, Reorder, motion, useDragControls, type PanInfo } from "framer-motion";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AVAILABLE_ACTIONS, type Action, type ActionType, type Button, type Layout, type Page } from "../../lib/api";
 import { ContextMenu, type MenuEntry, type MenuState } from "../ContextMenu";
@@ -68,7 +68,46 @@ export function ActionsTab({ button, onChange, pages, layout, lists = ["down", "
   const clipboard = useUiStore((s) => s.actionClipboard);
   const copyActions = useUiStore((s) => s.copyActions);
 
+  const root = useRef<HTMLDivElement>(null);
+  /** The list a dragged row is over while it is outside its own list. */
+  const [dropList, setDropList] = useState<ListKey | null>(null);
+
   const setList = (key: ListKey, list: Action[]) => onChange({ ...button, [key]: list });
+
+  /** The list section under a viewport point, if any. */
+  const listAt = (x: number, y: number): { key: ListKey; element: HTMLElement } | null => {
+    for (const element of root.current?.querySelectorAll<HTMLElement>("[data-list]") ?? []) {
+      const r = element.getBoundingClientRect();
+      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return { key: element.dataset.list as ListKey, element };
+    }
+    return null;
+  };
+
+  const dragOver = (from: ListKey, x: number, y: number) => {
+    const over = listAt(x, y);
+    const next = over && over.key !== from ? over.key : null;
+    setDropList((prev) => (prev === next ? prev : next));
+  };
+
+  /** Drop a row (a marker with its block) into another list, at the row under the pointer. */
+  const dropInto = (from: ListKey, action: Action, x: number, y: number) => {
+    setDropList(null);
+    const target = listAt(x, y);
+    if (!target || target.key === from) return;
+    const source = button[from];
+    const block = blockOf(source, action);
+    const moving = new Set(block.map((a) => a.id));
+    const dest = button[target.key];
+    // Before the first row whose middle is below the pointer, else at the end.
+    const rows = [...target.element.querySelectorAll<HTMLElement>("[data-action-id]")];
+    const before = rows.find((row) => {
+      const r = row.getBoundingClientRect();
+      return y < r.top + r.height / 2;
+    });
+    const index = before ? dest.findIndex((a) => a.id === before.dataset.actionId) : -1;
+    const at = index < 0 ? dest.length : index;
+    onChange({ ...button, [from]: source.filter((a) => !moving.has(a.id)), [target.key]: [...dest.slice(0, at), ...block, ...dest.slice(at)] });
+  };
 
   /** Insert copies of `actions` into a list after position `at` (`-1` = at the end). */
   const insertClones = (key: ListKey, actions: Action[], at: number) => {
@@ -141,11 +180,15 @@ export function ActionsTab({ button, onChange, pages, layout, lists = ["down", "
   };
 
   return (
-    <div className="flex flex-col gap-5">
+    <div ref={root} className="flex flex-col gap-5">
       {!hideLoop && <Toggle checked={button.loop} onChange={setLoop} label={t("actions.loop")} hint={t("actions.loopHint")} />}
 
       {lists.map((key) => (
-        <section key={key} className="flex flex-col gap-2">
+        <section
+          key={key}
+          data-list={key}
+          className={clsx("flex flex-col gap-2 rounded-lg outline-offset-4 transition-[outline-color]", dropList === key ? "outline outline-2 outline-accent-400/70" : "outline-transparent")}
+        >
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-sm font-medium text-stage-100">
               {t(labels?.[key] ?? LIST_TITLES[key])}
@@ -213,6 +256,8 @@ export function ActionsTab({ button, onChange, pages, layout, lists = ["down", "
                     onRemove={() => setList(key, removeAction(button[key], action.id))}
                     onChange={(next) => setList(key, button[key].map((a) => (a.id === next.id ? next : a)))}
                     onContextMenu={(e) => openRowMenu(e, key, action)}
+                    onDrag={(x, y) => dragOver(key, x, y)}
+                    onDragEnd={(x, y) => dropInto(key, action, x, y)}
                   />
                 ))}
               </AnimatePresence>
@@ -236,6 +281,8 @@ function ActionRow({
   onRemove,
   onChange,
   onContextMenu,
+  onDrag,
+  onDragEnd,
 }: {
   action: Action;
   pages: Page[];
@@ -246,6 +293,9 @@ function ActionRow({
   onRemove: () => void;
   onChange: (next: Action) => void;
   onContextMenu: (e: React.MouseEvent) => void;
+  /** The pointer's viewport position while the row is dragged, and where it was let go. */
+  onDrag: (x: number, y: number) => void;
+  onDragEnd: (x: number, y: number) => void;
 }) {
   const { t } = useTranslation();
   const controls = useDragControls();
@@ -257,8 +307,17 @@ function ActionRow({
   return (
     <Reorder.Item
       value={action}
+      data-action-id={action.id}
       dragListener={false}
       dragControls={controls}
+      onDrag={(e: PointerEvent | MouseEvent | TouchEvent, info: PanInfo) => {
+        const [x, y] = clientPoint(e, info);
+        onDrag(x, y);
+      }}
+      onDragEnd={(e: PointerEvent | MouseEvent | TouchEvent, info: PanInfo) => {
+        const [x, y] = clientPoint(e, info);
+        onDragEnd(x, y);
+      }}
       initial={{ opacity: 0, x: -12 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 12 }}
@@ -351,4 +410,12 @@ function ActionRow({
       </AnimatePresence>
     </Reorder.Item>
   );
+}
+
+/** Where a drag event's pointer is in the viewport (framer's point is relative to the page). */
+function clientPoint(e: PointerEvent | MouseEvent | TouchEvent, info: PanInfo): [number, number] {
+  if ("clientX" in e) return [e.clientX, e.clientY];
+  const touch = e.changedTouches?.[0];
+  if (touch) return [touch.clientX, touch.clientY];
+  return [info.point.x - window.scrollX, info.point.y - window.scrollY];
 }
