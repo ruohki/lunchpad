@@ -2,6 +2,7 @@ import { clsx } from "clsx";
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../../icons/Icon";
+import { typedRect } from "../../lib/caret";
 import { Popover } from "../Popover";
 import { Tooltip } from "../Tooltip";
 
@@ -109,6 +110,18 @@ export function PlaceholderField({ value, onChange, suggestions, multiline = fal
   // A caller may hand us a field that is not set yet; the plain input tolerated it.
   const text = value ?? "";
   const parts = useMemo(() => highlight(text, language), [text, language]);
+
+  // While typing, the list sits under the caret's line (the whole field, when it is one line);
+  // the layer behind the field knows where the caret is.
+  const at = browsing
+    ? undefined
+    : () => {
+        if (!token || caret === null) return null;
+        const line = typedRect(layer.current, token.start, caret);
+        if (!line || multiline || !ref.current) return line;
+        const box = ref.current.getBoundingClientRect();
+        return new DOMRect(line.left, box.top, 0, box.height);
+      };
 
   const close = () => {
     setTyping(false);
@@ -229,7 +242,7 @@ export function PlaceholderField({ value, onChange, suggestions, multiline = fal
           <Icon name="Variable" />
         </button>
       </Tooltip>
-      <Popover open={open} anchor={ref} onClose={close} width={260} className="p-1.5">
+      <Popover open={open} anchor={ref} at={at} onClose={close} width={260} className="p-1.5">
         <ul role="listbox" className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
           {matches.map((name, i) => (
             <li
