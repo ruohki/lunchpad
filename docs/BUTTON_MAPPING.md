@@ -81,9 +81,16 @@ own, so a page built on an 8 x 8 model lands one pad up and right on a Pro.
 
 LEDs: `F0 00 20 29 02 10 0B <led> <r> <g> <b> … F7`, r/g/b 0..63, 78 LEDs per message.
 
-## Launchpad Pro MK3  (unverified)
+## Launchpad Pro MK3  (mode switch and identification verified on hardware, firmware 4.8.3, 2026-09-15)
 
-Programmer mode (`… 02 0E 0E 01`). Inquiry family `23 01`. Grid is 10 wide, 11 tall; the two
+Programmer mode in two steps: `… 02 0E 10 00` (DAW → Standalone) then `… 02 0E 0E 01`
+(Live → Programmer). The mode hierarchy in the manual puts Programmer beside Live and DAW, so a
+device a DAW left in Session ignores the second message on its own; leaving `10 00` out is why the
+device had to be switched by hand. Back to Live on unload with `… 02 0E 0E 00`. Inquiry family `23 01`;
+the device answers on all three ports with `F0 7E 00 06 02 00 20 29 23 01 00 00 00 04 08 03 F7`. Verified
+with `cargo run --example promk3mode`: after `10 01` (DAW mode) the Programmer toggle alone does not take,
+with `10 00` first the pads light and presses arrive in programmer numbering. The app drives the MIDI
+interface (`LPProMK3 MIDI`), which also carries the clock (`F8`) the device sends. Grid is 10 wide, 11 tall; the two
 bottom rows are half height.
 
 | Region | Coordinates | MIDI | Numbers |

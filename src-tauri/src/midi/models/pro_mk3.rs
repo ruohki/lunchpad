@@ -3,6 +3,9 @@
 //! Reference: Novation "Launchpad Pro [MK3] Programmer's Reference Manual".
 //! Not yet verified on hardware in this rewrite; mirrors the legacy app.
 //!
+//! Every control is square on this model, pads and function buttons alike, so
+//! the layout uses `Pad` all round (the smaller Shift keeps `Small`).
+//!
 //! Layout is 10 columns x 11 rows (y = 0 bottom):
 //!   y = 0   bottom function row      CC 1..8
 //!   y = 1   track select row         CC 101..108
@@ -37,13 +40,13 @@ impl LaunchpadDriver for ProMk3 {
             for x in 0..10u8 {
                 let p = match (x, y) {
                     (0, 0) | (9, 0) | (0, 1) | (9, 1) => spec(self, x, y, PadShape::Empty, PadRegion::Other, None),
-                    (_, 0) => spec(self, x, y, PadShape::Round, PadRegion::Bottom, Some(BOTTOM_LABELS[x as usize - 1])),
-                    (_, 1) => spec(self, x, y, PadShape::Round, PadRegion::Bottom2, Some("—")),
+                    (_, 0) => spec(self, x, y, PadShape::Pad, PadRegion::Bottom, Some(BOTTOM_LABELS[x as usize - 1])),
+                    (_, 1) => spec(self, x, y, PadShape::Pad, PadRegion::Bottom2, Some("—")),
                     (0, 10) => spec(self, x, y, PadShape::Small, PadRegion::Top, Some("Shift")),
                     (9, 10) => spec(self, x, y, PadShape::Logo, PadRegion::Other, None),
-                    (_, 10) => spec(self, x, y, PadShape::Round, PadRegion::Top, Some(TOP_LABELS[x as usize - 1])),
-                    (0, _) => spec(self, x, y, PadShape::Round, PadRegion::Left, Some(LEFT_LABELS[9 - y as usize])),
-                    (9, _) => spec(self, x, y, PadShape::Round, PadRegion::Right, Some(RIGHT_LABELS[9 - y as usize])),
+                    (_, 10) => spec(self, x, y, PadShape::Pad, PadRegion::Top, Some(TOP_LABELS[x as usize - 1])),
+                    (0, _) => spec(self, x, y, PadShape::Pad, PadRegion::Left, Some(LEFT_LABELS[9 - y as usize])),
+                    (9, _) => spec(self, x, y, PadShape::Pad, PadRegion::Right, Some(RIGHT_LABELS[9 - y as usize])),
                     _ => spec(self, x, y, PadShape::Pad, PadRegion::Grid, None),
                 };
                 pads.push(p);
@@ -65,7 +68,11 @@ impl LaunchpadDriver for ProMk3 {
     }
 
     fn init_messages(&self) -> Vec<Vec<u8>> {
-        vec![sysex(&HEADER, &[0x0E, 0x01])]
+        // Two steps, in this order (manual, "Mode Hierarchy Table"): Programmer
+        // mode sits beside Live and DAW mode, so a device a DAW left in Session
+        // ignores the Programmer toggle. `10h 00` puts it back to Standalone
+        // first, `0Eh 01` then switches to Programmer.
+        vec![sysex(&HEADER, &[0x10, 0x00]), sysex(&HEADER, &[0x0E, 0x01])]
     }
 
     fn unload_messages(&self) -> Vec<Vec<u8>> {

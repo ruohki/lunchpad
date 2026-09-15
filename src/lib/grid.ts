@@ -12,8 +12,10 @@ export type Corners = "round" | "square" | "rect" | "key";
 export function cornersOf(shape: PadShape | undefined): Corners {
   switch (shape) {
     case "round":
-    case "small":
       return "round";
+    // Only the Pro MK3's Shift is "small", and that model's buttons are square.
+    case "small":
+      return "square";
     case "rect":
       return "rect";
     case "keyWhite":
