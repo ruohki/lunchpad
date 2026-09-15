@@ -404,9 +404,14 @@ function KnobFace({ fraction, cell }: { fraction: number | null; cell: number })
   );
 }
 
-/** A touch strip: a tall bar filled to the bound fader's level, its printed name at the top. */
-function StripFace({ fraction, label, cell }: { fraction: number | null; label: string | null; cell: number }) {
+/**
+ * A slider or touch strip: the level is a bar at its position, not a fill from
+ * the bottom. A pitch slider springs back to the middle, where a filled bar
+ * would read as "half on" rather than "resting in the centre".
+ */
+function StripFace({ fraction, label, cell, centred = false }: { fraction: number | null; label: string | null; cell: number; centred?: boolean }) {
   const pct = Math.round(Math.max(0, Math.min(1, fraction ?? 0)) * 100);
+  const bar = Math.max(3, Math.round(cell * 0.08));
   return (
     <div
       aria-hidden
@@ -414,7 +419,13 @@ function StripFace({ fraction, label, cell }: { fraction: number | null; label: 
       className="relative min-h-0 flex-1 overflow-hidden rounded-md bg-stage-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
       style={{ width: Math.max(10, cell * 0.68) }}
     >
-      {fraction !== null && <div className="absolute inset-x-0 bottom-0 bg-accent-500/70" style={{ height: `${pct}%` }} />}
+      {fraction !== null &&
+        (centred ? (
+          // A sprung strip rests in the middle: a bar reads as a position, a fill would read as a level.
+          <div className="absolute inset-x-0.5 rounded-sm bg-accent-500" style={{ height: bar, bottom: `calc(${pct}% - ${bar / 2}px)` }} />
+        ) : (
+          <div className="absolute inset-x-0 bottom-0 bg-accent-500/70" style={{ height: `${pct}%` }} />
+        ))}
       {label && <span className="absolute inset-x-0 top-1 truncate px-0.5 text-center text-[9px] text-stage-400">{label}</span>}
     </div>
   );
@@ -668,7 +679,7 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
           className={clsx("flex h-full w-full flex-col items-center justify-start gap-0.5 rounded-md focus-visible:outline-2 focus-visible:outline-accent-400", fader && "cursor-ns-resize")}
           style={{ paddingTop: topInset, paddingBottom: 4 }}
         >
-          {pad.shape === "strip" ? <StripFace fraction={fraction} label={pad.label} cell={cell} /> : <KnobFace fraction={fraction} cell={cell} />}
+          {pad.shape === "strip" ? <StripFace fraction={fraction} label={pad.label} cell={cell} centred={pad.centred} /> : <KnobFace fraction={fraction} cell={cell} />}
           {pad.shape === "knob" && <span className="text-[9px] leading-none text-stage-500">{fader ? formatFaderValue(fader, fader.min + (fader.max - fader.min) * (fraction ?? 0)) : pad.label}</span>}
         </button>
       </div>

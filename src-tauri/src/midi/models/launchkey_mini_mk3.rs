@@ -139,7 +139,7 @@ impl LaunchpadDriver for LaunchkeyMiniMk3 {
         for y in (0..HEIGHT).rev() {
             for x in 0..WIDTH {
                 let p = match (x, y) {
-                    (0, KNOB_Y) => spec(self, x, y, Strip, Left, Some("Pitch")).with_rows(5),
+                    (0, KNOB_Y) => spec(self, x, y, Strip, Left, Some("Pitch")).with_rows(5).centred(),
                     (1, KNOB_Y) => spec(self, x, y, Strip, Left, Some("Modulation")).with_rows(5),
                     // Covered by the strips.
                     (0 | 1, 2..=PAD_TOP_Y) => continue,

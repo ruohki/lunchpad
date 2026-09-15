@@ -230,6 +230,10 @@ pub struct PadSpec {
     /// Rows the control spans downwards from `y` (touch strips); 1 for everything else.
     #[serde(default = "one")]
     pub rows: u8,
+    /// Rests in the middle and springs back when released (a pitch strip or
+    /// slider). The interface draws its level as a bar rather than a fill.
+    #[serde(default)]
+    pub centred: bool,
 }
 
 fn one() -> u8 {
@@ -239,6 +243,12 @@ fn one() -> u8 {
 impl PadSpec {
     pub fn with_led(mut self, led: LedKind) -> Self {
         self.led = led;
+        self
+    }
+
+    /// Marks a control that springs back to the middle (the pitch strip).
+    pub fn centred(mut self) -> Self {
+        self.centred = true;
         self
     }
 

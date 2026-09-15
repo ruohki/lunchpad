@@ -49,6 +49,8 @@ export interface PadSpec {
   led: LedKind;
   /** rows the control spans downwards from y (touch strips); 1 otherwise */
   rows: number;
+  /** springs back to the middle when released (a pitch strip): drawn as a bar, not a fill */
+  centred: boolean;
 }
 
 export interface Layout {

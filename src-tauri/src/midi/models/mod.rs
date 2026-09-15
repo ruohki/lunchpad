@@ -151,7 +151,7 @@ pub(crate) fn spec(
         PadShape::Empty | PadShape::Knob | PadShape::Strip | PadShape::KeyWhite | PadShape::KeyBlack => LedKind::None,
         _ => LedKind::Rgb,
     };
-    PadSpec { x, y, shape, region, label: label.map(|s| s.to_string()), note, cc, led, rows: 1 }
+    PadSpec { x, y, shape, region, label: label.map(|s| s.to_string()), note, cc, led, rows: 1, centred: false }
 }
 
 /// Shared LED builder for MK2 / Pro MK2 (`0A` solid, `23` flash, `28` pulse,
