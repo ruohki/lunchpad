@@ -630,10 +630,15 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
     if (!d || d.pointerId !== e.pointerId) return;
     movedRef.current = d.moved;
     controlDrag.current = null;
+    // A sprung strip springs back to the middle when let go, on screen as on the device.
+    if (pad.centred) {
+      setControlPosition(pad.x, pad.y, 0.5);
+      if (!preview) void api.controlPad(pad.x, pad.y, 0.5, true).catch(() => undefined);
+    }
     if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
     // The last value reaches the profile within the engine's pacing interval.
     window.setTimeout(() => setDragFraction(null), 250);
-  }, []);
+  }, [pad, preview, setControlPosition]);
   /** Fraction of a strip's travel at the pointer, bottom = 0. */
   const stripFraction = (e: React.PointerEvent) => {
     const bar = e.currentTarget.querySelector("[data-strip]");

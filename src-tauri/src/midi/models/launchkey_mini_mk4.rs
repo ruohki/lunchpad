@@ -418,7 +418,7 @@ impl LaunchpadDriver for LaunchkeyMiniMk4 {
             return None;
         }
         let (x, y) = self.note_to_xy(msg[1], true)?;
-        Some(ControlEvent { x, y, value: msg[2].min(127) as f32 / 127.0 })
+        Some(ControlEvent { x, y, value: msg[2].min(127) as f32 / 127.0, released: false })
     }
 
     fn has_secondary_input(&self) -> bool {
@@ -433,9 +433,10 @@ impl LaunchpadDriver for LaunchkeyMiniMk4 {
         match (msg[0] & 0xF0, msg[1]) {
             (0xE0, lsb) => {
                 let bend = ((msg[2].min(127) as u16) << 7) | lsb.min(127) as u16;
-                Some(ControlEvent { x: 0, y: KNOB_Y, value: bend as f32 / 16383.0 })
+                // Exactly the centre is the strip springing back when let go.
+                Some(ControlEvent { x: 0, y: KNOB_Y, value: bend as f32 / 16383.0, released: bend == 0x2000 })
             }
-            (0xB0, 1) => Some(ControlEvent { x: 1, y: KNOB_Y, value: msg[2].min(127) as f32 / 127.0 }),
+            (0xB0, 1) => Some(ControlEvent { x: 1, y: KNOB_Y, value: msg[2].min(127) as f32 / 127.0, released: false }),
             _ => None,
         }
     }
@@ -530,6 +531,8 @@ mod tests {
         // Strips and keys on the MIDI interface.
         let pitch = d.parse_secondary_control(&[0xE0, 0x00, 0x40]).unwrap();
         assert!((pitch.value - 0.5).abs() < 0.001, "released pitch strip sits at the centre");
+        assert!(pitch.released, "the centre is the strip let go");
+        assert!(!d.parse_secondary_control(&[0xE0, 0x7F, 0x7F]).unwrap().released);
         let modulation = d.parse_secondary_control(&[0xB0, 0x01, 0x7F]).unwrap();
         assert_eq!((modulation.x, modulation.y), (1, KNOB_Y));
         let key = d.parse_secondary_input(&[0x90, 0x30, 0x06], 1).unwrap();

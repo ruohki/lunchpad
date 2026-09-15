@@ -254,6 +254,8 @@ export interface ControlEvent {
   x: number;
   y: number;
   value: number;
+  /** the control sprang back to its rest position on its own (a pitch strip let go) */
+  released?: boolean;
 }
 
 export interface AudioDevices {
@@ -659,7 +661,8 @@ export const api = {
   listModels: () => invoke<ModelInfo[]>("list_models"),
   pressPad: (x: number, y: number, pressed: boolean) => invoke<void>("press_pad", { x, y, pressed }),
   /** A drag on a knob or strip in the UI: `value` runs 0..1 over the control's travel, like a hardware turn. */
-  controlPad: (x: number, y: number, value: number) => invoke<void>("control_pad", { x, y, value }),
+  /** Work a knob or strip from the interface; `released` = a sprung strip let go (it springs to `value`). */
+  controlPad: (x: number, y: number, value: number, released = false) => invoke<void>("control_pad", { x, y, value, released }),
   resetLeds: () => invoke<void>("reset_leds"),
   sendRawMidi: (bytes: number[]) => invoke<void>("send_raw_midi", { bytes }),
 

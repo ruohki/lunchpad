@@ -377,11 +377,11 @@ impl DeviceManager {
 
     /// Treat a drag on a knob or strip in the UI exactly like a turn of the
     /// hardware control: `value` runs 0..1 over its travel.
-    pub fn simulate_control(&self, x: u8, y: u8, value: f32) -> MidiResult<()> {
+    pub fn simulate_control(&self, x: u8, y: u8, value: f32, released: bool) -> MidiResult<()> {
         if self.active.is_none() {
             return Err(MidiError::NotConnected);
         }
-        let event = ControlEvent { x, y, value: if value.is_finite() { value.clamp(0.0, 1.0) } else { 0.0 } };
+        let event = ControlEvent { x, y, value: if value.is_finite() { value.clamp(0.0, 1.0) } else { 0.0 }, released };
         let _ = self.app.emit(EVENT_CONTROL, event);
         for listener in self.control_listeners.lock().iter() {
             listener(&event);

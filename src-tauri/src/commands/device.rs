@@ -137,8 +137,8 @@ pub async fn press_pad(x: u8, y: u8, pressed: bool, state: State<'_, AppState>) 
 
 /// A drag on a knob or touch strip in the UI behaves like a turn of the hardware control.
 #[tauri::command]
-pub async fn control_pad(x: u8, y: u8, value: f32, state: State<'_, AppState>) -> CmdResult<()> {
-    state.manager.lock().simulate_control(x, y, value).map_err(err)
+pub async fn control_pad(x: u8, y: u8, value: f32, released: Option<bool>, state: State<'_, AppState>) -> CmdResult<()> {
+    state.manager.lock().simulate_control(x, y, value, released.unwrap_or(false)).map_err(err)
 }
 
 /// Turn every LED off, then repaint the active page.

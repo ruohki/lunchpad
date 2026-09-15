@@ -310,6 +310,11 @@ pub struct ControlEvent {
     pub x: u8,
     pub y: u8,
     pub value: f32,
+    /// The control returned to its rest position on its own (a sprung pitch
+    /// strip let go): the level follows it, but a fader's actions run for the
+    /// value it was let go at, not for this one.
+    #[serde(default)]
+    pub released: bool,
 }
 
 /// Complete description of a model's button matrix, consumed by the UI.

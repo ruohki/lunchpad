@@ -173,7 +173,14 @@ impl MacroEngine {
         let start_worker = {
             let mut pending = self.inner.pending_controls.lock();
             let slot = pending.entry(id.clone()).or_default();
-            slot.latest = Some((page_id, event.x, event.y, hit));
+            // A release overtaking a value not shown yet must not lose it: that value is
+            // the one the control was let go at.
+            if event.released {
+                if let Some(touched) = slot.latest.take().filter(|v| !v.released) {
+                    slot.resting = Some(touched);
+                }
+            }
+            slot.latest = Some(ControlValue { page_id, x: event.x, y: event.y, hit, released: event.released });
             slot.changed = Some(Instant::now());
             !std::mem::replace(&mut slot.busy, true)
         };
@@ -189,6 +196,12 @@ impl MacroEngine {
                     let slot = pending.entry(id.clone()).or_default();
                     let rested = slot.changed.map(|t| t.elapsed() >= CONTROL_SETTLE).unwrap_or(true);
                     match slot.latest.take() {
+                        // A sprung control let go: show where it sprang to, and run the actions
+                        // now for the value it was let go at (the spring-back itself never counts).
+                        Some(v) if v.released => match slot.resting.take() {
+                            Some(touched) => ControlStep::ShowThenRun(v, touched),
+                            None => ControlStep::Show(v),
+                        },
                         // A newer value: show it now; its actions wait for the hand to rest.
                         Some(v) => {
                             slot.resting = Some(v.clone());
@@ -207,8 +220,12 @@ impl MacroEngine {
                     }
                 };
                 match step {
-                    ControlStep::Show((page_id, x, y, hit)) => engine.fader_pressed(&page_id, x, y, hit, 127, false),
-                    ControlStep::Run((page_id, x, y, hit)) => engine.fader_pressed(&page_id, x, y, hit, 127, true),
+                    ControlStep::Show(v) => engine.fader_pressed(&v.page_id, v.x, v.y, v.hit, 127, false),
+                    ControlStep::Run(v) => engine.fader_pressed(&v.page_id, v.x, v.y, v.hit, 127, true),
+                    ControlStep::ShowThenRun(shown, touched) => {
+                        engine.fader_pressed(&touched.page_id, touched.x, touched.y, touched.hit, 127, true);
+                        engine.fader_pressed(&shown.page_id, shown.x, shown.y, shown.hit, 127, false);
+                    }
                     ControlStep::Wait => {}
                     ControlStep::Done => break,
                 }
@@ -725,7 +742,16 @@ const CONTROL_INTERVAL: Duration = Duration::from_millis(60);
 /// run: the level follows every movement, the actions fire once per stop.
 const CONTROL_SETTLE: Duration = Duration::from_millis(150);
 
-type ControlValue = (String, u8, u8, FaderHit);
+/// A value a knob or strip delivered for the fader on it.
+#[derive(Clone)]
+struct ControlValue {
+    page_id: String,
+    x: u8,
+    y: u8,
+    hit: FaderHit,
+    /// The control sprang back on its own (see `ControlEvent::released`).
+    released: bool,
+}
 
 /// One tick of a fader's control worker.
 enum ControlStep {
@@ -733,6 +759,9 @@ enum ControlStep {
     Show(ControlValue),
     /// The movement rested: run the actions with the value it stopped on.
     Run(ControlValue),
+    /// A sprung control let go: the actions for the value it was let go at,
+    /// then the rest position as the level.
+    ShowThenRun(ControlValue, ControlValue),
     /// Still moving, nothing new to show.
     Wait,
     /// Rested and everything is applied.
@@ -1073,9 +1102,9 @@ mod tests {
         });
         // A burst of values: only the last one runs the actions, after the pacing gap.
         for v in [0.1f32, 0.4, 0.75] {
-            engine.on_control(&ControlEvent { x: 3, y: 3, value: v });
+            engine.on_control(&ControlEvent { x: 3, y: 3, value: v, released: false });
         }
-        engine.on_control(&ControlEvent { x: 4, y: 3, value: 0.5 }); // no fader here: ignored
+        engine.on_control(&ControlEvent { x: 4, y: 3, value: 0.5, released: false }); // no fader here: ignored
         tokio::time::sleep(Duration::from_millis(250)).await;
         let globals = engine.globals();
         assert_eq!(globals.get("fader.gain").map(String::as_str), Some("75"));
@@ -1102,7 +1131,7 @@ mod tests {
         });
         // A sweep: a value every 40 ms for 400 ms.
         for i in 1..=10u32 {
-            engine.on_control(&ControlEvent { x: 3, y: 3, value: i as f32 / 10.0 });
+            engine.on_control(&ControlEvent { x: 3, y: 3, value: i as f32 / 10.0, released: false });
             tokio::time::sleep(Duration::from_millis(40)).await;
         }
         // Mid-sweep: the level has been following, the actions have not run.
@@ -1115,6 +1144,38 @@ mod tests {
         let globals = engine.globals();
         assert_eq!(globals.get("fader.gain").map(String::as_str), Some("100"));
         assert_eq!(globals.get("runs").map(String::as_str), Some("1"));
+    }
+
+    /// A pitch strip springs back to the middle when let go: the level follows it
+    /// there, but the actions run for the value it was let go at, and never for
+    /// the spring-back itself.
+    #[tokio::test]
+    async fn a_sprung_strip_runs_the_actions_for_where_it_was_let_go() {
+        let (engine, profile) = engine();
+        profile.lock().profile.page_mut(DEFAULT_PAGE_ID).unwrap().set_fader(Fader {
+            id: "pitch".into(),
+            name: "pitch".into(),
+            x: 0,
+            y: 7,
+            length: 1,
+            min: 0.0,
+            max: 100.0,
+            on_change: vec![a(ActionKind::SetVariable { name: "ran".into(), value: "{{value}}".into(), scope: VarScope::Global })],
+            ..Fader::default()
+        });
+        for v in [0.55f32, 0.7, 0.85] {
+            engine.on_control(&ControlEvent { x: 0, y: 7, value: v, released: false });
+            tokio::time::sleep(Duration::from_millis(30)).await;
+        }
+        engine.on_control(&ControlEvent { x: 0, y: 7, value: 0.5, released: true });
+        tokio::time::sleep(Duration::from_millis(400)).await;
+        let globals = engine.globals();
+        assert_eq!(globals.get("ran").map(String::as_str), Some("85"), "the actions ran for the value the strip was let go at");
+        assert_eq!(globals.get("fader.pitch").map(String::as_str), Some("50"), "the level followed the spring-back");
+        // Letting go without a touch first shows the centre and runs nothing.
+        engine.on_control(&ControlEvent { x: 0, y: 7, value: 0.5, released: true });
+        tokio::time::sleep(Duration::from_millis(300)).await;
+        assert_eq!(engine.globals().get("ran").map(String::as_str), Some("85"));
     }
 
     /// Setting a knob's fader by hand (the on-screen control, "Set fader", a
@@ -1136,7 +1197,7 @@ mod tests {
         assert!(engine.set_fader_level("gain", 20.0, false));
         tokio::time::sleep(Duration::from_millis(80)).await;
 
-        engine.on_control(&ControlEvent { x: 3, y: 3, value: 0.8 });
+        engine.on_control(&ControlEvent { x: 3, y: 3, value: 0.8, released: false });
         tokio::time::sleep(Duration::from_millis(250)).await;
         let value = profile.lock().profile.page(DEFAULT_PAGE_ID).unwrap().faders[0].value;
         // The hardware value arrives as an f32 fraction, so compare loosely.
@@ -1145,7 +1206,7 @@ mod tests {
 
         // And again the other way round: hand, then hardware, in quick succession.
         assert!(engine.set_fader_level("gain", 10.0, false));
-        engine.on_control(&ControlEvent { x: 3, y: 3, value: 0.35 });
+        engine.on_control(&ControlEvent { x: 3, y: 3, value: 0.35, released: false });
         tokio::time::sleep(Duration::from_millis(250)).await;
         let value = profile.lock().profile.page(DEFAULT_PAGE_ID).unwrap().faders[0].value;
         assert!((value - 35.0).abs() < 1e-4, "the slider was moved to 35, the profile says {value}");
