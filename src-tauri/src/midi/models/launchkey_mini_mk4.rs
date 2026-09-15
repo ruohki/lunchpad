@@ -424,7 +424,7 @@ impl LaunchpadDriver for LaunchkeyMiniMk4 {
             return None;
         }
         let (x, y) = self.note_to_xy(msg[1], true)?;
-        Some(ControlEvent { x, y, value: msg[2].min(127) as f32 / 127.0, released: false })
+        Some(ControlEvent { x, y, value: msg[2].min(127) as f32 / 127.0, kind: ControlKind::Knob, released: false })
     }
 
     fn has_secondary_input(&self) -> bool {
@@ -440,9 +440,9 @@ impl LaunchpadDriver for LaunchkeyMiniMk4 {
             (0xE0, lsb) => {
                 let bend = ((msg[2].min(127) as u16) << 7) | lsb.min(127) as u16;
                 // Exactly the centre is the strip springing back when let go.
-                Some(ControlEvent { x: 0, y: KNOB_Y, value: bend as f32 / 16383.0, released: bend == 0x2000 })
+                Some(ControlEvent { x: 0, y: KNOB_Y, value: bend as f32 / 16383.0, kind: ControlKind::SprungStrip, released: bend == 0x2000 })
             }
-            (0xB0, 1) => Some(ControlEvent { x: 1, y: KNOB_Y, value: msg[2].min(127) as f32 / 127.0, released: false }),
+            (0xB0, 1) => Some(ControlEvent { x: 1, y: KNOB_Y, value: msg[2].min(127) as f32 / 127.0, kind: ControlKind::Strip, released: false }),
             _ => None,
         }
     }

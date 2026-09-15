@@ -231,9 +231,17 @@ pub struct Fader {
     /// Show the level on another scale (e.g. -100..26 dB shown as 0..100 %)
     #[serde(default)]
     pub display: Option<FaderDisplay>,
-    /// Runs after every change with `value`, `percent`, `fraction`, `step`, `steps`, `display`
+    /// Runs after every change with `value`, `percent`, `fraction`, `step`, `steps`, `display`;
+    /// on a touch strip this is the "while moving" list.
     #[serde(default)]
     pub on_change: Vec<Action>,
+    /// Touch strips only: runs when a finger lands on the strip, with the first value.
+    #[serde(default)]
+    pub on_touch: Vec<Action>,
+    /// Touch strips only: runs when the finger leaves (a sprung strip reports it, another
+    /// counts as let go after resting a moment), with the last value it touched.
+    #[serde(default)]
+    pub on_release: Vec<Action>,
 }
 
 /// A second scale the fader's value is shown in, mapped linearly from the range.
@@ -281,6 +289,8 @@ impl Default for Fader {
             value: 0.0,
             display: None,
             on_change: Vec::new(),
+            on_touch: Vec::new(),
+            on_release: Vec::new(),
         }
     }
 }

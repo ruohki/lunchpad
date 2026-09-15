@@ -129,6 +129,8 @@ export function newFader(x: number, y: number, layout: Layout | null): Fader {
     value: 0,
     display: null,
     onChange: [],
+    onTouch: [],
+    onRelease: [],
   };
 }
 

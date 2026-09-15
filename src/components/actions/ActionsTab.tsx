@@ -24,6 +24,8 @@ interface Props {
   hideLoop?: boolean;
   /** The list belongs to a fader: value actions start out reading the fader's own level. */
   faderContext?: boolean;
+  /** The lists are just lists: no hold time, no tap hints (a strip's touch / move / release). */
+  plain?: boolean;
 }
 
 type ListKey = "down" | "up" | "hold";
@@ -56,7 +58,7 @@ function readFaderValue(action: Action): Action {
 }
 
 /** The "Actions" tab of the button editor: pressed and released lists. */
-export function ActionsTab({ button, onChange, pages, layout, lists = ["down", "up", "hold"], labels, hideLoop = false, faderContext = false }: Props) {
+export function ActionsTab({ button, onChange, pages, layout, lists = ["down", "up", "hold"], labels, hideLoop = false, faderContext = false, plain = false }: Props) {
   const { t } = useTranslation();
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
@@ -150,7 +152,7 @@ export function ActionsTab({ button, onChange, pages, layout, lists = ["down", "
               <span className="ml-2 text-xs font-normal text-stage-500">{button[key].length || ""}</span>
             </h3>
             <div className="flex items-center gap-3">
-              {key === "hold" && (
+              {key === "hold" && !plain && (
                 <label className="flex items-center gap-1.5 text-xs text-stage-400">
                   {t("actions.holdTime")}
                   <input
@@ -175,10 +177,10 @@ export function ActionsTab({ button, onChange, pages, layout, lists = ["down", "
               </button>
             </div>
           </div>
-          {key === "down" && lists.includes("hold") && button.hold.length > 0 && (
+          {key === "down" && !plain && lists.includes("hold") && button.hold.length > 0 && (
             <p className="text-xs text-stage-500">{button.holdWait ? t("actions.tapHint") : t("actions.tapHintImmediate")}</p>
           )}
-          {key === "hold" && (
+          {key === "hold" && !plain && (
             <div className="flex flex-col gap-2">
               <p className="text-xs text-stage-500">{button.hold.length > 0 ? t("actions.heldHint", { ms: button.holdMs }) : t("actions.heldEmptyHint", { ms: button.holdMs })}</p>
               {button.hold.length > 0 && (

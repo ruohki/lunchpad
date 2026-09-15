@@ -124,10 +124,16 @@ function FaderForm({
   }, [page, pads, fader.id]);
   const covered = useMemo(() => (page ? page.buttons.filter((b) => pads.some(([x, y]) => x === b.x && y === b.y)).length : 0), [page, pads]);
 
-  const pseudo: Button = useMemo(() => ({ ...emptyButton(), down: fader.onChange }), [fader.onChange]);
+  const controlShape = layout?.pads.find((p) => p.x === fader.x && p.y === fader.y)?.shape;
+  const strip = controlShape === "strip";
+  // A touch strip has three lists (touch, move, release); anything else the one "on change" list.
+  const pseudo: Button = useMemo(
+    () => (strip ? { ...emptyButton(), down: fader.onTouch ?? [], up: fader.onChange, hold: fader.onRelease ?? [] } : { ...emptyButton(), down: fader.onChange }),
+    [strip, fader.onTouch, fader.onChange, fader.onRelease],
+  );
+  const actionCount = fader.onChange.length + (strip ? (fader.onTouch?.length ?? 0) + (fader.onRelease?.length ?? 0) : 0);
   const setDirection = (direction: FaderDirection) => setFader({ ...fader, direction, length: Math.min(fader.length, maxFaderLength(layout, fader.x, fader.y, direction)) });
   const control = isControlCell(layout, fader.x, fader.y);
-  const controlShape = layout?.pads.find((p) => p.x === fader.x && p.y === fader.y)?.shape;
   const valid = (control ? fader.length >= 1 : fader.length >= 2) && !overlaps && fader.min !== fader.max;
 
   return (
@@ -142,7 +148,7 @@ function FaderForm({
             value={tab}
             options={[
               { value: "fader", label: t("fader.tabFader") },
-              { value: "actions", label: `${t("fader.tabActions")}${fader.onChange.length ? ` · ${fader.onChange.length}` : ""}` },
+              { value: "actions", label: `${t("fader.tabActions")}${actionCount ? ` · ${actionCount}` : ""}` },
             ]}
             onChange={setTab}
           />
@@ -154,8 +160,22 @@ function FaderForm({
 
       {tab === "actions" ? (
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-4">
-          <p className="text-xs text-stage-500">{t("fader.variablesHint")}</p>
-          <ActionsTab button={pseudo} onChange={(b) => setFader({ ...fader, onChange: b.down })} pages={pages} layout={layout} lists={["down"]} labels={{ down: "fader.onChange" }} hideLoop faderContext />
+          <p className="text-xs text-stage-500">{t(strip ? "fader.stripHint" : "fader.variablesHint")}</p>
+          {strip ? (
+            <ActionsTab
+              button={pseudo}
+              onChange={(b) => setFader({ ...fader, onTouch: b.down, onChange: b.up, onRelease: b.hold })}
+              pages={pages}
+              layout={layout}
+              lists={["down", "up", "hold"]}
+              labels={{ down: "fader.onTouch", up: "fader.onMove", hold: "fader.onRelease" }}
+              hideLoop
+              plain
+              faderContext
+            />
+          ) : (
+            <ActionsTab button={pseudo} onChange={(b) => setFader({ ...fader, onChange: b.down })} pages={pages} layout={layout} lists={["down"]} labels={{ down: "fader.onChange" }} hideLoop faderContext />
+          )}
         </div>
       ) : (
       <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 py-4">

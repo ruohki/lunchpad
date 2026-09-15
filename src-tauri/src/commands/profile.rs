@@ -101,7 +101,7 @@ pub async fn missing_sound_files(state: State<'_, AppState>) -> CmdResult<Vec<St
         let store = state.profile.lock();
         let mut files: Vec<String> = Vec::new();
         for page in &store.profile.pages {
-            let actions = page.buttons.iter().flat_map(|b| b.button.down.iter().chain(b.button.up.iter()).chain(b.button.hold.iter())).chain(page.faders.iter().flat_map(|f| f.on_change.iter()));
+            let actions = page.buttons.iter().flat_map(|b| b.button.down.iter().chain(b.button.up.iter()).chain(b.button.hold.iter())).chain(page.faders.iter().flat_map(|f| f.on_change.iter().chain(f.on_touch.iter()).chain(f.on_release.iter())));
             for action in actions {
                 if let crate::macros::ActionKind::PlaySound { file, .. } = &action.kind {
                     // Paths with placeholders are only known when the macro runs.

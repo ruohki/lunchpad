@@ -19,8 +19,8 @@ use super::exec::execute_external;
 use super::model::*;
 use super::services::Services;
 use super::sink::EngineSink;
-use crate::midi::types::{ButtonEvent, ControlEvent, PressureEvent};
-use crate::profile::{self, PadColor, Profile, SharedProfile};
+use crate::midi::types::{ButtonEvent, ControlEvent, ControlKind, PressureEvent};
+use crate::profile::{self, Fader, PadColor, Profile, SharedProfile};
 use parking_lot::Mutex;
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
@@ -46,8 +46,19 @@ pub enum ActionList {
     Up,
     /// Long-press actions (`Button::hold`)
     Hold,
-    /// A fader's `on_change` actions
+    /// A fader's `on_change` actions (a touch strip's "while moving")
     Fader,
+    /// A touch strip's `on_touch` actions
+    FaderTouch,
+    /// A touch strip's `on_release` actions
+    FaderRelease,
+}
+
+impl ActionList {
+    /// One of a fader's lists rather than a button's.
+    pub fn is_fader(self) -> bool {
+        matches!(self, ActionList::Fader | ActionList::FaderTouch | ActionList::FaderRelease)
+    }
 }
 
 const HOLD_ARMED: u8 = 0;
@@ -180,7 +191,7 @@ impl MacroEngine {
                     slot.resting = Some(touched);
                 }
             }
-            slot.latest = Some(ControlValue { page_id, x: event.x, y: event.y, hit, released: event.released });
+            slot.latest = Some(ControlValue { page_id, x: event.x, y: event.y, hit, kind: event.kind, released: event.released });
             slot.changed = Some(Instant::now());
             !std::mem::replace(&mut slot.busy, true)
         };
@@ -196,35 +207,64 @@ impl MacroEngine {
                     let slot = pending.entry(id.clone()).or_default();
                     let rested = slot.changed.map(|t| t.elapsed() >= CONTROL_SETTLE).unwrap_or(true);
                     match slot.latest.take() {
-                        // A sprung control let go: show where it sprang to, and run the actions
-                        // now for the value it was let go at (the spring-back itself never counts).
-                        Some(v) if v.released => match slot.resting.take() {
-                            Some(touched) => ControlStep::ShowThenRun(v, touched),
-                            None => ControlStep::Show(v),
-                        },
-                        // A newer value: show it now; its actions wait for the hand to rest.
+                        // A sprung strip let go: show where it sprang to, and run the release
+                        // list for the value it was let go at (the spring-back itself never counts).
+                        Some(v) if v.released => {
+                            slot.touching = false;
+                            match slot.resting.take() {
+                                Some(touched) => ControlStep::ShowThenRelease(v, touched),
+                                None => ControlStep::Show(v),
+                            }
+                        }
+                        // A strip under a finger: the first value is the touch, every value a move.
+                        Some(v) if v.kind != ControlKind::Knob => {
+                            let first = !slot.touching;
+                            slot.touching = true;
+                            slot.resting = Some(v.clone());
+                            if first {
+                                ControlStep::TouchThenMove(v)
+                            } else {
+                                ControlStep::Move(v)
+                            }
+                        }
+                        // A knob's newer value: show it now; its actions wait for the hand to rest.
                         Some(v) => {
                             slot.resting = Some(v.clone());
                             ControlStep::Show(v)
                         }
                         None if !rested => ControlStep::Wait,
-                        // Rested: the actions run once, with the value it came to rest on.
+                        // Rested: a knob's actions run once with the value it came to rest on; a
+                        // strip without a spring counts as let go (a sprung one reports that itself).
                         None => match slot.resting.take() {
+                            Some(v) if v.kind == ControlKind::SprungStrip => {
+                                slot.resting = Some(v);
+                                ControlStep::Wait
+                            }
+                            Some(v) if v.kind == ControlKind::Strip => {
+                                slot.touching = false;
+                                ControlStep::Release(v)
+                            }
                             Some(v) => ControlStep::Run(v),
                             None => {
                                 slot.busy = false;
                                 slot.changed = None;
+                                slot.touching = false;
                                 ControlStep::Done
                             }
                         },
                     }
                 };
                 match step {
-                    ControlStep::Show(v) => engine.fader_pressed(&v.page_id, v.x, v.y, v.hit, 127, false),
-                    ControlStep::Run(v) => engine.fader_pressed(&v.page_id, v.x, v.y, v.hit, 127, true),
-                    ControlStep::ShowThenRun(shown, touched) => {
-                        engine.fader_pressed(&touched.page_id, touched.x, touched.y, touched.hit, 127, true);
-                        engine.fader_pressed(&shown.page_id, shown.x, shown.y, shown.hit, 127, false);
+                    ControlStep::Show(v) => engine.fader_pressed(&v.page_id, v.x, v.y, v.hit, 127, None),
+                    ControlStep::Run(v) | ControlStep::Move(v) => engine.fader_pressed(&v.page_id, v.x, v.y, v.hit, 127, Some(ActionList::Fader)),
+                    ControlStep::TouchThenMove(v) => {
+                        engine.fader_pressed(&v.page_id, v.x, v.y, v.hit.clone(), 127, Some(ActionList::FaderTouch));
+                        engine.fader_pressed(&v.page_id, v.x, v.y, v.hit, 127, Some(ActionList::Fader));
+                    }
+                    ControlStep::Release(v) => engine.fader_pressed(&v.page_id, v.x, v.y, v.hit, 127, Some(ActionList::FaderRelease)),
+                    ControlStep::ShowThenRelease(shown, touched) => {
+                        engine.fader_pressed(&touched.page_id, touched.x, touched.y, touched.hit, 127, Some(ActionList::FaderRelease));
+                        engine.fader_pressed(&shown.page_id, shown.x, shown.y, shown.hit, 127, None);
                     }
                     ControlStep::Wait => {}
                     ControlStep::Done => break,
@@ -254,7 +294,7 @@ impl MacroEngine {
         if let Some(hit) = fader {
             // A fader pad sets the level; the release does nothing.
             if event.pressed {
-                self.fader_pressed(&page_id, x, y, hit, velocity, true);
+                self.fader_pressed(&page_id, x, y, hit, velocity, Some(ActionList::Fader));
             }
             return;
         }
@@ -351,12 +391,13 @@ impl MacroEngine {
             decimals: fader.decimals,
             display: at.display_text(),
         };
-        self.fader_pressed(&page_id, fader.x, fader.y, hit, 127, run_actions);
+        self.fader_pressed(&page_id, fader.x, fader.y, hit, 127, run_actions.then_some(ActionList::Fader));
         true
     }
 
     /// Persist a fader's new level, expose it as `fader.<name>` and run its actions.
-    fn fader_pressed(&self, page_id: &str, x: u8, y: u8, hit: FaderHit, velocity: u8, run_actions: bool) {
+    /// Apply a fader's value (LEDs, level, variables) and run one of its lists, if any.
+    fn fader_pressed(&self, page_id: &str, x: u8, y: u8, hit: FaderHit, velocity: u8, run: Option<ActionList>) {
         let page_for = page_id.to_string();
         let id_for = hit.id.clone();
         let value = hit.value;
@@ -388,8 +429,8 @@ impl MacroEngine {
             globals.clone()
         };
         self.inner.sink.variables_changed(&snapshot);
-        if run_actions {
-            let _ = self.start_with(page_id, x, y, ActionList::Fader, velocity, 0, None, Some(Arc::new(Mutex::new(locals))));
+        if let Some(list) = run {
+            let _ = self.start_with(page_id, x, y, list, velocity, 0, None, Some(Arc::new(Mutex::new(locals))));
         }
     }
 
@@ -423,15 +464,15 @@ impl MacroEngine {
         let has_actions = {
             let store = self.inner.profile.lock();
             let page = store.profile.page(page_id)?;
-            if list == ActionList::Fader {
-                page.fader_at(x, y).map(|(f, _)| !f.on_change.is_empty()).unwrap_or(false)
+            if list.is_fader() {
+                page.fader_at(x, y).map(|(f, _)| !fader_list(f, list).is_empty()).unwrap_or(false)
             } else {
                 let button = page.get(x, y)?;
                 match list {
                     ActionList::Down => !button.down.is_empty(),
                     ActionList::Up => !button.up.is_empty(),
                     ActionList::Hold => !button.hold.is_empty(),
-                    ActionList::Fader => false,
+                    ActionList::Fader | ActionList::FaderTouch | ActionList::FaderRelease => false,
                 }
             }
         };
@@ -645,7 +686,7 @@ impl Inner {
         let runners = self.runners.lock();
         let list: Vec<RunningMacro> = runners.values().map(|r| r.info.clone()).collect();
         // A fader's own actions run "at" its first pad; that pad shows the level, not a running ring.
-        let pads: HashSet<(String, u8, u8)> = runners.values().filter(|r| r.info.list != ActionList::Fader).map(|r| (r.info.page_id.clone(), r.info.x, r.info.y)).collect();
+        let pads: HashSet<(String, u8, u8)> = runners.values().filter(|r| !r.info.list.is_fader()).map(|r| (r.info.page_id.clone(), r.info.x, r.info.y)).collect();
         drop(runners);
         *self.running_pads.lock() = pads;
         self.sink.running_changed(&list);
@@ -723,17 +764,26 @@ async fn run_lists(ctx: RunContext, list: ActionList) {
 fn snapshot(ctx: &RunContext, list: ActionList) -> Option<(Vec<Action>, bool)> {
     let store = ctx.inner.profile.lock();
     let page = store.profile.page(&ctx.page_id)?;
-    if list == ActionList::Fader {
-        return page.fader_at(ctx.x, ctx.y).map(|(f, _)| (f.on_change.clone(), false));
+    if list.is_fader() {
+        return page.fader_at(ctx.x, ctx.y).map(|(f, _)| (fader_list(f, list).clone(), false));
     }
     let button = page.get(ctx.x, ctx.y)?;
     let actions = match list {
         ActionList::Down => button.down.clone(),
         ActionList::Up => button.up.clone(),
         ActionList::Hold => button.hold.clone(),
-        ActionList::Fader => Vec::new(),
+        ActionList::Fader | ActionList::FaderTouch | ActionList::FaderRelease => Vec::new(),
     };
     Some((actions, button.loop_down))
+}
+
+/// The fader's list behind one of the fader `ActionList`s.
+fn fader_list(fader: &Fader, list: ActionList) -> &Vec<Action> {
+    match list {
+        ActionList::FaderTouch => &fader.on_touch,
+        ActionList::FaderRelease => &fader.on_release,
+        _ => &fader.on_change,
+    }
 }
 
 /// How often a fader driven by a knob or strip shows the newest value.
@@ -749,19 +799,26 @@ struct ControlValue {
     x: u8,
     y: u8,
     hit: FaderHit,
+    kind: ControlKind,
     /// The control sprang back on its own (see `ControlEvent::released`).
     released: bool,
 }
 
 /// One tick of a fader's control worker.
 enum ControlStep {
-    /// Show a newer value (LEDs, level, variables), no actions yet.
+    /// Show a newer value (LEDs, level, variables), no actions.
     Show(ControlValue),
-    /// The movement rested: run the actions with the value it stopped on.
+    /// A knob's movement rested: its actions run with the value it stopped on.
     Run(ControlValue),
-    /// A sprung control let go: the actions for the value it was let go at,
+    /// A finger landed on a strip: the touch list, then the move list.
+    TouchThenMove(ControlValue),
+    /// A strip moved under the finger: the move list.
+    Move(ControlValue),
+    /// A strip was let go (rested, or the spring-back): the release list.
+    Release(ControlValue),
+    /// A sprung strip let go: the release list for the value it was let go at,
     /// then the rest position as the level.
-    ShowThenRun(ControlValue, ControlValue),
+    ShowThenRelease(ControlValue, ControlValue),
     /// Still moving, nothing new to show.
     Wait,
     /// Rested and everything is applied.
@@ -776,8 +833,11 @@ struct PendingControl {
     /// When the newest value arrived; the movement has rested once that is
     /// `CONTROL_SETTLE` ago.
     changed: Option<Instant>,
-    /// The last value shown whose actions have not run yet.
+    /// The last value shown whose actions have not run yet (a knob's rest value, or
+    /// what a strip was last touched at).
     resting: Option<ControlValue>,
+    /// A finger is on the strip: the next value is a move, not a touch.
+    touching: bool,
 }
 
 /// What the engine needs from a fader pad press, copied out of the profile lock.
@@ -1102,9 +1162,9 @@ mod tests {
         });
         // A burst of values: only the last one runs the actions, after the pacing gap.
         for v in [0.1f32, 0.4, 0.75] {
-            engine.on_control(&ControlEvent { x: 3, y: 3, value: v, released: false });
+            engine.on_control(&ControlEvent { x: 3, y: 3, value: v, kind: ControlKind::Knob, released: false });
         }
-        engine.on_control(&ControlEvent { x: 4, y: 3, value: 0.5, released: false }); // no fader here: ignored
+        engine.on_control(&ControlEvent { x: 4, y: 3, value: 0.5, kind: ControlKind::Knob, released: false }); // no fader here: ignored
         tokio::time::sleep(Duration::from_millis(250)).await;
         let globals = engine.globals();
         assert_eq!(globals.get("fader.gain").map(String::as_str), Some("75"));
@@ -1131,7 +1191,7 @@ mod tests {
         });
         // A sweep: a value every 40 ms for 400 ms.
         for i in 1..=10u32 {
-            engine.on_control(&ControlEvent { x: 3, y: 3, value: i as f32 / 10.0, released: false });
+            engine.on_control(&ControlEvent { x: 3, y: 3, value: i as f32 / 10.0, kind: ControlKind::Knob, released: false });
             tokio::time::sleep(Duration::from_millis(40)).await;
         }
         // Mid-sweep: the level has been following, the actions have not run.
@@ -1146,11 +1206,12 @@ mod tests {
         assert_eq!(globals.get("runs").map(String::as_str), Some("1"));
     }
 
-    /// A pitch strip springs back to the middle when let go: the level follows it
-    /// there, but the actions run for the value it was let go at, and never for
-    /// the spring-back itself.
+    /// A touch strip runs its touch list when the finger lands, its move list with
+    /// every value, and its release list when the finger leaves: a sprung strip
+    /// reports that as it springs back (the level follows it there, the release runs
+    /// for the value it was let go at, and the spring-back itself runs nothing).
     #[tokio::test]
-    async fn a_sprung_strip_runs_the_actions_for_where_it_was_let_go() {
+    async fn a_sprung_strip_runs_touch_move_and_release() {
         let (engine, profile) = engine();
         profile.lock().profile.page_mut(DEFAULT_PAGE_ID).unwrap().set_fader(Fader {
             id: "pitch".into(),
@@ -1160,22 +1221,59 @@ mod tests {
             length: 1,
             min: 0.0,
             max: 100.0,
-            on_change: vec![a(ActionKind::SetVariable { name: "ran".into(), value: "{{value}}".into(), scope: VarScope::Global })],
+            on_touch: vec![a(ActionKind::SetVariable { name: "touched".into(), value: "{{value}}".into(), scope: VarScope::Global })],
+            on_change: vec![a(ActionKind::AddToVariable { name: "moves".into(), amount: "1".into(), scope: VarScope::Global })],
+            on_release: vec![a(ActionKind::SetVariable { name: "released".into(), value: "{{value}}".into(), scope: VarScope::Global })],
             ..Fader::default()
         });
         for v in [0.55f32, 0.7, 0.85] {
-            engine.on_control(&ControlEvent { x: 0, y: 7, value: v, released: false });
-            tokio::time::sleep(Duration::from_millis(30)).await;
+            engine.on_control(&ControlEvent { x: 0, y: 7, value: v, kind: ControlKind::SprungStrip, released: false });
+            tokio::time::sleep(Duration::from_millis(70)).await;
         }
-        engine.on_control(&ControlEvent { x: 0, y: 7, value: 0.5, released: true });
-        tokio::time::sleep(Duration::from_millis(400)).await;
+        // Holding still on a sprung strip is not letting go.
+        tokio::time::sleep(Duration::from_millis(300)).await;
+        assert_eq!(engine.globals().get("released"), None, "no release while the finger rests on a sprung strip");
+        engine.on_control(&ControlEvent { x: 0, y: 7, value: 0.5, kind: ControlKind::SprungStrip, released: true });
+        tokio::time::sleep(Duration::from_millis(300)).await;
         let globals = engine.globals();
-        assert_eq!(globals.get("ran").map(String::as_str), Some("85"), "the actions ran for the value the strip was let go at");
+        assert_eq!(globals.get("touched").map(String::as_str), Some("55"), "the touch list ran once, with the first value");
+        assert_eq!(globals.get("moves").map(String::as_str), Some("3"), "the move list ran for every value");
+        assert_eq!(globals.get("released").map(String::as_str), Some("85"), "the release list ran for the value the strip was let go at");
         assert_eq!(globals.get("fader.pitch").map(String::as_str), Some("50"), "the level followed the spring-back");
         // Letting go without a touch first shows the centre and runs nothing.
-        engine.on_control(&ControlEvent { x: 0, y: 7, value: 0.5, released: true });
+        engine.on_control(&ControlEvent { x: 0, y: 7, value: 0.5, kind: ControlKind::SprungStrip, released: true });
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        assert_eq!(engine.globals().get("moves").map(String::as_str), Some("3"));
+    }
+
+    /// A strip without a spring stays where the finger left it: after resting a moment
+    /// it counts as let go, and the next value is a new touch.
+    #[tokio::test]
+    async fn a_plain_strip_is_let_go_when_it_rests() {
+        let (engine, profile) = engine();
+        profile.lock().profile.page_mut(DEFAULT_PAGE_ID).unwrap().set_fader(Fader {
+            id: "mod".into(),
+            name: "mod".into(),
+            x: 1,
+            y: 7,
+            length: 1,
+            min: 0.0,
+            max: 100.0,
+            on_touch: vec![a(ActionKind::AddToVariable { name: "touches".into(), amount: "1".into(), scope: VarScope::Global })],
+            on_release: vec![a(ActionKind::SetVariable { name: "released".into(), value: "{{value}}".into(), scope: VarScope::Global })],
+            ..Fader::default()
+        });
+        for v in [0.2f32, 0.4] {
+            engine.on_control(&ControlEvent { x: 1, y: 7, value: v, kind: ControlKind::Strip, released: false });
+            tokio::time::sleep(Duration::from_millis(70)).await;
+        }
         tokio::time::sleep(Duration::from_millis(300)).await;
-        assert_eq!(engine.globals().get("ran").map(String::as_str), Some("85"));
+        let globals = engine.globals();
+        assert_eq!(globals.get("touches").map(String::as_str), Some("1"));
+        assert_eq!(globals.get("released").map(String::as_str), Some("40"), "rested: let go at the last value");
+        engine.on_control(&ControlEvent { x: 1, y: 7, value: 0.6, kind: ControlKind::Strip, released: false });
+        tokio::time::sleep(Duration::from_millis(300)).await;
+        assert_eq!(engine.globals().get("touches").map(String::as_str), Some("2"), "a value after the rest is a new touch");
     }
 
     /// Setting a knob's fader by hand (the on-screen control, "Set fader", a
@@ -1197,7 +1295,7 @@ mod tests {
         assert!(engine.set_fader_level("gain", 20.0, false));
         tokio::time::sleep(Duration::from_millis(80)).await;
 
-        engine.on_control(&ControlEvent { x: 3, y: 3, value: 0.8, released: false });
+        engine.on_control(&ControlEvent { x: 3, y: 3, value: 0.8, kind: ControlKind::Knob, released: false });
         tokio::time::sleep(Duration::from_millis(250)).await;
         let value = profile.lock().profile.page(DEFAULT_PAGE_ID).unwrap().faders[0].value;
         // The hardware value arrives as an f32 fraction, so compare loosely.
@@ -1206,7 +1304,7 @@ mod tests {
 
         // And again the other way round: hand, then hardware, in quick succession.
         assert!(engine.set_fader_level("gain", 10.0, false));
-        engine.on_control(&ControlEvent { x: 3, y: 3, value: 0.35, released: false });
+        engine.on_control(&ControlEvent { x: 3, y: 3, value: 0.35, kind: ControlKind::Knob, released: false });
         tokio::time::sleep(Duration::from_millis(250)).await;
         let value = profile.lock().profile.page(DEFAULT_PAGE_ID).unwrap().faders[0].value;
         assert!((value - 35.0).abs() < 1e-4, "the slider was moved to 35, the profile says {value}");

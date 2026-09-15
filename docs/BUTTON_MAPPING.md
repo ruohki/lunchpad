@@ -161,11 +161,12 @@ settings pad.
 
 LEDs: a palette index as the velocity / value on channel 1 (solid), 2 (flashing, alternate colour)
 or 3 (pulsing); RGB colours become the nearest palette entry. Knobs and strips feed a single-cell
-fader placed on them; the level follows every 60 ms while one moves, and the fader's actions run
-once the movement has rested for 150 ms, with the value it stopped on. The pitch strip springs
-back to its centre when let go: the level follows it there, but the actions run for the value the
-strip was let go at, never for the spring-back.
-The pitch strip springs back to its centre, so a fader on it returns to half way when released.
+fader placed on them; the level follows every 60 ms while one moves. A knob's fader runs its
+on-change list once the movement has rested for 150 ms, with the value it stopped on. A strip's
+fader has touch, move and release lists (`ControlKind::Strip` / `SprungStrip` on the control
+event): the first value after a rest is the touch, every value a move, and the release is either
+the sprung strip's own spring-back report (`released`, the actions get the value it was let go
+at, the level follows it to the centre) or, for the modulation strip, a 150 ms rest.
 Keys are mapped at the default octave: after an Octave shift they send other notes, which are
 ignored because the DAW interface does not report the shift. With the Arp on, a held key repeats.
 

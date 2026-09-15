@@ -319,11 +319,28 @@ pub struct ControlEvent {
     pub x: u8,
     pub y: u8,
     pub value: f32,
+    /// A knob, or a touch strip (with or without a spring): a fader on a strip
+    /// gets touch, move and release lists.
+    #[serde(default)]
+    pub kind: ControlKind,
     /// The control returned to its rest position on its own (a sprung pitch
-    /// strip let go): the level follows it, but a fader's actions run for the
-    /// value it was let go at, not for this one.
+    /// strip let go): the level follows it, and the release list runs for the
+    /// value it was let go at.
     #[serde(default)]
     pub released: bool,
+}
+
+/// What kind of control delivered a value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ControlKind {
+    /// A knob or fader that stays where it is left; its actions run when it rests.
+    #[default]
+    Knob,
+    /// A touch strip that stays where the finger left it: let go = rested a moment.
+    Strip,
+    /// A touch strip that springs back to the middle and reports it (`released`).
+    SprungStrip,
 }
 
 /// Complete description of a model's button matrix, consumed by the UI.

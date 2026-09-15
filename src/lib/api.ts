@@ -251,11 +251,15 @@ export interface Settings {
   secrets: string[];
 }
 
+/** A knob, a touch strip that stays put, or one that springs back to the middle. */
+export type ControlKind = "knob" | "strip" | "sprungStrip";
+
 /** A knob or touch strip at a position (0..1), bound to a fader or not. */
 export interface ControlEvent {
   x: number;
   y: number;
   value: number;
+  kind?: ControlKind;
   /** the control sprang back to its rest position on its own (a pitch strip let go) */
   released?: boolean;
 }
@@ -598,6 +602,10 @@ export interface Fader {
   /** show the level on another scale, e.g. -100..26 dB as 0..100 % */
   display: { min: number; max: number; unit: string; decimals: number } | null;
   onChange: Action[];
+  /** touch strips only: when a finger lands on the strip */
+  onTouch: Action[];
+  /** touch strips only: when the finger leaves */
+  onRelease: Action[];
 }
 
 /** Variables the fader's actions receive. */
@@ -664,7 +672,7 @@ export const api = {
   pressPad: (x: number, y: number, pressed: boolean) => invoke<void>("press_pad", { x, y, pressed }),
   /** A drag on a knob or strip in the UI: `value` runs 0..1 over the control's travel, like a hardware turn. */
   /** Work a knob or strip from the interface; `released` = a sprung strip let go (it springs to `value`). */
-  controlPad: (x: number, y: number, value: number, released = false) => invoke<void>("control_pad", { x, y, value, released }),
+  controlPad: (x: number, y: number, value: number, kind: ControlKind = "knob", released = false) => invoke<void>("control_pad", { x, y, value, kind, released }),
   resetLeds: () => invoke<void>("reset_leds"),
   sendRawMidi: (bytes: number[]) => invoke<void>("send_raw_midi", { bytes }),
 

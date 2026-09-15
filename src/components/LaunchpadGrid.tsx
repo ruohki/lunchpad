@@ -3,7 +3,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { api, padKey, type Button, type Fader, type Layout, type PadSpec } from "../lib/api";
+import { api, padKey, type Button, type ControlKind, type Fader, type Layout, type PadSpec } from "../lib/api";
 import { faderAt, faderFitsAt, faderFraction, faderLevelStep, faderPadRgb, faderPads, formatFaderValue, isControlCell } from "../lib/fader";
 import { useShallow } from "zustand/react/shallow";
 import { useElementSize } from "../lib/useElementSize";
@@ -475,6 +475,11 @@ function DragGhost({ button, cell, copy, corners, limited }: { button: Button; c
  * The app's own button: a round pad in a corner, or, on a Launchkey MK4, the screen: a dark
  * OLED-like panel as wide as the button block under it, with the gear glowing on it.
  */
+/** What the engine should take a control for: a knob, a strip, or a strip that springs back. */
+function controlKind(pad: PadSpec): ControlKind {
+  return pad.shape === "strip" ? (pad.centred ? "sprungStrip" : "strip") : "knob";
+}
+
 function SettingsPad({ cell, wide = false }: { cell: number; wide?: boolean }) {
   const { t } = useTranslation();
   const toggle = useUiStore((s) => s.toggleSettings);
@@ -613,7 +618,7 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
       setDragFraction(value);
       // The position outlives the drag whether or not a fader takes the value.
       setControlPosition(pad.x, pad.y, value);
-      if (!preview) void api.controlPad(pad.x, pad.y, value).catch(() => undefined);
+      if (!preview) void api.controlPad(pad.x, pad.y, value, controlKind(pad)).catch(() => undefined);
     },
     [preview, pad, setControlPosition],
   );
@@ -625,7 +630,7 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
     // A sprung strip springs back to the middle when let go, on screen as on the device.
     if (pad.centred) {
       setControlPosition(pad.x, pad.y, 0.5);
-      if (!preview) void api.controlPad(pad.x, pad.y, 0.5, true).catch(() => undefined);
+      if (!preview) void api.controlPad(pad.x, pad.y, 0.5, "sprungStrip", true).catch(() => undefined);
     }
     if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
     // The last value reaches the profile within the engine's pacing interval.
