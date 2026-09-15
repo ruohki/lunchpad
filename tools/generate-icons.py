@@ -7,7 +7,8 @@ SRC = "legacy/libs/icons/src/SVG"
 OUT = "src/icons/icons.ts"
 EXTRA = {
     "Home": ("0 0 24 24", '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M3.5 11.5 12 4l8.5 7.5M5.5 10v10h4.5v-5.5h4V20h4.5V10"/>'),
-    "Globe": ("0 0 24 24", '<path fill="currentColor" fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1 1.6C9.2 5 8 8.2 8 12s1.2 7 3 8.4V3.6Zm2 0v16.8c1.8-1.4 3-4.6 3-8.4s-1.2-7-3-8.4ZM7.5 4.3A8 8 0 0 0 4.1 11h2c.1-2.7.6-5 1.4-6.7ZM6.1 13h-2a8 8 0 0 0 3.4 6.7c-.8-1.7-1.3-4-1.4-6.7Zm10.4-2h2a8 8 0 0 0-3.4-6.7c.8 1.7 1.3 4 1.4 6.7Zm-1.4 8.7A8 8 0 0 0 19.9 13h-2c-.1 2.7-.6 5-1.4 6.7Z"/>'),
+    # Line art like the rest of the set: a filled disc turns into a blob at 16 px.
+    "Globe": ("0 0 24 24", '<g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 3c-3.1 2.6-4.7 5.6-4.7 9s1.6 6.4 4.7 9c3.1-2.6 4.7-5.6 4.7-9S15.1 5.6 12 3Z"/><path d="M3.5 9.2h17M3.5 14.8h17"/></g>'),
     "Code": ("0 0 24 24", '<path fill="currentColor" d="M8.7 7.3a1 1 0 0 0-1.4-1.4l-5 5a1 1 0 0 0 0 1.4l5 5a1 1 0 0 0 1.4-1.4L4.4 12l4.3-4.7Zm6.6-1.4a1 1 0 0 0-1.4 1.4l4.3 4.7-4.3 4.6a1 1 0 0 0 1.4 1.4l5-5a1 1 0 0 0 0-1.4l-5-5.3Z"/>'),
     "Variable": ("0 0 24 24", '<path fill="currentColor" d="M4 5a1 1 0 0 1 1-1h4a1 1 0 1 1 0 2H6v12h3a1 1 0 1 1 0 2H5a1 1 0 0 1-1-1V5Zm16 0v14a1 1 0 0 1-1 1h-4a1 1 0 1 1 0-2h3V6h-3a1 1 0 1 1 0-2h4a1 1 0 0 1 1 1Zm-9.5 3.2a1 1 0 0 1 1.3.4L12 9.8l.2-.2a1 1 0 0 1 1.7 1.1L13.2 12l1 1.6a1 1 0 0 1-1.7 1L12 14.2l-.5.8a1 1 0 0 1-1.7-1.1l1-1.5-1-1.6a1 1 0 0 1 .4-1.4Z"/>'),
     "Branch": ("0 0 24 24", '<path fill="currentColor" fill-rule="evenodd" d="M7 3a3 3 0 0 0-1 5.8v6.4A3 3 0 1 0 8 15.2V9.9c.7.5 1.6.8 2.7.9h2.6a3 3 0 1 0 0-2h-2.6C9.5 8.8 8 7.7 8 6a3 3 0 0 0-1-3Zm0 2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm0 12a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm9-9a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/>'),
