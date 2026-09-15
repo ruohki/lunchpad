@@ -173,6 +173,9 @@ impl MacroEngine {
             let mut pending = self.inner.pending_controls.lock();
             let slot = pending.entry(id.clone()).or_default();
             slot.latest = Some((page_id, event.x, event.y, hit));
+            let now = Instant::now();
+            slot.changed = Some(now);
+            slot.waiting_since.get_or_insert(now);
             !std::mem::replace(&mut slot.busy, true)
         };
         if !start_worker {
@@ -185,10 +188,21 @@ impl MacroEngine {
                 let next = {
                     let mut pending = engine.inner.pending_controls.lock();
                     let slot = pending.entry(id.clone()).or_default();
+                    let settled = slot.changed.map(|t| t.elapsed() >= CONTROL_SETTLE).unwrap_or(true);
+                    let held_long_enough = slot.waiting_since.map(|t| t.elapsed() >= CONTROL_MAX_HOLD).unwrap_or(false);
+                    if slot.latest.is_some() && !settled && !held_long_enough {
+                        // Still moving: give it one more tick to come to rest.
+                        continue;
+                    }
                     match slot.latest.take() {
-                        Some(v) => Some(v),
+                        Some(v) => {
+                            slot.waiting_since = None;
+                            Some(v)
+                        }
                         None => {
                             slot.busy = false;
+                            slot.changed = None;
+                            slot.waiting_since = None;
                             None
                         }
                     }
@@ -704,11 +718,20 @@ fn snapshot(ctx: &RunContext, list: ActionList) -> Option<(Vec<Action>, bool)> {
 
 /// Shortest gap between two action runs of a fader driven by a knob or strip.
 const CONTROL_INTERVAL: Duration = Duration::from_millis(60);
+/// A fader that is still moving waits this long for the next value before its
+/// actions run, so a sweep does not fire an action per step. A control that
+/// keeps moving is applied anyway every `CONTROL_MAX_HOLD`.
+const CONTROL_SETTLE: Duration = Duration::from_millis(40);
+const CONTROL_MAX_HOLD: Duration = Duration::from_millis(240);
 
 #[derive(Default)]
 struct PendingControl {
     latest: Option<(String, u8, u8, FaderHit)>,
     busy: bool,
+    /// When the value waiting in `latest` arrived, and when the oldest value of
+    /// this movement did: together they debounce a sweep without stalling it.
+    changed: Option<Instant>,
+    waiting_since: Option<Instant>,
 }
 
 /// What the engine needs from a fader pad press, copied out of the profile lock.
@@ -1041,6 +1064,40 @@ mod tests {
         assert_eq!(globals.get("applied").map(String::as_str), Some("75"));
         let value = profile.lock().profile.page(DEFAULT_PAGE_ID).unwrap().faders[0].value;
         assert!((value - 75.0).abs() < 1e-9);
+    }
+
+    /// Setting a knob's fader by hand (the on-screen control, "Set fader", a
+    /// variable write) and then moving the hardware: the hardware wins, and the
+    /// value does not fall back to the one set by hand.
+    #[tokio::test]
+    async fn a_hardware_move_beats_a_value_set_by_hand() {
+        let (engine, profile) = engine();
+        profile.lock().profile.page_mut(DEFAULT_PAGE_ID).unwrap().set_fader(Fader {
+            id: "knob1".into(),
+            name: "gain".into(),
+            x: 3,
+            y: 3,
+            length: 1,
+            min: 0.0,
+            max: 100.0,
+            ..Fader::default()
+        });
+        assert!(engine.set_fader_level("gain", 20.0, false));
+        tokio::time::sleep(Duration::from_millis(80)).await;
+
+        engine.on_control(&ControlEvent { x: 3, y: 3, value: 0.8 });
+        tokio::time::sleep(Duration::from_millis(250)).await;
+        let value = profile.lock().profile.page(DEFAULT_PAGE_ID).unwrap().faders[0].value;
+        // The hardware value arrives as an f32 fraction, so compare loosely.
+        assert!((value - 80.0).abs() < 1e-4, "the slider was moved to 80, the profile says {value}");
+        assert_eq!(engine.globals().get("fader.gain").map(String::as_str), Some("80"));
+
+        // And again the other way round: hand, then hardware, in quick succession.
+        assert!(engine.set_fader_level("gain", 10.0, false));
+        engine.on_control(&ControlEvent { x: 3, y: 3, value: 0.35 });
+        tokio::time::sleep(Duration::from_millis(250)).await;
+        let value = profile.lock().profile.page(DEFAULT_PAGE_ID).unwrap().faders[0].value;
+        assert!((value - 35.0).abs() < 1e-4, "the slider was moved to 35, the profile says {value}");
     }
 
     #[tokio::test]
