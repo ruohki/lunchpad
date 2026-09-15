@@ -233,6 +233,9 @@ pub struct PadSpec {
     /// Rows the control spans downwards from `y` (touch strips); 1 for everything else.
     #[serde(default = "one")]
     pub rows: u8,
+    /// Columns the control spans rightwards from `x` (the Launchkey MK4's screen); 1 otherwise.
+    #[serde(default = "one")]
+    pub cols: u8,
     /// Rests in the middle and springs back when released (a pitch strip or
     /// slider). The interface draws its level as a bar rather than a fill.
     #[serde(default)]
@@ -257,6 +260,11 @@ impl PadSpec {
 
     pub fn with_rows(mut self, rows: u8) -> Self {
         self.rows = rows.max(1);
+        self
+    }
+
+    pub fn with_cols(mut self, cols: u8) -> Self {
+        self.cols = cols.max(1);
         self
     }
 

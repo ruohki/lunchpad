@@ -49,6 +49,8 @@ export interface PadSpec {
   led: LedKind;
   /** rows the control spans downwards from y (touch strips); 1 otherwise */
   rows: number;
+  /** columns the control spans rightwards from x (the Launchkey MK4's screen); 1 otherwise */
+  cols: number;
   /** springs back to the middle when released (a pitch strip): drawn as a bar, not a fill */
   centred: boolean;
 }

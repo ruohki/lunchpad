@@ -91,6 +91,7 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
     [layout.pads],
   );
   const keys = useMemo(() => layout.pads.filter((p) => isKey(p.shape)), [layout.pads]);
+  const hasLogo = useMemo(() => layout.pads.some((p) => p.shape === "logo"), [layout.pads]);
   /** Ordinal of every knob on the device (top row first, left to right), for its accessible name. */
   const knobNumbers = useMemo(
     () =>
@@ -293,12 +294,15 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
           }}
         >
           {padsTopDown.map((pad) => {
-            // Explicit placement: rows count from the bottom, and touch strips span several rows.
-            const place = { gridColumn: pad.x + 1, gridRow: `${layout.height - pad.y} / span ${Math.max(1, pad.rows)}` };
-            if (pad.x === layout.width - 1 && pad.y === layout.height - 1 && (pad.shape === "empty" || pad.shape === "logo")) {
+            // Explicit placement: rows count from the bottom; strips span rows, a screen spans columns.
+            const place = { gridColumn: `${pad.x + 1} / span ${Math.max(1, pad.cols ?? 1)}`, gridRow: `${layout.height - pad.y} / span ${Math.max(1, pad.rows)}` };
+            // The settings pad sits on the logo (a Launchkey MK4 puts it on the screen), or in an
+            // empty top-right corner on models without one.
+            const settingsHere = pad.shape === "logo" || (!hasLogo && pad.shape === "empty" && pad.x === layout.width - 1 && pad.y === layout.height - 1);
+            if (settingsHere) {
               return (
-                <div key={padKey(pad.x, pad.y)} style={place}>
-                  <SettingsPad cell={cell} />
+                <div key={padKey(pad.x, pad.y)} style={place} className="min-h-0 min-w-0">
+                  <SettingsPad cell={cell} wide={(pad.cols ?? 1) > 1} />
                 </div>
               );
             }
@@ -457,7 +461,8 @@ function DragGhost({ button, cell, copy, corners, limited }: { button: Button; c
 }
 
 /** The corner every model leaves free (or uses for a logo LED) opens the settings, like the legacy "SET" pad. */
-function SettingsPad({ cell }: { cell: number }) {
+/** The app's own button: a round pad in a corner, or the screen's rectangle on a Launchkey MK4. */
+function SettingsPad({ cell, wide = false }: { cell: number; wide?: boolean }) {
   const { t } = useTranslation();
   const toggle = useUiStore((s) => s.toggleSettings);
   const open = useUiStore((s) => s.settingsOpen);
@@ -469,8 +474,10 @@ function SettingsPad({ cell }: { cell: number }) {
         aria-expanded={open}
         onClick={toggle}
         whileTap={{ scale: 0.93 }}
+        style={wide ? { borderRadius: Math.max(4, cell * 0.12) } : undefined}
         className={clsx(
-          "flex h-full w-full items-center justify-center rounded-full text-stage-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),inset_0_-2px_0_rgba(0,0,0,0.5)] transition-colors hover:text-stage-100 focus-visible:outline-2 focus-visible:outline-accent-400",
+          "flex h-full w-full items-center justify-center text-stage-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),inset_0_-2px_0_rgba(0,0,0,0.5)] transition-colors hover:text-stage-100 focus-visible:outline-2 focus-visible:outline-accent-400",
+          !wide && "rounded-full",
           open ? "bg-stage-600" : "bg-stage-800 hover:bg-stage-700",
         )}
       >
@@ -704,8 +711,9 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
    * fills the rows it spans; the Pro MK3's small ones take half a cell; the rest fill their cell.
    */
   const sizeClass = pad.shape === "small" ? "h-1/2 w-1/2" : pad.shape === "rect" ? "shrink-0" : pad.shape === "tallRect" ? "h-full shrink-0" : "h-full w-full";
-  // Rounded buttons take most of their column, as on the Launchkey's panel.
-  const sizeStyle = pad.shape === "rect" ? { width: cell * 0.86, height: cell * 0.4 } : pad.shape === "tallRect" ? { width: cell * 0.86 } : undefined;
+  // Rounded buttons take most of their column and a good part of a pad row, as on the
+  // Launchkey's panel; a half-row is shorter than that, so they lean into the grid gaps.
+  const sizeStyle = pad.shape === "rect" ? { width: cell * 0.86, height: cell * 0.6 } : pad.shape === "tallRect" ? { width: cell * 0.86 } : undefined;
 
   if (decorative) {
     return (

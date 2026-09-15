@@ -32,11 +32,11 @@
 //! the Track arrows, > and Func (tall rounded buttons, a pad row high), and
 //! the button block with ▶ and ● between the pad rows and Oct −/+ under them.
 //!   x = 0, 1   Pitch and Modulation strips, from the top down to y = 2
-//!   x = 2, 3   screen (y 7, 6)  Shift  Settings (y 5)  ▶  ● (y 4 + 3)  Oct −  Oct + (y 2)
+//!   x = 2, 3   screen = the settings pad (y 7 + 6, both columns)  Shift  Settings (y 5)  ▶  ● (y 4 + 3)  Oct −  Oct + (y 2)
 //!   x = 4      Arp (y 7)  Scale (y 6)  ∧ Track (y 5 + 4)  ∨ Track (y 3 + 2)
 //!   x = 5..12  encoders (y 7 + 6)  pads (y 5 + 4 and y 3 + 2)
 //!   x = 13     ∧ (y 7)  ∨ (y 6)  > (y 5 + 4)  Func (y 3 + 2)
-//!   x = 14     the logo: the settings pad, nothing below it
+//!   x = 14     the logo's column, left empty
 //!   y = 1      black keys, each at the x of the white key to its left
 //!   y = 0      white keys (0..14)
 //!
@@ -167,8 +167,9 @@ impl LaunchpadDriver for LaunchkeyMiniMk4 {
                     (1, KNOB_Y) => spec(self, x, y, Strip, Left, Some("Modulation")).with_rows(6),
                     // Covered by the strips.
                     (0 | 1, OCT_Y..=KNOB_LOW_Y) => continue,
-                    // The screen sits over the button block; nothing to press there.
-                    (BLOCK_L_X | BLOCK_R_X, KNOB_Y | KNOB_LOW_Y) => spec(self, x, y, Empty, Other, None),
+                    // The screen over the button block: the app's settings pad sits there.
+                    (BLOCK_L_X, KNOB_Y) => spec(self, x, y, Logo, Other, None).with_rows(2).with_cols(2),
+                    (BLOCK_R_X, KNOB_Y) | (BLOCK_L_X | BLOCK_R_X, KNOB_LOW_Y) => continue,
                     (BLOCK_L_X, PAD_TOP_Y) => spec(self, x, y, Rect, Left, Some("Shift")).with_led(LedKind::None),
                     (BLOCK_R_X, PAD_TOP_Y) => spec(self, x, y, Rect, Left, Some("Settings")).with_led(LedKind::None).without_input(),
                     (BLOCK_L_X, TRANSPORT_Y) => spec(self, x, y, Rect, Left, Some("▶")).with_led(LedKind::White).with_rows(2),
@@ -204,8 +205,9 @@ impl LaunchpadDriver for LaunchkeyMiniMk4 {
             width: WIDTH,
             height: HEIGHT,
             // Bottom up: white keys, black keys, two half-rows per pad row (a pad spanning
-            // both plus the gap between them comes out square), two for the encoder band.
-            row_weights: vec![1.6, 1.1, 0.46, 0.46, 0.46, 0.46, 0.5, 0.5],
+            // both plus the gap between them comes out square), two taller ones for the
+            // encoder band, which holds two buttons on top of each other.
+            row_weights: vec![1.6, 1.1, 0.46, 0.46, 0.46, 0.46, 0.66, 0.66],
             pads,
             limited_color: false,
             velocity_sensitive: true,
@@ -407,7 +409,8 @@ mod tests {
         assert_eq!(d.xy_to_note(BLOCK_R_X, PAD_TOP_Y), None, "Settings has no DAW message yet");
         assert_eq!(d.xy_to_note(SIDE_X, KNOB_Y), None, "Arp is a keyboard function");
         assert_eq!(d.xy_to_note(RIGHT_X, PAD_TOP_Y), None, "> has no DAW message yet");
-        assert_eq!(d.xy_to_note(LOGO_X, KNOB_Y), None, "the settings corner is free");
+        assert_eq!(d.xy_to_note(LOGO_X, KNOB_Y), None, "the logo's corner is free");
+        assert_eq!(d.xy_to_note(BLOCK_L_X, KNOB_Y), None, "the screen sends nothing");
         assert_eq!(d.xy_to_note(PAD_X0 + 7, KNOB_Y), Some((28, true)), "the eighth encoder");
     }
 
@@ -485,8 +488,9 @@ mod tests {
         assert_eq!((at(RIGHT_X, KNOB_Y).label.as_deref(), at(RIGHT_X, KNOB_LOW_Y).label.as_deref()), (Some("∧"), Some("∨")));
         assert_eq!((at(RIGHT_X, PAD_TOP_Y).shape, at(RIGHT_X, PAD_TOP_Y).label.as_deref(), at(RIGHT_X, PAD_TOP_Y).rows), (PadShape::TallRect, Some(">"), 2));
         assert_eq!((at(RIGHT_X, PAD_BOTTOM_Y).label.as_deref(), at(RIGHT_X, PAD_BOTTOM_Y).rows), (Some("Func"), 2));
-        assert_eq!(at(BLOCK_L_X, KNOB_Y).shape, PadShape::Empty, "the screen is not a control");
-        assert_eq!(at(LOGO_X, KNOB_Y).shape, PadShape::Empty, "the settings pad takes the logo's corner");
+        assert_eq!((at(BLOCK_L_X, KNOB_Y).shape, at(BLOCK_L_X, KNOB_Y).rows, at(BLOCK_L_X, KNOB_Y).cols), (PadShape::Logo, 2, 2), "the screen hosts the settings pad");
+        assert!(layout.pads.iter().all(|p| !(p.x == BLOCK_R_X && p.y == KNOB_Y)), "the screen's other cells are covered");
+        assert_eq!(at(LOGO_X, KNOB_Y).shape, PadShape::Empty, "the logo's corner stays empty");
         assert!(layout.pads.iter().all(|p| p.x != LOGO_X || p.y <= BLACK_Y || p.shape == PadShape::Empty), "nothing but keys under the logo");
         assert_eq!(layout.pads.iter().filter(|p| p.shape == PadShape::KeyWhite).count(), 15);
         assert_eq!(layout.pads.iter().filter(|p| p.shape == PadShape::KeyBlack).count(), 10);

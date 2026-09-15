@@ -148,7 +148,7 @@ settings pad.
 | Pitch strip | (0, 6), 5 rows | Pitch Bend, MIDI interface, any channel | 14 bit → control event, centre when released | none |
 | Modulation strip | (1, 6), 5 rows | CC, MIDI interface, any channel | 1, value 0-127 → control event | none |
 | Shift | (2, 6) | CC ch 16 | 108 | none |
-| Transpose, Octave +, Octave − | (2, 5), (2, 3), (2, 2) | none in DAW mode | | none |
+| Transpose, Octave +, Octave − | (2, 5), (2, 4) 2 rows, (2, 2) | none in DAW mode | | none |
 | Knobs 1-8 | x 4-11, y 6 | CC ch 16 | 21..28, value 0-127 → control events | none |
 | Pads top row | x 4-11, y 5, 2 rows | Note ch 1 | 96..103 | RGB palette |
 | Pads bottom row | x 4-11, y 3, 2 rows | Note ch 1 | 112..119 | RGB palette |
@@ -180,14 +180,14 @@ bottom), one column per white key, following the front panel. The control area i
 of two half-rows each: the encoder band (y 7 + 6) with the screen, Arp over Scale, the encoders
 and the mode arrows; the two pad bands (y 5 + 4 and y 3 + 2) with the pads, the Track arrows,
 > and Func, and the button block, whose ▶ and ● sit between the pad rows and Oct −/+ under
-them. The logo's corner (14, 7) holds the settings pad. Buttons whose CCs are not confirmed on
-hardware are drawn but send nothing.
+them. The settings pad sits on the screen; the logo's corner (14, 7) stays empty. Buttons whose
+CCs are not confirmed on hardware are drawn but send nothing.
 
 | Region | Coordinates | MIDI | Numbers | LED |
 |---|---|---|---|---|
 | Pitch strip (sprung, drawn as a bar) | (0, 7), 6 rows | Pitch Bend, MIDI interface | 14 bit → control event, centre when released | none |
 | Modulation strip | (1, 7), 6 rows | CC, MIDI interface | 1, value 0-127 → control event | none |
-| Screen | (2, 7), (3, 7), (2, 6), (3, 6) | | | |
+| Screen | (2, 7), 2 rows × 2 columns | none: the app's settings pad sits there | | |
 | Shift | (2, 5) | CC ch 7 | 63 (a feature-control report) | none |
 | Settings | (3, 5) | not wired (the guide lists CC 63 on ch 1) | | none |
 | ▶, ● | (2, 4), (3, 4), 2 rows | CC ch 1 | 115, 117 | single LED, brightness as CC on ch 4 (unverified) |

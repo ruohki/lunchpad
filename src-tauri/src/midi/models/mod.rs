@@ -151,7 +151,7 @@ pub(crate) fn spec(
         PadShape::Empty | PadShape::Knob | PadShape::Strip | PadShape::KeyWhite | PadShape::KeyBlack => LedKind::None,
         _ => LedKind::Rgb,
     };
-    PadSpec { x, y, shape, region, label: label.map(|s| s.to_string()), note, cc, led, rows: 1, centred: false }
+    PadSpec { x, y, shape, region, label: label.map(|s| s.to_string()), note, cc, led, rows: 1, cols: 1, centred: false }
 }
 
 /// Shared LED builder for MK2 / Pro MK2 (`0A` solid, `23` flash, `28` pulse,
@@ -321,10 +321,12 @@ mod tests {
             let mut seen = std::collections::HashSet::new();
             for pad in &layout.pads {
                 assert!(pad.x < layout.width && pad.y < layout.height, "{model}");
-                // A control spanning several rows covers the cells below its anchor.
+                // A control spanning several rows or columns covers the cells below and right of its anchor.
                 for r in 0..pad.rows {
-                    assert!(pad.y >= r, "{model}: ({}, {}) spans past the bottom", pad.x, pad.y);
-                    assert!(seen.insert((pad.x, pad.y - r)), "{model}: duplicate ({}, {})", pad.x, pad.y - r);
+                    for c in 0..pad.cols {
+                        assert!(pad.y >= r && pad.x + c < layout.width, "{model}: ({}, {}) spans past the edge", pad.x, pad.y);
+                        assert!(seen.insert((pad.x + c, pad.y - r)), "{model}: duplicate ({}, {})", pad.x + c, pad.y - r);
+                    }
                 }
             }
             assert_eq!(seen.len(), (layout.width as usize) * (layout.height as usize), "{model}");
