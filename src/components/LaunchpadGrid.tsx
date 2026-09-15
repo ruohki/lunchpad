@@ -19,8 +19,7 @@ import { IconGear } from "./ui";
 import { limitedRgb } from "../lib/colors";
 import { padAt, sameRef, useDragStore } from "../lib/drag";
 import { buttonsOutside, cornerRadius, cornersOf, isControl, isKey, noteName, type Corners } from "../lib/grid";
-import { Icon } from "../icons/Icon";
-import type { IconName } from "../icons/icons";
+import { PadLabel } from "./PadLabel";
 import { Tooltip } from "./Tooltip";
 
 interface Props {
@@ -95,6 +94,11 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
   );
   const keys = useMemo(() => layout.pads.filter((p) => isKey(p.shape)), [layout.pads]);
   const hasLogo = useMemo(() => layout.pads.some((p) => p.shape === "logo"), [layout.pads]);
+  /** How many columns the controls above the keys take: the keyboard spans those, not a bare logo column. */
+  const controlColumns = useMemo(
+    () => Math.max(1, ...layout.pads.filter((p) => !isKey(p.shape) && p.shape !== "empty").map((p) => p.x + Math.max(1, p.cols ?? 1))),
+    [layout.pads],
+  );
   /** Ordinal of every knob on the device (top row first, left to right), for its accessible name. */
   const knobNumbers = useMemo(
     () =>
@@ -316,7 +320,7 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
               </div>
             );
           })}
-          {keys.length > 0 && <Keyboard keys={keys} height={layout.height} cell={cell} renderPad={renderPad} />}
+          {keys.length > 0 && <Keyboard keys={keys} height={layout.height} columns={controlColumns} cell={cell} renderPad={renderPad} />}
         </motion.div>
       )}
       {drag && dragButton && <DragGhost button={dragButton} cell={cell} copy={drag.copy} corners={dragCorners} limited={layout.limitedColor} />}
@@ -331,7 +335,7 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
  * keys side by side, each black key over the gap right of the white key whose
  * x it shares, as on the instrument.
  */
-function Keyboard({ keys, height, cell, renderPad }: { keys: PadSpec[]; height: number; cell: number; renderPad: (pad: PadSpec) => ReactNode }) {
+function Keyboard({ keys, height, columns, cell, renderPad }: { keys: PadSpec[]; height: number; columns: number; cell: number; renderPad: (pad: PadSpec) => ReactNode }) {
   const whites = keys.filter((k) => k.shape === "keyWhite").sort((a, b) => a.x - b.x);
   const blacks = keys.filter((k) => k.shape === "keyBlack");
   const top = Math.max(...keys.map((k) => k.y));
@@ -341,7 +345,7 @@ function Keyboard({ keys, height, cell, renderPad }: { keys: PadSpec[]; height: 
   // The keys are positioned inside an inner box so the outer padding (the gap below the pads
   // and the board's bottom corner) takes effect.
   return (
-    <div className="min-h-0 min-w-0" style={{ gridColumn: "1 / -1", gridRow: `${height - top} / span ${top - bottom + 1}`, paddingTop: cell * 0.22, paddingBottom: cell * 0.06 }}>
+    <div className="min-h-0 min-w-0" style={{ gridColumn: `1 / ${columns + 1}`, gridRow: `${height - top} / span ${top - bottom + 1}`, paddingTop: cell * 0.22, paddingBottom: cell * 0.06 }}>
       <div className="relative h-full w-full">
         {whites.map((k, i) => (
           <div key={padKey(k.x, k.y)} className="absolute inset-y-0" style={{ left: `${i * slot}%`, width: `${slot}%`, paddingLeft: gap / 2, paddingRight: gap / 2 }}>
@@ -468,21 +472,6 @@ function DragGhost({ button, cell, copy, corners, limited }: { button: Button; c
  * The app's own button: a round pad in a corner, or, on a Launchkey MK4, the screen: a dark
  * OLED-like panel as wide as the button block under it, with the gear glowing on it.
  */
-/** A printed label: chevrons as icons, everything else as text. */
-const CHEVRONS: Record<string, IconName> = { "∧": "ChevronUp", "∨": "ChevronDown", ">": "ChevronRight", "<": "ChevronLeft" };
-
-function PadLabel({ label, size }: { label: string | null; size: number }) {
-  if (!label) return null;
-  const icon = CHEVRONS[label];
-  return icon ? (
-    <span className="inline-flex" style={{ fontSize: size * 1.15 }}>
-      <Icon name={icon} />
-    </span>
-  ) : (
-    <>{label}</>
-  );
-}
-
 function SettingsPad({ cell, wide = false }: { cell: number; wide?: boolean }) {
   const { t } = useTranslation();
   const toggle = useUiStore((s) => s.toggleSettings);
@@ -880,7 +869,18 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
         {fader ? (
           <FaderFace fader={fader} step={step} cell={cell} corners={corners} limited={limited} />
         ) : button ? (
-          <PadFace button={button as Button} cell={cell} active={lit} corners={corners} limited={limited} noLed={pad.led === "none"} noLedTone={white ? "light" : "dark"} align={pianoKey ? "bottom" : "center"} />
+          <PadFace
+            button={button as Button}
+            cell={cell}
+            active={lit}
+            corners={corners}
+            limited={limited}
+            noLed={pad.led === "none"}
+            noLedTone={white ? "light" : "dark"}
+            align={pianoKey ? "bottom" : "center"}
+            mask={pad.mask ?? false}
+            symbol={pad.label}
+          />
         ) : (
           pad.label && (
             <span className="px-1 font-medium" style={{ fontSize: legendSize }}>

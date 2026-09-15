@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import type { Button, PadColor } from "../lib/api";
 import { contrastText, edgeCss, faceCss, limitedRgb, padColorAltRgb, padColorRgb, padCss } from "../lib/colors";
 import { cornerRadius, type Corners } from "../lib/grid";
+import { PadLabel } from "./PadLabel";
 
 /** Reference pad size the look's font size is relative to (legacy: ~84 px pads). */
 const REFERENCE_CELL = 84;
@@ -21,6 +22,10 @@ interface Props {
   noLedTone?: "dark" | "light";
   /** Where the look sits: centred, or in the lower part (a white key's top is under the black keys). */
   align?: "center" | "bottom";
+  /** The LED lights only the printed symbol (or the caption): the body stays dark. */
+  mask?: boolean;
+  /** The symbol printed on a masked button. */
+  symbol?: string | null;
   className?: string;
 }
 
@@ -29,11 +34,38 @@ interface Props {
  * animated), text or image look on top. Shared by the grid and the editor
  * preview.
  */
-export function PadFace({ button, cell, active, corners = "square", limited = false, noLed = false, noLedTone = "dark", align = "center", className }: Props) {
+export function PadFace({ button, cell, active, corners = "square", limited = false, noLed = false, noLedTone = "dark", align = "center", mask = false, symbol = null, className }: Props) {
   const color: PadColor = active && button.activeColor ? button.activeColor : button.color;
   const rgb = limited ? limitedRgb(padColorRgb(color)) : padColorRgb(color);
   const alt = limited ? limitedRgb(padColorAltRgb(color)) : padColorAltRgb(color);
   const off = noLed || (rgb.r === 0 && rgb.g === 0 && rgb.b === 0);
+
+  if (mask) {
+    // A dark body with the symbol lit in the LED's colour; a caption of the button's own
+    // takes the symbol's place.
+    const lit = padCss(rgb);
+    const text = button.look.type === "text" ? button.look : null;
+    const caption = text?.caption ?? "";
+    const glyphSize = Math.max(8, cell * 0.22);
+    return (
+      <div
+        className={clsx("flex h-full w-full items-center justify-center overflow-hidden", !off && !limited && color.mode === "pulsing" && "pad-pulsing", className)}
+        style={{ backgroundColor: "var(--color-stage-700)", boxShadow: "inset 0 -3px 0 rgba(0,0,0,0.45)", borderRadius: cornerRadius(corners, cell), "--pad-a": lit, "--pad-b": padCss(alt) } as CSSProperties}
+      >
+        <span
+          className={clsx("px-1 text-center font-semibold leading-none", !off && color.mode === "flashing" && "pad-flashing-symbol")}
+          style={{
+            fontSize: text && caption ? Math.max(6, (text.size * cell) / REFERENCE_CELL) : glyphSize,
+            fontFamily: text && caption ? faceCss(text.face) : undefined,
+            color: off ? "var(--color-stage-500)" : lit,
+            textShadow: off ? undefined : `0 0 ${Math.max(3, cell * 0.08)}px ${lit}`,
+          }}
+        >
+          {caption ? caption : <PadLabel label={symbol} size={glyphSize} />}
+        </span>
+      </div>
+    );
+  }
   const light = noLed && noLedTone === "light";
   const bg = off ? (light ? "var(--color-stage-200)" : "var(--color-stage-700)") : padCss(rgb);
 

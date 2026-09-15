@@ -806,7 +806,14 @@ impl InputSink {
             return;
         }
         match self.driver.parse_input_with(msg, self.threshold()) {
-            Some(event) => self.button(event),
+            Some(event) => {
+                let tap = event.pressed && self.driver.momentary(&event);
+                let release = ButtonEvent { pressed: false, value: 0, ..event.clone() };
+                self.button(event);
+                if tap {
+                    self.button(release);
+                }
+            }
             None => {
                 // Not a press: maybe aftertouch for the pads being held.
                 let held: Vec<(u8, u8)> = self.pressed.lock().iter().copied().collect();

@@ -101,8 +101,14 @@ body {
   pointer-events: none;
 }
 .pad-pulsing { animation: pad-pulse 1.4s ease-in-out infinite; }
+/* A masked button lights its symbol only: flashing alternates the symbol's colour. */
+@keyframes pad-flash-symbol {
+  0%, 49.9% { color: var(--pad-a); text-shadow: 0 0 6px var(--pad-a); }
+  50%, 100% { color: var(--pad-b); text-shadow: 0 0 6px var(--pad-b); }
+}
+.pad-flashing-symbol { animation: pad-flash-symbol 0.9s steps(1) infinite; }
 @media (prefers-reduced-motion: reduce) {
-  .pad-flashing::after, .pad-pulsing { animation: none; }
+  .pad-flashing::after, .pad-pulsing, .pad-flashing-symbol { animation: none; }
 }
 
 /* Syntax colours of the script field (Prism tokens), from the theme's own palette. */

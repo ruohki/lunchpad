@@ -213,8 +213,8 @@ impl LaunchpadDriver for LaunchkeyMiniMk4 {
                     // band, its bottom row against the bottom, ▶ and ● centred between.
                     (BLOCK_L_X, PAD_TOP_Y) => spec(self, x, y, Rect, Left, Some("Shift")).with_led(LedKind::None).at_top(),
                     (BLOCK_R_X, PAD_TOP_Y) => spec(self, x, y, Rect, Left, Some("Settings")).with_led(LedKind::None).without_input().at_top(),
-                    (BLOCK_L_X, TRANSPORT_Y) => spec(self, x, y, Rect, Left, Some("▶")).with_led(LedKind::White).with_rows(2),
-                    (BLOCK_R_X, TRANSPORT_Y) => spec(self, x, y, Rect, Left, Some("●")).with_led(LedKind::White).with_rows(2),
+                    (BLOCK_L_X, TRANSPORT_Y) => spec(self, x, y, Rect, Left, Some("▶")).with_led(LedKind::White).with_rows(2).masked(),
+                    (BLOCK_R_X, TRANSPORT_Y) => spec(self, x, y, Rect, Left, Some("●")).with_led(LedKind::White).with_rows(2).masked(),
                     // Covered by ▶ and ●.
                     (BLOCK_L_X | BLOCK_R_X, PAD_BOTTOM_Y) => continue,
                     (BLOCK_L_X, OCT_Y) => spec(self, x, y, Rect, Left, Some("Oct −")).with_led(LedKind::None).without_input().at_bottom(),
@@ -413,6 +413,12 @@ impl LaunchpadDriver for LaunchkeyMiniMk4 {
         }
     }
 
+    /// Arp and Scale report their toggle once; the device does not confirm the
+    /// switch-off the driver answers with, so each press is a tap.
+    fn momentary(&self, event: &ButtonEvent) -> bool {
+        event.cc && matches!(event.note, FEATURE_ARP | FEATURE_SCALE)
+    }
+
     fn parse_control(&self, msg: &[u8]) -> Option<ControlEvent> {
         if msg.len() < 3 || msg[0] != 0xBF || !(CC_KNOB_FIRST..=CC_KNOB_LAST).contains(&msg[1]) {
             return None;
@@ -511,6 +517,9 @@ mod tests {
         assert_eq!(d.parse_input_with(&[0xB0, 0x34, 0x00], 1).map(|e| (e.x, e.y, e.pressed)), Some((RIGHT_X, KNOB_LOW_Y, false)));
         assert_eq!(d.parse_input_with(&[0xB6, 0x49, 0x7F], 1).map(|e| (e.x, e.y, e.pressed)), Some((SIDE_X, KNOB_Y, true)));
         assert_eq!(d.parse_input_with(&[0xB6, 0x4A, 0x00], 1).map(|e| (e.x, e.y, e.pressed)), Some((SIDE_X, KNOB_LOW_Y, false)));
+        let arp = d.parse_input_with(&[0xB6, 0x49, 0x7F], 1).unwrap();
+        assert!(d.momentary(&arp), "Arp is a tap: the device confirms nothing after the switch-off");
+        assert!(!d.momentary(&d.parse_input_with(&[0xB6, 0x3F, 0x7F], 1).unwrap()), "Shift has a real release");
         // The driver puts the device back: Arp on → off, a foreign pad layout → DAW, a foreign encoder mode → Plugin.
         assert_eq!(d.react(&[0xB6, 0x49, 0x7F]), vec![vec![0xB6, 0x49, 0x00]]);
         assert_eq!(d.react(&[0xB6, 0x4A, 0x7F]), vec![vec![0xB6, 0x4A, 0x00]]);
@@ -578,6 +587,8 @@ mod tests {
             (at(BLOCK_L_X, TRANSPORT_Y).shape, at(BLOCK_L_X, TRANSPORT_Y).rows, at(BLOCK_L_X, TRANSPORT_Y).led, at(BLOCK_L_X, TRANSPORT_Y).label.as_deref()),
             (PadShape::Rect, 2, LedKind::White, Some("▶"))
         );
+        assert!(at(BLOCK_L_X, TRANSPORT_Y).mask && at(BLOCK_R_X, TRANSPORT_Y).mask, "▶ and ● light their symbols only");
+        assert!(!at(PAD_X0, PAD_TOP_Y).mask);
         assert_eq!(at(BLOCK_L_X, PAD_TOP_Y).label.as_deref(), Some("Shift"));
         assert_eq!(at(BLOCK_R_X, PAD_TOP_Y).label.as_deref(), Some("Settings"));
         assert!(at(BLOCK_R_X, PAD_TOP_Y).note.is_none(), "Settings sends nothing");

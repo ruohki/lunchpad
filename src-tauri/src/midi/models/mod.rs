@@ -108,6 +108,12 @@ pub trait LaunchpadDriver: Send + Sync {
         None
     }
 
+    /// A button the device reports as one event only (a toggle it confirms
+    /// once): the manager adds the release right after the press.
+    fn momentary(&self, _event: &ButtonEvent) -> bool {
+        false
+    }
+
     /// Messages to send straight back in answer to one the device sent: a
     /// Launchkey MK4 reports layout and feature changes made on the device
     /// itself, and its driver puts them back so the surface stays the app's.
@@ -159,7 +165,7 @@ pub(crate) fn spec(
         PadShape::Empty | PadShape::Knob | PadShape::Strip | PadShape::KeyWhite | PadShape::KeyBlack => LedKind::None,
         _ => LedKind::Rgb,
     };
-    PadSpec { x, y, shape, region, label: label.map(|s| s.to_string()), note, cc, led, rows: 1, cols: 1, edge: PadEdge::Free, centred: false }
+    PadSpec { x, y, shape, region, label: label.map(|s| s.to_string()), note, cc, led, rows: 1, cols: 1, edge: PadEdge::Free, mask: false, centred: false }
 }
 
 /// Shared LED builder for MK2 / Pro MK2 (`0A` solid, `23` flash, `28` pulse,

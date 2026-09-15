@@ -53,6 +53,8 @@ export interface PadSpec {
   cols: number;
   /** for a button smaller than its cell: the edge it sits against, so a stack lines up with the pads */
   edge: "free" | "top" | "bottom";
+  /** the LED lights only the printed symbol or text, not the whole button */
+  mask: boolean;
   /** springs back to the middle when released (a pitch strip): drawn as a bar, not a fill */
   centred: boolean;
 }

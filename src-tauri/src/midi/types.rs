@@ -253,6 +253,9 @@ pub struct PadSpec {
     /// stack of them lines up with the pad rows beside it.
     #[serde(default)]
     pub edge: PadEdge,
+    /// The LED lights only the printed symbol or text, not the whole button.
+    #[serde(default)]
+    pub mask: bool,
     /// Rests in the middle and springs back when released (a pitch strip or
     /// slider). The interface draws its level as a bar rather than a fill.
     #[serde(default)]
@@ -282,6 +285,12 @@ impl PadSpec {
 
     pub fn with_cols(mut self, cols: u8) -> Self {
         self.cols = cols.max(1);
+        self
+    }
+
+    /// Marks a button whose LED lights only its printed symbol.
+    pub fn masked(mut self) -> Self {
+        self.mask = true;
         self
     }
 
