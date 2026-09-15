@@ -2,7 +2,7 @@ import { clsx } from "clsx";
 import type { CSSProperties } from "react";
 import type { Button, PadColor } from "../lib/api";
 import { contrastText, edgeCss, faceCss, limitedRgb, padColorAltRgb, padColorRgb, padCss } from "../lib/colors";
-import { cornerRadius, type Corners } from "../lib/grid";
+import { cornerRadius, legendSize, type Corners } from "../lib/grid";
 import { PadLabel } from "./PadLabel";
 
 /** Reference pad size the look's font size is relative to (legacy: ~84 px pads). */
@@ -46,14 +46,16 @@ export function PadFace({ button, cell, active, corners = "square", limited = fa
     const lit = padCss(rgb);
     const text = button.look.type === "text" ? button.look : null;
     const caption = text?.caption ?? "";
-    const glyphSize = Math.max(8, cell * 0.22);
+    // The same size as the printed legend of an unconfigured pad, so a button on Scale
+    // does not grow its label next to a bare Arp.
+    const glyphSize = legendSize(cell);
     return (
       <div
         className={clsx("flex h-full w-full items-center justify-center overflow-hidden", !off && !limited && color.mode === "pulsing" && "pad-pulsing", className)}
         style={{ backgroundColor: "var(--color-stage-700)", boxShadow: "inset 0 -3px 0 rgba(0,0,0,0.45)", borderRadius: cornerRadius(corners, cell), "--pad-a": lit, "--pad-b": padCss(alt) } as CSSProperties}
       >
         <span
-          className={clsx("px-1 text-center font-semibold leading-none", !off && color.mode === "flashing" && "pad-flashing-symbol")}
+          className={clsx("px-1 text-center leading-none", caption ? "font-semibold" : "font-medium", !off && color.mode === "flashing" && "pad-flashing-symbol")}
           style={{
             fontSize: text && caption ? Math.max(6, (text.size * cell) / REFERENCE_CELL) : glyphSize,
             fontFamily: text && caption ? faceCss(text.face) : undefined,

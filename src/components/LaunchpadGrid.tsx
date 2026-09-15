@@ -18,7 +18,7 @@ import { PadFace } from "./PadFace";
 import { IconGear } from "./ui";
 import { limitedRgb } from "../lib/colors";
 import { padAt, sameRef, useDragStore } from "../lib/drag";
-import { buttonsOutside, cornerRadius, cornersOf, isControl, isKey, noteName, type Corners } from "../lib/grid";
+import { buttonsOutside, cornerRadius, cornersOf, isControl, isKey, legendSize, noteName, type Corners } from "../lib/grid";
 import { PadLabel } from "./PadLabel";
 import { Tooltip } from "./Tooltip";
 
@@ -788,14 +788,14 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
             )}
             style={{ ...sizeStyle, borderRadius: radius }}
           >
-            <PadLabel label={pad.label} size={Math.max(8, Math.min(12, cell * 0.16))} />
+            <PadLabel label={pad.label} size={legendSize(cell)} />
           </span>
         </Tooltip>
       </div>
     );
   }
 
-  const legendSize = Math.max(8, Math.min(12, cell * 0.16));
+  const legend = legendSize(cell);
   const name =
     button && button.look.type === "text" && button.look.caption
       ? button.look.caption
@@ -891,8 +891,8 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
           />
         ) : (
           pad.label && (
-            <span className="px-1 font-medium" style={{ fontSize: legendSize }}>
-              <PadLabel label={pad.label} size={legendSize} />
+            <span className="px-1 font-medium" style={{ fontSize: legend }}>
+              <PadLabel label={pad.label} size={legend} />
             </span>
           )
         )}

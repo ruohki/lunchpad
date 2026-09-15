@@ -47,6 +47,9 @@ export function cornerRadius(corners: Corners, cell: number): string {
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
 /** Name of a MIDI note the way Novation prints it (60 = C3). */
+/** Font size of a printed label (Arp, Scale, a chevron) on a cell of the given size. */
+export const legendSize = (cell: number): number => Math.max(8, Math.min(12, cell * 0.16));
+
 export const noteName = (note: number): string => `${NOTE_NAMES[note % 12]}${Math.floor(note / 12) - 2}`;
 
 /** Buttons of a page that the connected layout has no pad for (kept, invisible until a bigger Launchpad is used). */
