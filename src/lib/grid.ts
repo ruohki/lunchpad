@@ -6,16 +6,17 @@ export const isControl = (shape: PadShape): boolean => shape === "knob" || shape
 /** Piano keys: drawn as a keyboard row, a black key at the x of the white key to its left. */
 export const isKey = (shape: PadShape): boolean => shape === "keyWhite" || shape === "keyBlack";
 
-/** Outline of a control's face: a circle, a square pad, a wide rounded button or a piano key. */
-export type Corners = "round" | "square" | "rect" | "key";
+/** Outline of a control's face: a circle, a square pad, a barely rounded function button, a wide rounded button or a piano key. */
+export type Corners = "round" | "square" | "sharp" | "rect" | "key";
 
 export function cornersOf(shape: PadShape | undefined): Corners {
   switch (shape) {
     case "round":
       return "round";
-    // Only the Pro MK3's Shift is "small", and that model's buttons are square.
+    // The function buttons around a Launchpad X / Mini MK3 / Pro MK3 grid, and the Pro MK3's Shift.
+    case "square":
     case "small":
-      return "square";
+      return "sharp";
     case "rect":
     case "tallRect":
     case "smallRect":
@@ -35,6 +36,8 @@ export function cornerRadius(corners: Corners, cell: number): string {
       return "9999px";
     case "square":
       return `${Math.max(2, cell * 0.14)}px`;
+    case "sharp":
+      return `${Math.max(1.5, cell * 0.045)}px`;
     case "rect":
       return `${Math.max(3, cell * 0.1)}px`;
     case "key": {

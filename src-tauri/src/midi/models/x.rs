@@ -32,8 +32,8 @@ impl LaunchpadDriver for LaunchpadX {
             for x in 0..9u8 {
                 let p = match (x, y) {
                     (8, 8) => spec(self, x, y, PadShape::Logo, PadRegion::Other, None),
-                    (_, 8) => spec(self, x, y, PadShape::Round, PadRegion::Top, Some(TOP_LABELS[x as usize])),
-                    (8, _) => spec(self, x, y, PadShape::Round, PadRegion::Right, Some(RIGHT_LABELS[7 - y as usize])),
+                    (_, 8) => spec(self, x, y, PadShape::Square, PadRegion::Top, Some(TOP_LABELS[x as usize])),
+                    (8, _) => spec(self, x, y, PadShape::Square, PadRegion::Right, Some(RIGHT_LABELS[7 - y as usize])),
                     _ => spec(self, x, y, PadShape::Pad, PadRegion::Grid, None),
                 };
                 pads.push(p);

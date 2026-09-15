@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api, emptyButton, type Button, type Layout, type Look, type Page } from "../lib/api";
 import { FACES } from "../lib/colors";
+import { cornersOf } from "../lib/grid";
 import { useDeviceStore } from "../store/device";
 import { useProfileStore } from "../store/profile";
 import { ActionsTab } from "./actions/ActionsTab";
@@ -167,7 +168,7 @@ function EditorForm({ pageId, x, y, initial, limited, pages, layout, onCancel, o
             onPointerUp={() => setPreviewActive(false)}
             onPointerLeave={() => setPreviewActive(false)}
           >
-            <PadFace button={button} cell={144} active={previewActive} limited={limited} noLed={ledKind === "none"} />
+            <PadFace button={button} cell={144} active={previewActive} corners={cornersOf(pad?.shape)} limited={limited} noLed={ledKind === "none"} mask={pad?.mask ?? false} symbol={pad?.label ?? null} />
           </div>
           <p className="text-center text-xs text-stage-400">{t("editor.previewHint")}</p>
         </div>

@@ -167,6 +167,10 @@ pub enum PadShape {
     Round,
     /// Smaller button (e.g. Pro MK3 shift)
     Small,
+    /// Function button around the grid with barely rounded corners: a black
+    /// body whose printed symbol the LED lights (Launchpad X, Mini MK3, Pro MK3).
+    /// Drawn against the grid's edge of its cell.
+    Square,
     /// LED-only spot that cannot be pressed (e.g. Launchpad X logo)
     Logo,
     /// No control at this coordinate (corners)

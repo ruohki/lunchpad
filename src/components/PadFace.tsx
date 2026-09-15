@@ -41,8 +41,8 @@ export function PadFace({ button, cell, active, corners = "square", limited = fa
   const off = noLed || (rgb.r === 0 && rgb.g === 0 && rgb.b === 0);
 
   if (mask) {
-    // A dark body with the symbol lit in the LED's colour; a caption of the button's own
-    // takes the symbol's place.
+    // A black body with the grey printed symbol lit in the LED's colour; a caption of the
+    // button's own takes the symbol's place.
     const lit = padCss(rgb);
     const text = button.look.type === "text" ? button.look : null;
     const caption = text?.caption ?? "";
@@ -52,14 +52,14 @@ export function PadFace({ button, cell, active, corners = "square", limited = fa
     return (
       <div
         className={clsx("flex h-full w-full items-center justify-center overflow-hidden", !off && !limited && color.mode === "pulsing" && "pad-pulsing", className)}
-        style={{ backgroundColor: "var(--color-stage-700)", boxShadow: "inset 0 -3px 0 rgba(0,0,0,0.45)", borderRadius: cornerRadius(corners, cell), "--pad-a": lit, "--pad-b": padCss(alt) } as CSSProperties}
+        style={{ backgroundColor: "var(--color-ink)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -3px 0 rgba(0,0,0,0.7)", borderRadius: cornerRadius(corners, cell), "--pad-a": lit, "--pad-b": padCss(alt) } as CSSProperties}
       >
         <span
           className={clsx("px-1 text-center leading-none", caption ? "font-semibold" : "font-medium", !off && color.mode === "flashing" && "pad-flashing-symbol")}
           style={{
             fontSize: text && caption ? Math.max(6, (text.size * cell) / REFERENCE_CELL) : glyphSize,
             fontFamily: text && caption ? faceCss(text.face) : undefined,
-            color: off ? "var(--color-stage-500)" : lit,
+            color: off ? "var(--color-stage-400)" : lit,
             textShadow: off ? undefined : `0 0 ${Math.max(3, cell * 0.08)}px ${lit}`,
           }}
         >

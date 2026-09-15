@@ -6,6 +6,8 @@
 
   /* Lunchpad palette: near-black stage, warm accent inspired by the Launchpad LEDs */
   --color-stage-950: #0b0b0f;
+  /* The black of a function button's body (the printed symbol on it is what lights up). */
+  --color-ink: #050507;
   --color-stage-900: #121218;
   --color-stage-800: #1a1a22;
   --color-stage-700: #24242e;

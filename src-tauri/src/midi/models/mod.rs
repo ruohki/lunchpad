@@ -165,8 +165,9 @@ pub(crate) fn spec(
         PadShape::Empty | PadShape::Knob | PadShape::Strip | PadShape::KeyWhite | PadShape::KeyBlack => LedKind::None,
         _ => LedKind::Rgb,
     };
-    // The Launchkey's function buttons light their printed symbol only; pads light all over.
-    let mask = matches!(shape, PadShape::Rect | PadShape::SmallRect | PadShape::TallRect);
+    // Function buttons light their printed symbol only (the Launchkey's rounded ones, the
+    // square ones around a Launchpad's grid and the Pro MK3's Shift); pads light all over.
+    let mask = matches!(shape, PadShape::Rect | PadShape::SmallRect | PadShape::TallRect | PadShape::Square | PadShape::Small);
     PadSpec { x, y, shape, region, label: label.map(|s| s.to_string()), note, cc, led, rows: 1, cols: 1, edge: PadEdge::Free, mask, centred: false, momentary: false }
 }
 

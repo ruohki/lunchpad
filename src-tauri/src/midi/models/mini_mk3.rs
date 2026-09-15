@@ -26,9 +26,9 @@ impl LaunchpadDriver for MiniMk3 {
             for x in 0..9u8 {
                 let p = match (x, y) {
                     (8, 8) => spec(self, x, y, PadShape::Logo, PadRegion::Other, None),
-                    (_, 8) => spec(self, x, y, PadShape::Round, PadRegion::Top, Some(TOP_LABELS[x as usize])),
-                    (8, 0) => spec(self, x, y, PadShape::Round, PadRegion::Right, Some("Stop Solo Mute")),
-                    (8, _) => spec(self, x, y, PadShape::Round, PadRegion::Right, Some("▶")),
+                    (_, 8) => spec(self, x, y, PadShape::Square, PadRegion::Top, Some(TOP_LABELS[x as usize])),
+                    (8, 0) => spec(self, x, y, PadShape::Square, PadRegion::Right, Some("Stop Solo Mute")),
+                    (8, _) => spec(self, x, y, PadShape::Square, PadRegion::Right, Some("▶")),
                     _ => spec(self, x, y, PadShape::Pad, PadRegion::Grid, None),
                 };
                 pads.push(p);
