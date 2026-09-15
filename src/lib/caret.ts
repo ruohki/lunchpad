@@ -4,7 +4,7 @@
  * that is laid out exactly like the field (same font, padding and wrapping),
  * so the rectangle is where the field draws that character.
  */
-export function charRect(root: HTMLElement | null, index: number): DOMRect | null {
+function charRect(root: HTMLElement | null, index: number): DOMRect | null {
   if (!root || index < 0) return null;
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   let node = walker.nextNode() as Text | null;

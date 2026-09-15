@@ -23,18 +23,33 @@ export function Popover({ open, anchor, at, onClose, children, width: fixedWidth
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0, width: fixedWidth ?? 320 });
 
+  // Callers pass fresh closures on every render; the listeners below read the latest through refs.
+  const atRef = useRef(at);
+  atRef.current = at;
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  const place = () => {
+    if (!anchor.current) return;
+    const r = atRef.current?.() ?? anchor.current.getBoundingClientRect();
+    const width = fixedWidth ?? Math.max(240, Math.min(420, r.width));
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - width - 8));
+    const below = r.bottom + 6;
+    const height = ref.current?.offsetHeight ?? 300;
+    const top = below + height > window.innerHeight - 8 ? Math.max(8, r.top - height - 6) : below;
+    setPos((p) => (p.top === top && p.left === left && p.width === width ? p : { top, left, width }));
+  };
+  const placeRef = useRef(place);
+  placeRef.current = place;
+
+  // Every render while open: the box to place at may have moved (a caret, say).
   useLayoutEffect(() => {
-    if (!open || !anchor.current) return;
-    const place = () => {
-      const r = at?.() ?? anchor.current!.getBoundingClientRect();
-      const width = fixedWidth ?? Math.max(240, Math.min(420, r.width));
-      const left = Math.max(8, Math.min(r.left, window.innerWidth - width - 8));
-      const below = r.bottom + 6;
-      const height = ref.current?.offsetHeight ?? 300;
-      const top = below + height > window.innerHeight - 8 ? Math.max(8, r.top - height - 6) : below;
-      setPos((p) => (p.top === top && p.left === left && p.width === width ? p : { top, left, width }));
-    };
-    place();
+    if (open) place();
+  });
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => placeRef.current();
     const id = requestAnimationFrame(place);
     window.addEventListener("resize", place);
     window.addEventListener("scroll", place, true);
@@ -43,20 +58,20 @@ export function Popover({ open, anchor, at, onClose, children, width: fixedWidth
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
     };
-  }, [open, anchor, at, fixedWidth]);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
-        onClose();
+        onCloseRef.current();
       }
     };
     const onDown = (e: PointerEvent) => {
       const t = e.target as Node;
       if (ref.current?.contains(t) || anchor.current?.contains(t)) return;
-      onClose();
+      onCloseRef.current();
     };
     window.addEventListener("keydown", onKey, true);
     window.addEventListener("pointerdown", onDown, true);
@@ -64,7 +79,7 @@ export function Popover({ open, anchor, at, onClose, children, width: fixedWidth
       window.removeEventListener("keydown", onKey, true);
       window.removeEventListener("pointerdown", onDown, true);
     };
-  }, [open, onClose, anchor]);
+  }, [open, anchor]);
 
   return createPortal(
     <AnimatePresence>

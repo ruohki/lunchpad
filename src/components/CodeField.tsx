@@ -51,6 +51,8 @@ export function CodeField({ value, onChange, rows = 6, placeholder, className, a
     if (!maximized) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      // An open completion list takes the Escape itself (its own listener follows this one).
+      if (big.current?.getAttribute("aria-expanded") === "true") return;
       e.stopPropagation();
       e.preventDefault();
       close();
