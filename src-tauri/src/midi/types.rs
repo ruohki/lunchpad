@@ -180,6 +180,9 @@ pub enum PadShape {
     /// Rounded rectangular button as wide as a `Rect` but as tall as the rows it
     /// spans (the Launchkey MK4's Track arrows, > and Func)
     TallRect,
+    /// Smaller rounded rectangular button (the function buttons beside the
+    /// Launchkey's encoders: Arp, Scale, the mode arrows)
+    SmallRect,
     /// White piano key, no LED (Launchkey)
     KeyWhite,
     /// Black piano key, no LED; placed at the `x` of the white key to its left (Launchkey)

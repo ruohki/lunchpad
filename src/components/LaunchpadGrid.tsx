@@ -461,11 +461,36 @@ function DragGhost({ button, cell, copy, corners, limited }: { button: Button; c
 }
 
 /** The corner every model leaves free (or uses for a logo LED) opens the settings, like the legacy "SET" pad. */
-/** The app's own button: a round pad in a corner, or the screen's rectangle on a Launchkey MK4. */
+/**
+ * The app's own button: a round pad in a corner, or, on a Launchkey MK4, the screen: a dark
+ * OLED-like panel as wide as the button block under it, with the gear glowing on it.
+ */
 function SettingsPad({ cell, wide = false }: { cell: number; wide?: boolean }) {
   const { t } = useTranslation();
   const toggle = useUiStore((s) => s.toggleSettings);
   const open = useUiStore((s) => s.settingsOpen);
+  if (wide) {
+    return (
+      <div className="flex h-full w-full items-center justify-center" style={{ padding: `${cell * 0.1}px ${cell * 0.07}px` }}>
+        <motion.button
+          type="button"
+          aria-label={t("common.settings")}
+          aria-expanded={open}
+          onClick={toggle}
+          whileTap={{ scale: 0.97 }}
+          style={{ borderRadius: Math.max(3, cell * 0.08) }}
+          className={clsx(
+            "group relative flex h-full w-full items-center justify-center overflow-hidden bg-[#04050a] shadow-[inset_0_0_0_2px_#16161e,inset_0_0_16px_rgba(0,0,0,0.9)] transition-colors focus-visible:outline-2 focus-visible:outline-accent-400",
+            open ? "text-accent-300" : "text-[#cfe3ff] hover:text-white",
+          )}
+        >
+          {/* The faint line pattern of a small display. */}
+          <span aria-hidden className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(0deg,rgba(255,255,255,0.035)_0px,rgba(255,255,255,0.035)_1px,transparent_1px,transparent_3px)]" />
+          <IconGear className="relative h-[46%] w-[46%] drop-shadow-[0_0_5px_rgba(160,200,255,0.55)] transition-transform group-hover:rotate-12" />
+        </motion.button>
+      </div>
+    );
+  }
   return (
     <div className="flex h-full w-full items-center justify-center" style={{ padding: cell * 0.08 }}>
       <motion.button
@@ -474,10 +499,8 @@ function SettingsPad({ cell, wide = false }: { cell: number; wide?: boolean }) {
         aria-expanded={open}
         onClick={toggle}
         whileTap={{ scale: 0.93 }}
-        style={wide ? { borderRadius: Math.max(4, cell * 0.12) } : undefined}
         className={clsx(
-          "flex h-full w-full items-center justify-center text-stage-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),inset_0_-2px_0_rgba(0,0,0,0.5)] transition-colors hover:text-stage-100 focus-visible:outline-2 focus-visible:outline-accent-400",
-          !wide && "rounded-full",
+          "flex h-full w-full items-center justify-center rounded-full text-stage-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),inset_0_-2px_0_rgba(0,0,0,0.5)] transition-colors hover:text-stage-100 focus-visible:outline-2 focus-visible:outline-accent-400",
           open ? "bg-stage-600" : "bg-stage-800 hover:bg-stage-700",
         )}
       >
@@ -710,10 +733,12 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
    * Rect buttons keep one size whatever their row's height; a tall rect keeps that width but
    * fills the rows it spans; the Pro MK3's small ones take half a cell; the rest fill their cell.
    */
-  const sizeClass = pad.shape === "small" ? "h-1/2 w-1/2" : pad.shape === "rect" ? "shrink-0" : pad.shape === "tallRect" ? "h-full shrink-0" : "h-full w-full";
-  // Rounded buttons take most of their column and a good part of a pad row, as on the
-  // Launchkey's panel; a half-row is shorter than that, so they lean into the grid gaps.
-  const sizeStyle = pad.shape === "rect" ? { width: cell * 0.86, height: cell * 0.6 } : pad.shape === "tallRect" ? { width: cell * 0.86 } : undefined;
+  const sizeClass = pad.shape === "small" ? "h-1/2 w-1/2" : pad.shape === "rect" || pad.shape === "smallRect" ? "shrink-0" : pad.shape === "tallRect" ? "h-full shrink-0" : "h-full w-full";
+  // Rounded buttons take most of their column and exactly a half-row in height, so a block
+  // of three (one of them spanning the two middle half-rows) is flush with the pad rows
+  // beside it. The buttons beside the encoders are narrower, as on the Launchkey's panel.
+  const sizeStyle =
+    pad.shape === "rect" ? { width: cell * 0.86, height: cell * 0.46 } : pad.shape === "smallRect" ? { width: cell * 0.54, height: cell * 0.46 } : pad.shape === "tallRect" ? { width: cell * 0.54 } : undefined;
 
   if (decorative) {
     return (

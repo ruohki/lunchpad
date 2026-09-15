@@ -18,6 +18,7 @@ export function cornersOf(shape: PadShape | undefined): Corners {
       return "square";
     case "rect":
     case "tallRect":
+    case "smallRect":
       return "rect";
     case "keyWhite":
     case "keyBlack":

@@ -156,8 +156,8 @@ impl LaunchpadDriver for LaunchkeyMiniMk3 {
                     (SCENE_X, PAD_BOTTOM_Y) => spec(self, x, y, Pad, Right, Some("Stop Solo Mute")).with_rows(2),
                     // The lower halves of the pad rows, covered by the pads and scene buttons.
                     (PAD_X0..=SCENE_X, 2 | 4) => continue,
-                    (ARP_X, 4) => spec(self, x, y, Rect, Right, Some("Arp")).with_led(LedKind::None).without_input(),
-                    (CHORD_X, 4) => spec(self, x, y, Rect, Right, Some("Fixed Chord")).with_led(LedKind::None).without_input(),
+                    (ARP_X, 4) => spec(self, x, y, SmallRect, Right, Some("Arp")).with_led(LedKind::None).without_input(),
+                    (CHORD_X, 4) => spec(self, x, y, SmallRect, Right, Some("Fixed Chord")).with_led(LedKind::None).without_input(),
                     (ARP_X, TRANSPORT_Y) => spec(self, x, y, Rect, Right, Some("▶")).with_led(LedKind::White),
                     (CHORD_X, TRANSPORT_Y) => spec(self, x, y, Rect, Right, Some("●")).with_led(LedKind::White),
                     (_, WHITE_Y) => spec(self, x, y, KeyWhite, Bottom, None),
@@ -395,7 +395,7 @@ mod tests {
         assert_eq!((at(12, 5).shape, at(12, 5).rows, at(12, 5).label.as_deref()), (PadShape::Pad, 2, Some(">")));
         assert_eq!(at(4, 3).rows, 2, "pads span both half-rows");
         assert!(layout.pads.iter().all(|p| p.y != 4 || matches!(p.x, 2 | 3 | 13 | 14)), "only side buttons and gaps sit on a lower half-row");
-        assert_eq!((at(13, 4).shape, at(13, 4).label.as_deref()), (PadShape::Rect, Some("Arp")));
+        assert_eq!((at(13, 4).shape, at(13, 4).label.as_deref()), (PadShape::SmallRect, Some("Arp")));
         assert_eq!((at(13, 2).shape, at(13, 2).led), (PadShape::Rect, LedKind::White));
         assert_eq!(at(14, 6).shape, PadShape::Empty, "the settings pad takes the top-right corner");
         assert!(at(4, 6).label.is_none(), "nothing is printed on the knobs");

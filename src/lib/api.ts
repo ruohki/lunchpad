@@ -33,7 +33,7 @@ export interface DiscoveredLaunchpad {
   connected: boolean;
 }
 
-export type PadShape = "pad" | "round" | "small" | "logo" | "empty" | "knob" | "strip" | "rect" | "tallRect" | "keyWhite" | "keyBlack";
+export type PadShape = "pad" | "round" | "small" | "logo" | "empty" | "knob" | "strip" | "rect" | "tallRect" | "smallRect" | "keyWhite" | "keyBlack";
 /** What a control can light: full colour, one white LED (colours become a brightness), or nothing. */
 export type LedKind = "rgb" | "white" | "none";
 export type PadRegion = "grid" | "top" | "right" | "bottom" | "left" | "bottom2" | "other";
