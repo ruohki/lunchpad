@@ -78,7 +78,15 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
   layoutRef.current = layout;
 
   const totalRowWeight = layout.rowWeights.reduce((a, b) => a + b, 0);
-  const aspect = layout.width / totalRowWeight;
+  /**
+   * The board is as wide as the columns that hold controls (a logo column with nothing in it
+   * takes no room); the keys are laid out by index across those columns, however many keys there are.
+   */
+  const columns = useMemo(
+    () => Math.max(1, ...layout.pads.filter((p) => !isKey(p.shape) && p.shape !== "empty").map((p) => p.x + Math.max(1, p.cols ?? 1))),
+    [layout.pads],
+  );
+  const aspect = columns / totalRowWeight;
   const padding = 8;
   const boardWidth = Math.max(0, Math.min(width - padding, (height - padding) * aspect));
   const boardHeight = boardWidth / aspect;
@@ -94,11 +102,6 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
   );
   const keys = useMemo(() => layout.pads.filter((p) => isKey(p.shape)), [layout.pads]);
   const hasLogo = useMemo(() => layout.pads.some((p) => p.shape === "logo"), [layout.pads]);
-  /** How many columns the controls above the keys take: the keyboard spans those, not a bare logo column. */
-  const controlColumns = useMemo(
-    () => Math.max(1, ...layout.pads.filter((p) => !isKey(p.shape) && p.shape !== "empty").map((p) => p.x + Math.max(1, p.cols ?? 1))),
-    [layout.pads],
-  );
   /** Ordinal of every knob on the device (top row first, left to right), for its accessible name. */
   const knobNumbers = useMemo(
     () =>
@@ -110,7 +113,7 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
       ),
     [layout.pads],
   );
-  const cell = boardWidth / layout.width;
+  const cell = boardWidth / columns;
 
   useEffect(
     () => () => {
@@ -295,7 +298,7 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
             // In pixels: a percentage turns elliptical on a board that is much wider than tall.
             borderRadius: Math.min(boardWidth, boardHeight) * 0.03,
             padding: cell * 0.1,
-            gridTemplateColumns: `repeat(${layout.width}, minmax(0, 1fr))`,
+            gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
             gridTemplateRows: rowsTopDown,
             gap: cell * 0.08,
           }}
@@ -305,7 +308,7 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
             const place = { gridColumn: `${pad.x + 1} / span ${Math.max(1, pad.cols ?? 1)}`, gridRow: `${layout.height - pad.y} / span ${Math.max(1, pad.rows)}` };
             // The settings pad sits on the logo (a Launchkey MK4 puts it on the screen), or in an
             // empty top-right corner on models without one.
-            const settingsHere = pad.shape === "logo" || (!hasLogo && pad.shape === "empty" && pad.x === layout.width - 1 && pad.y === layout.height - 1);
+            const settingsHere = pad.shape === "logo" || (!hasLogo && pad.shape === "empty" && pad.x === columns - 1 && pad.y === layout.height - 1);
             if (settingsHere) {
               return (
                 <div key={padKey(pad.x, pad.y)} style={place} className="min-h-0 min-w-0">
@@ -320,7 +323,7 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
               </div>
             );
           })}
-          {keys.length > 0 && <Keyboard keys={keys} height={layout.height} columns={controlColumns} cell={cell} renderPad={renderPad} />}
+          {keys.length > 0 && <Keyboard keys={keys} height={layout.height} columns={columns} cell={cell} renderPad={renderPad} />}
         </motion.div>
       )}
       {drag && dragButton && <DragGhost button={dragButton} cell={cell} copy={drag.copy} corners={dragCorners} limited={layout.limitedColor} />}
