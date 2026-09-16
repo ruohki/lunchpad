@@ -467,6 +467,27 @@ export const BUILTIN_VARIABLES = [
   "hour",
   "minute",
   "second",
+  "trigger",
+  "heldMs",
+  "random",
+  "obs.scene",
+  "obs.streaming",
+  "obs.recording",
+  "obs.connected",
+  "slobs.scene",
+  "slobs.streaming",
+  "slobs.recording",
+  "slobs.connected",
+  "model",
+  "port",
+  "firmware",
+  "virtual",
+  "appVersion",
+  "os",
+  "hostname",
+  "username",
+  "downloadDir",
+  "configDir",
 ] as const;
 export type HttpMethod = "get" | "post" | "put" | "patch" | "delete" | "head";
 export type HttpBodyMode = "text" | "file" | "multipart";
@@ -786,6 +807,8 @@ export const api = {
   testHttpRequest: (request: Omit<Extract<ActionKind, { type: "httpRequest" }>, "type" | "saveTo" | "saveScope">) =>
     invoke<HttpOutcome>("test_http_request", { request }),
   testScript: (code: string, locals: Record<string, string> = {}) => invoke<ScriptOutcome>("test_script", { request: { code, locals } }),
+  /** The provided variables that never change while the app runs: the machine and the folders. */
+  builtinInfo: () => invoke<Record<string, string>>("builtin_info"),
   getVariables: () => invoke<Record<string, string>>("get_variables"),
   deleteVariables: (names: string[]) => invoke<Record<string, string>>("delete_variables", { names }),
   clearVariables: () => invoke<Record<string, string>>("clear_variables"),

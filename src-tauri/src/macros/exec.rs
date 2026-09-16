@@ -264,7 +264,7 @@ pub async fn execute_external(ctx: &RunContext, action: &Action) {
         ActionKind::RunScript { code, save_to, save_scope } => {
             let input_locals = ctx.locals.lock().clone();
             let input_globals = ctx.globals_snapshot();
-            let builtins = super::builtins::values(&ctx.press());
+            let builtins = super::builtins::values(&ctx.press(), &ctx.env());
             let code = code.clone();
             let job = tokio::task::spawn_blocking(move || script::run(ScriptInput { code: &code, locals: &input_locals, globals: &input_globals, builtins: &builtins }));
             match job.await {

@@ -16,6 +16,7 @@
 //! actions tells a tap (down list on release) from a long press (hold list).
 
 use super::builtins;
+use crate::midi::ConnectedDevice;
 use super::exec::execute_external;
 use super::model::*;
 use super::services::Services;
@@ -56,6 +57,18 @@ pub enum ActionList {
 }
 
 impl ActionList {
+    /// The name the `{{trigger}}` variable and the interface use.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ActionList::Down => "down",
+            ActionList::Up => "up",
+            ActionList::Hold => "hold",
+            ActionList::Fader => "fader",
+            ActionList::FaderTouch => "faderTouch",
+            ActionList::FaderRelease => "faderRelease",
+        }
+    }
+
     /// One of a fader's lists rather than a button's.
     pub fn is_fader(self) -> bool {
         matches!(self, ActionList::Fader | ActionList::FaderTouch | ActionList::FaderRelease)
@@ -102,10 +115,31 @@ struct Inner {
     holds: Mutex<HashMap<(String, u8, u8), HoldArm>>,
     /// Latest aftertouch per held pad, read live by `{{pressure}}`.
     pressure: Mutex<HashMap<(u8, u8), u8>>,
+    /// When each pad went down and, once released, came up, read by `{{heldMs}}`.
+    presses: Mutex<HashMap<(u8, u8), PadPress>>,
+    /// The connected device as the manager last reported it, read by `{{model}}` and friends.
+    device: Mutex<Option<ConnectedDevice>>,
     /// Latest knob / strip value per fader while a worker is pacing its actions.
     pending_controls: Mutex<HashMap<String, PendingControl>>,
     ptt_count: Mutex<i32>,
     epoch: Instant,
+}
+
+fn env_of(inner: &Inner) -> builtins::Env {
+    builtins::Env {
+        obs: inner.services.obs.as_ref().map(|h| h.state()),
+        slobs: inner.services.slobs.as_ref().map(|h| h.state()),
+        device: inner.device.lock().clone(),
+        downloads: inner.services.downloads.clone(),
+        config_dir: inner.services.config_dir.clone(),
+    }
+}
+
+/// A pad's last press: when it went down and, once released, came up.
+#[derive(Debug, Clone, Copy)]
+struct PadPress {
+    down: Instant,
+    up: Option<Instant>,
 }
 
 /// Cheap handle to the engine; clone freely.
@@ -124,6 +158,8 @@ pub struct RunContext {
     pub y: u8,
     /// Trigger velocity (1-127; models without velocity report 127).
     pub velocity: u8,
+    /// The list this run executes, read by `{{trigger}}`.
+    pub list: ActionList,
     pub token: CancellationToken,
     /// Registers of this run, shared with buttons it calls.
     pub locals: Arc<Mutex<HashMap<String, String>>>,
@@ -149,11 +185,23 @@ impl MacroEngine {
                 runners: Mutex::new(HashMap::new()),
                 holds: Mutex::new(HashMap::new()),
                 pressure: Mutex::new(HashMap::new()),
+                presses: Mutex::new(HashMap::new()),
+                device: Mutex::new(None),
                 pending_controls: Mutex::new(HashMap::new()),
                 ptt_count: Mutex::new(0),
                 epoch: Instant::now(),
             }),
         }
+    }
+
+    /// What surrounds a run right now, for previews and the interface.
+    pub fn env(&self) -> builtins::Env {
+        env_of(&self.inner)
+    }
+
+    /// The manager reports the connected device here; `{{model}}` and friends read it.
+    pub fn set_device(&self, device: Option<ConnectedDevice>) {
+        *self.inner.device.lock() = device;
     }
 
     #[cfg(test)]
@@ -278,6 +326,14 @@ impl MacroEngine {
     pub fn on_button(&self, event: &ButtonEvent) {
         if !event.pressed {
             self.inner.pressure.lock().remove(&(event.x, event.y));
+        }
+        {
+            let mut presses = self.inner.presses.lock();
+            if event.pressed {
+                presses.insert((event.x, event.y), PadPress { down: Instant::now(), up: None });
+            } else if let Some(press) = presses.get_mut(&(event.x, event.y)) {
+                press.up = Some(Instant::now());
+            }
         }
         let (page_id, hold_ms, fader) = {
             let store = self.inner.profile.lock();
@@ -506,6 +562,7 @@ impl MacroEngine {
             x,
             y,
             velocity,
+            list,
             token,
             locals: locals.unwrap_or_default(),
             depth,
@@ -601,7 +658,7 @@ impl RunContext {
     pub fn variables(&self) -> HashMap<String, String> {
         let mut vars: HashMap<String, String> = self.inner.globals.lock().clone();
         vars.extend(self.locals.lock().iter().map(|(k, v)| (k.clone(), v.clone())));
-        vars.extend(builtins::values(&self.press()).into_iter().map(|(k, v)| (k.to_string(), v)));
+        vars.extend(builtins::values(&self.press(), &self.env()).into_iter().map(|(k, v)| (k.to_string(), v)));
         vars
     }
 
@@ -620,7 +677,19 @@ impl RunContext {
                 .unwrap_or_default();
             (page.map(|p| p.name.clone()).unwrap_or_default(), caption)
         };
-        builtins::Press { velocity: self.velocity, pressure, x: self.x, y: self.y, page_id: self.page_id.clone(), page_name, caption }
+        let held_ms = self
+            .inner
+            .presses
+            .lock()
+            .get(&(self.x, self.y))
+            .map(|press| press.up.unwrap_or_else(Instant::now).duration_since(press.down).as_millis() as u64)
+            .unwrap_or(0);
+        builtins::Press { velocity: self.velocity, pressure, x: self.x, y: self.y, trigger: self.list.as_str(), held_ms, page_id: self.page_id.clone(), page_name, caption }
+    }
+
+    /// What surrounds the run: the streaming apps' state, the device and the folders.
+    pub fn env(&self) -> builtins::Env {
+        env_of(&self.inner)
     }
 
     pub fn globals_snapshot(&self) -> HashMap<String, String> {

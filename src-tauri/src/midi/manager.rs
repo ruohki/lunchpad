@@ -120,6 +120,8 @@ impl OutputHandle {
 }
 
 pub type ButtonListener = Arc<dyn Fn(&ButtonEvent) + Send + Sync>;
+/// Told after every change of the device state (connect, disconnect, settings).
+pub type StateListener = Arc<dyn Fn(&DeviceState) + Send + Sync>;
 pub type PressureListener = Arc<dyn Fn(&PressureEvent) + Send + Sync>;
 pub type ControlListener = Arc<dyn Fn(&ControlEvent) + Send + Sync>;
 pub const EVENT_PRESSURE: &str = "device:pressure";
@@ -164,6 +166,7 @@ pub struct DeviceManager {
     listeners: Arc<Mutex<Vec<ButtonListener>>>,
     pressure_listeners: Arc<Mutex<Vec<PressureListener>>>,
     control_listeners: Arc<Mutex<Vec<ControlListener>>>,
+    state_listeners: Arc<Mutex<Vec<StateListener>>>,
     press_feedback: Arc<Mutex<bool>>,
     /// Velocity that counts as a press; `None` = the model's default.
     press_threshold: Arc<Mutex<Option<u8>>>,
@@ -242,6 +245,7 @@ impl DeviceManager {
             listeners: Arc::new(Mutex::new(Vec::new())),
             pressure_listeners: Arc::new(Mutex::new(Vec::new())),
             control_listeners: Arc::new(Mutex::new(Vec::new())),
+            state_listeners: Arc::new(Mutex::new(Vec::new())),
             press_feedback: Arc::new(Mutex::new(press_feedback)),
             press_threshold: Arc::new(Mutex::new(press_threshold)),
             live: Arc::new(Mutex::new(Default::default())),
@@ -283,9 +287,20 @@ impl DeviceManager {
     }
 
     fn emit_state(&self) {
-        if let Err(e) = self.app.emit(EVENT_STATE, self.state()) {
-            tracing::warn!(error = %e, "failed to emit device state");
+
+        let state = self.state();
+
+        for listener in self.state_listeners.lock().iter() {
+
+            listener(&state);
+
         }
+
+        if let Err(e) = self.app.emit(EVENT_STATE, state) {
+            tracing::warn!(error = %e, "failed to emit device state");
+
+        }
+
     }
 
     #[allow(dead_code)] // used by the macro engine (stage 2)
@@ -310,6 +325,13 @@ impl DeviceManager {
 
     pub fn add_control_listener(&self, listener: ControlListener) {
         self.control_listeners.lock().push(listener);
+    }
+
+
+    pub fn add_state_listener(&self, listener: StateListener) {
+
+        self.state_listeners.lock().push(listener);
+
     }
 
     pub fn add_pressure_listener(&self, listener: PressureListener) {

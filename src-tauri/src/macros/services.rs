@@ -21,4 +21,6 @@ pub struct Services {
     pub settings: Option<SharedSettings>,
     /// Where HTTP actions keep the files they download (`None` = a temp folder)
     pub downloads: Option<PathBuf>,
+    /// Where the profile and settings live, for `{{configDir}}`.
+    pub config_dir: Option<PathBuf>,
 }
