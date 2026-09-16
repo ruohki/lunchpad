@@ -288,7 +288,7 @@
     "removeImage": "Remove image",
     "imageHint": "PNG, JPG, GIF, WebP or SVG up to 2 MB.",
     "description": "Description",
-    "descriptionHint": "Shown as a tooltip when you hover the pad. Markdown works: **bold**, `code`, lists, and ``` fenced code blocks.",
+    "descriptionHint": "Shown as a tooltip when you hover the pad. Markdown works: **bold**, `code`, lists, and ``` fenced code blocks. {{name}} shows a shared variable's current value.",
     "descriptionPlaceholder": "What this button does, and anything worth remembering about it…",
     "colour": "Colour",
     "colourWhileActive": "While active",

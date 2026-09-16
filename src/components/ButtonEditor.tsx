@@ -1,12 +1,14 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useTranslation } from "react-i18next";
 import { api, emptyButton, type Button, type Layout, type Look, type Page } from "../lib/api";
 import { FACES } from "../lib/colors";
 import { cornersOf } from "../lib/grid";
 import { useDeviceStore } from "../store/device";
 import { useProfileStore } from "../store/profile";
+import { useVariablesStore } from "../store/variables";
 import { ActionsTab } from "./actions/ActionsTab";
 import { ColorField } from "./ColorField";
 import { PadFace } from "./PadFace";
@@ -96,6 +98,7 @@ type Tab = "appearance" | "actions";
 
 function EditorForm({ pageId, x, y, initial, limited, pages, layout, onCancel, onSave, onRemove }: FormProps) {
   const { t } = useTranslation();
+  const globalNames = useVariablesStore(useShallow((s) => Object.keys(s.globals).sort()));
   const [button, setButton] = useState<Button>(() => initial ?? randomNewButton());
   const [tab, setTab] = useState<Tab>("appearance");
   const [previewActive, setPreviewActive] = useState(false);
@@ -248,6 +251,7 @@ function EditorForm({ pageId, x, y, initial, limited, pages, layout, onCancel, o
             <CodeField
               language="markdown"
               rows={3}
+              suggestions={globalNames}
               value={button.description ?? ""}
               onChange={(description) => setButton({ ...button, description })}
               placeholder={t("editor.descriptionPlaceholder")}

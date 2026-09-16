@@ -173,4 +173,9 @@ body {
 .code-field .token.hr {
   color: var(--color-accent-400);
 }
+.code-field .token.placeholder {
+  color: var(--color-accent-300);
+  background: color-mix(in oklab, var(--color-accent-500) 15%, transparent);
+  border-radius: 2px;
+}
 

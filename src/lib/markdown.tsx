@@ -1,5 +1,5 @@
 import Prism from "prismjs";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 
 /**
  * A small Markdown for notes: headings, paragraphs (a line break stays a
@@ -57,7 +57,10 @@ function inline(text: string): ReactNode[] {
 
 /** Lines of a paragraph, each kept on its own line. */
 function lines(items: string[]): ReactNode[] {
-  return items.flatMap((line, i) => (i === 0 ? inline(line) : [<br key={`br${i}`} />, ...inline(line)]));
+  return items.flatMap((line, i) => [
+    ...(i === 0 ? [] : [<br key={`br${i}`} />]),
+    <Fragment key={`l${i}`}>{inline(line)}</Fragment>,
+  ]);
 }
 
 function codeBlock(key: number, code: string, language: string): ReactNode {
