@@ -46,11 +46,11 @@ use crate::midi::types::*;
 const WIDTH: u8 = 15;
 const HEIGHT: u8 = 7;
 const BUTTON_X: u8 = 2;
-const PAD_X0: u8 = 4;
-const PAD_X1: u8 = 11;
-const SCENE_X: u8 = 12;
-const ARP_X: u8 = 13;
-const CHORD_X: u8 = 14;
+const PAD_X0: u8 = 3;
+const PAD_X1: u8 = 10;
+const SCENE_X: u8 = 11;
+const ARP_X: u8 = 12;
+const CHORD_X: u8 = 13;
 const KNOB_Y: u8 = 6;
 /// Anchor (upper half-row) of each pad row; the pads span the half-row below too.
 const PAD_TOP_Y: u8 = 5;
@@ -144,22 +144,25 @@ impl LaunchpadDriver for LaunchkeyMiniMk3 {
                     (1, KNOB_Y) => spec(self, x, y, Strip, Left, Some("Modulation")).with_rows(5),
                     // Covered by the strips.
                     (0 | 1, 2..=PAD_TOP_Y) => continue,
-                    (BUTTON_X, KNOB_Y) => spec(self, x, y, Rect, Left, Some("Shift")).with_led(LedKind::None),
-                    (BUTTON_X, PAD_TOP_Y) => spec(self, x, y, Rect, Left, Some("Transpose")).with_led(LedKind::None).without_input().at_top(),
-                    // Octave + sits between the pad rows, so the three buttons are evenly spaced.
-                    (BUTTON_X, 4) => spec(self, x, y, Rect, Left, Some("+")).with_led(LedKind::None).without_input().with_rows(2),
-                    (BUTTON_X, PAD_BOTTOM_Y) => continue,
-                    (BUTTON_X, 2) => spec(self, x, y, Rect, Left, Some("−")).with_led(LedKind::None).without_input().at_bottom(),
+                    // The side buttons are pad-wide and half a pad tall, black with a printed legend.
+                    // Shift sits level with the knobs; Transpose hangs from the top of the upper pad
+                    // row; Octave + and − share the lower pad row's height.
+                    (BUTTON_X, KNOB_Y) => spec(self, x, y, HalfPad, Left, Some("Shift")).with_led(LedKind::None),
+                    (BUTTON_X, PAD_TOP_Y) => spec(self, x, y, HalfPad, Left, Some("Transpose")).with_led(LedKind::None).without_input().at_top(),
+                    (BUTTON_X, PAD_BOTTOM_Y) => spec(self, x, y, HalfPad, Left, Some("+")).with_led(LedKind::None).without_input().at_top(),
+                    (BUTTON_X, 2) => spec(self, x, y, HalfPad, Left, Some("−")).with_led(LedKind::None).without_input().at_bottom(),
                     (PAD_X0..=PAD_X1, KNOB_Y) => spec(self, x, y, Knob, Top, None),
                     (PAD_X0..=PAD_X1, PAD_TOP_Y | PAD_BOTTOM_Y) => spec(self, x, y, Pad, Grid, None).with_rows(2),
-                    (SCENE_X, PAD_TOP_Y) => spec(self, x, y, Pad, Right, Some(">")).with_rows(2),
-                    (SCENE_X, PAD_BOTTOM_Y) => spec(self, x, y, Pad, Right, Some("Stop Solo Mute")).with_rows(2),
+                    // The scene buttons are pad-sized, black, with the legend lit in the LED's colour.
+                    (SCENE_X, PAD_TOP_Y) => spec(self, x, y, Pad, Right, Some(">")).with_rows(2).masked(),
+                    (SCENE_X, PAD_BOTTOM_Y) => spec(self, x, y, Pad, Right, Some("Stop Solo Mute")).with_rows(2).masked(),
                     // The lower halves of the pad rows, covered by the pads and scene buttons.
                     (PAD_X0..=SCENE_X, 2 | 4) => continue,
-                    (ARP_X, 4) => spec(self, x, y, SmallRect, Right, Some("Arp")).with_led(LedKind::None).without_input(),
-                    (CHORD_X, 4) => spec(self, x, y, SmallRect, Right, Some("Fixed Chord")).with_led(LedKind::None).without_input(),
-                    (ARP_X, TRANSPORT_Y) => spec(self, x, y, Rect, Right, Some("▶")).with_led(LedKind::White).masked(),
-                    (CHORD_X, TRANSPORT_Y) => spec(self, x, y, Rect, Right, Some("●")).with_led(LedKind::White).masked(),
+                    // Arp, Fixed Chord, Play and Record sit on the bottom line of their pad rows.
+                    (ARP_X, 4) => spec(self, x, y, HalfPad, Right, Some("Arp")).with_led(LedKind::None).without_input().at_bottom(),
+                    (CHORD_X, 4) => spec(self, x, y, HalfPad, Right, Some("Fixed Chord")).with_led(LedKind::None).without_input().at_bottom(),
+                    (ARP_X, TRANSPORT_Y) => spec(self, x, y, HalfPad, Right, Some("▶")).with_led(LedKind::White).at_bottom(),
+                    (CHORD_X, TRANSPORT_Y) => spec(self, x, y, HalfPad, Right, Some("●")).with_led(LedKind::White).at_bottom(),
                     (_, WHITE_Y) => spec(self, x, y, KeyWhite, Bottom, None),
                     (_, BLACK_Y) if black_note(x).is_some() => spec(self, x, y, KeyBlack, Bottom, None),
                     _ => spec(self, x, y, Empty, Other, None),
@@ -360,46 +363,47 @@ impl LaunchpadDriver for LaunchkeyMiniMk3 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::midi::types::PadEdge;
 
     #[test]
     fn launchkey_mapping() {
         let d = LaunchkeyMiniMk3;
-        assert_eq!(d.xy_to_note(4, 5), Some((96, false)));
-        assert_eq!(d.xy_to_note(11, 3), Some((119, false)));
-        assert_eq!(d.xy_to_note(4, 4), None, "the lower half of a pad row is covered by the pad");
-        assert_eq!(d.note_to_xy(112, false), Some((4, 3)));
-        assert_eq!(d.xy_to_note(12, 5), Some((104, true)));
-        assert_eq!(d.note_to_xy(117, true), Some((14, 2)));
+        assert_eq!(d.xy_to_note(3, 5), Some((96, false)));
+        assert_eq!(d.xy_to_note(10, 3), Some((119, false)));
+        assert_eq!(d.xy_to_note(3, 4), None, "the lower half of a pad row is covered by the pad");
+        assert_eq!(d.note_to_xy(112, false), Some((3, 3)));
+        assert_eq!(d.xy_to_note(11, 5), Some((104, true)));
+        assert_eq!(d.note_to_xy(117, true), Some((13, 2)));
         assert_eq!(d.xy_to_note(2, 6), Some((108, true)));
         assert_eq!(d.xy_to_note(2, 5), None, "Transpose has no DAW message");
-        assert_eq!(d.xy_to_note(3, 5), None, "the gap column is empty");
+        assert_eq!(d.xy_to_note(14, 5), None, "the right margin is empty");
         // Presses: pads on channel 1, buttons on their channels, knobs never.
         let pad = d.parse_input_with(&[0x90, 100, 90], 1).unwrap();
-        assert_eq!((pad.x, pad.y, pad.pressed, pad.value), (8, 5, true, 90));
+        assert_eq!((pad.x, pad.y, pad.pressed, pad.value), (7, 5, true, 90));
         assert!(!d.parse_input_with(&[0x90, 100, 0], 1).unwrap().pressed);
         let play = d.parse_input_with(&[0xBF, 115, 127], 1).unwrap();
-        assert_eq!((play.x, play.y, play.pressed), (13, 2, true));
+        assert_eq!((play.x, play.y, play.pressed), (12, 2, true));
         assert!(d.parse_input_with(&[0xBF, 24, 100], 1).is_none());
         assert!(d.parse_input_with(&[0xB0, 115, 127], 1).is_none(), "Play lives on channel 16");
         assert!(d.parse_input_with(&[0x90, 60, 100], 1).is_none(), "keys do not arrive on the DAW interface");
         let knob = d.parse_control(&[0xBF, 24, 127]).unwrap();
-        assert_eq!((knob.x, knob.y), (7, 6));
+        assert_eq!((knob.x, knob.y), (6, 6));
         assert!((knob.value - 1.0).abs() < 1e-6);
         assert!(d.parse_control(&[0xB0, 24, 127]).is_none());
         // LEDs: pads and scene buttons take palette indices, Play/Record a brightness, the rest nothing.
-        let msgs = d.led_messages(&[(4, 5, LedColor::Palette(5)), (12, 3, LedColor::Flashing { index: 5, alt: 21 }), (13, 2, LedColor::Rgb(Color::new(255, 255, 255))), (2, 6, LedColor::Palette(5)), (4, 6, LedColor::Palette(5)), (0, 0, LedColor::Palette(5))]);
+        let msgs = d.led_messages(&[(3, 5, LedColor::Palette(5)), (11, 3, LedColor::Flashing { index: 5, alt: 21 }), (12, 2, LedColor::Rgb(Color::new(255, 255, 255))), (2, 6, LedColor::Palette(5)), (3, 6, LedColor::Palette(5)), (0, 0, LedColor::Palette(5))]);
         assert_eq!(msgs, vec![vec![0x90, 96, 5], vec![0xB0, 105, 5], vec![0xB1, 105, 21], vec![0xBF, 115, 127]]);
         let layout = d.layout();
         let at = |x: u8, y: u8| layout.pads.iter().find(|p| p.x == x && p.y == y).unwrap();
         assert_eq!((at(0, 6).shape, at(0, 6).rows, at(0, 6).led), (PadShape::Strip, 5, LedKind::None));
         assert!(at(2, 5).note.is_none());
-        assert_eq!((at(12, 5).shape, at(12, 5).rows, at(12, 5).label.as_deref()), (PadShape::Pad, 2, Some(">")));
-        assert_eq!(at(4, 3).rows, 2, "pads span both half-rows");
-        assert!(layout.pads.iter().all(|p| p.y != 4 || matches!(p.x, 2 | 3 | 13 | 14)), "only side buttons and gaps sit on a lower half-row");
-        assert_eq!((at(13, 4).shape, at(13, 4).label.as_deref()), (PadShape::SmallRect, Some("Arp")));
-        assert_eq!((at(13, 2).shape, at(13, 2).led), (PadShape::Rect, LedKind::White));
-        assert_eq!(at(14, 6).shape, PadShape::Empty, "the settings pad takes the top-right corner");
-        assert!(at(4, 6).label.is_none(), "nothing is printed on the knobs");
+        assert_eq!((at(11, 5).shape, at(11, 5).rows, at(11, 5).label.as_deref()), (PadShape::Pad, 2, Some(">")));
+        assert_eq!(at(3, 3).rows, 2, "pads span both half-rows");
+        assert!(layout.pads.iter().all(|p| p.y != 4 || matches!(p.x, 2 | 12 | 13 | 14)), "only side buttons and gaps sit on a lower half-row");
+        assert_eq!((at(12, 4).shape, at(12, 4).label.as_deref(), at(12, 4).edge), (PadShape::HalfPad, Some("Arp"), PadEdge::Bottom));
+        assert_eq!((at(12, 2).shape, at(12, 2).led, at(12, 2).edge), (PadShape::HalfPad, LedKind::White, PadEdge::Bottom));
+        assert_eq!(at(13, 6).shape, PadShape::Empty, "the settings pad takes the top-right corner");
+        assert!(at(3, 6).label.is_none(), "nothing is printed on the knobs");
     }
 
     #[test]
