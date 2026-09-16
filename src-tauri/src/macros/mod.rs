@@ -4,6 +4,7 @@
 //! * `engine` - runners, cancellation, cross-button calls, flip-flop state
 //! * `sink`   - what the engine reports to the outside (UI events, LEDs, keys)
 
+pub mod builtins;
 pub mod engine;
 mod exec;
 pub mod model;

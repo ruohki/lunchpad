@@ -445,8 +445,29 @@ export type ActionKind =
 export type VarScope = "local" | "global";
 export type CompareOp = "equals" | "notEquals" | "contains" | "startsWith" | "endsWith" | "greaterThan" | "lessThan" | "isEmpty" | "isNotEmpty" | "matches";
 export const COMPARE_OPS: CompareOp[] = ["equals", "notEquals", "contains", "startsWith", "endsWith", "greaterThan", "lessThan", "isEmpty", "isNotEmpty", "matches"];
-/** Placeholder names every macro can read. */
-export const BUILTIN_VARIABLES = ["velocity", "velocity01", "pressure", "pressure01", "x", "y", "pageId"] as const;
+/** Names Lunchpad provides to every macro (the press, the page, the clock); mirrors `macros/builtins.rs`. Actions cannot write them. */
+export const BUILTIN_VARIABLES = [
+  "velocity",
+  "velocity01",
+  "pressure",
+  "pressure01",
+  "x",
+  "y",
+  "pageId",
+  "pageName",
+  "caption",
+  "date",
+  "time",
+  "datetime",
+  "timestamp",
+  "weekday",
+  "year",
+  "month",
+  "day",
+  "hour",
+  "minute",
+  "second",
+] as const;
 export type HttpMethod = "get" | "post" | "put" | "patch" | "delete" | "head";
 export type HttpBodyMode = "text" | "file" | "multipart";
 /** What an HTTP action does with the response: keep the text, or save a file from the body, a base64 field or a URL in a field. */

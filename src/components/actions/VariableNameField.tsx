@@ -1,6 +1,7 @@
 import { clsx } from "clsx";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { isBuiltinVariable } from "../../lib/placeholders";
 import { Popover } from "../Popover";
 
 interface Props {
@@ -11,13 +12,15 @@ interface Props {
   placeholder?: string;
   className?: string;
   ariaLabel?: string;
+  /** The variable will be written: the names Lunchpad provides are not offered and are flagged. */
+  write?: boolean;
 }
 
 /**
  * Text field for a variable name with a completion popover (no native
  * datalist). Arrow keys move the highlight, Enter or Tab accept, Escape closes.
  */
-export function VariableNameField({ value, onChange, suggestions, placeholder, className, ariaLabel }: Props) {
+export function VariableNameField({ value, onChange, suggestions, placeholder, className, ariaLabel, write = false }: Props) {
   const { t } = useTranslation();
   const ref = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
@@ -25,9 +28,10 @@ export function VariableNameField({ value, onChange, suggestions, placeholder, c
 
   const matches = useMemo(() => {
     const q = value.trim().toLowerCase();
-    const list = suggestions.filter((s) => s.toLowerCase().includes(q) && s !== value);
+    const list = suggestions.filter((s) => (!write || !isBuiltinVariable(s)) && s.toLowerCase().includes(q) && s !== value);
     return list.slice(0, 40);
-  }, [value, suggestions]);
+  }, [value, suggestions, write]);
+  const provided = write && isBuiltinVariable(value.trim());
 
   const accept = (name: string) => {
     onChange(name);
@@ -66,8 +70,14 @@ export function VariableNameField({ value, onChange, suggestions, placeholder, c
             setOpen(false);
           }
         }}
-        className={clsx("rounded-md bg-stage-800 px-2.5 py-1.5 font-mono text-sm text-stage-100 outline-none placeholder:text-stage-500 focus:ring-1 focus:ring-accent-400", className)}
+        aria-invalid={provided || undefined}
+        className={clsx(
+          "rounded-md bg-stage-800 px-2.5 py-1.5 font-mono text-sm outline-none placeholder:text-stage-500",
+          provided ? "text-builtin ring-1 ring-danger" : "text-stage-100 focus:ring-1 focus:ring-accent-400",
+          className,
+        )}
       />
+      {provided && <span className="text-xs text-danger">{t("vars.builtinName")}</span>}
       <Popover open={open && matches.length > 0} anchor={ref} onClose={() => setOpen(false)} width={260} className="p-1.5">
         <ul role="listbox" className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
           {matches.map((name, i) => (
@@ -80,7 +90,11 @@ export function VariableNameField({ value, onChange, suggestions, placeholder, c
                 e.preventDefault(); // keep focus in the field
                 accept(name);
               }}
-              className={clsx("cursor-pointer rounded-md px-2.5 py-1.5 font-mono text-sm", i === highlight ? "bg-stage-700 text-stage-100" : "text-stage-200")}
+              className={clsx(
+                "cursor-pointer rounded-md px-2.5 py-1.5 font-mono text-sm",
+                i === highlight && "bg-stage-700",
+                isBuiltinVariable(name) ? "text-builtin" : i === highlight ? "text-stage-100" : "text-stage-200",
+              )}
             >
               {name}
             </li>

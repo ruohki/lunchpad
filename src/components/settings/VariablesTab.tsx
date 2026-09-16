@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { api, type DownloadCacheInfo } from "../../lib/api";
+import { api, BUILTIN_VARIABLES, type DownloadCacheInfo } from "../../lib/api";
+import { builtinValues } from "../../lib/placeholders";
+import { useNow } from "../../lib/useNow";
 import { useVariablesStore } from "../../store/variables";
 import { Tooltip } from "../Tooltip";
 import { Button, IconClose } from "../ui";
@@ -17,6 +19,7 @@ export function VariablesTab() {
   const [pruned, setPruned] = useState<number | null>(null);
   const names = useMemo(() => Object.keys(globals).sort((a, b) => a.localeCompare(b)), [globals]);
   const faderCount = names.filter((n) => n.startsWith("fader.")).length;
+  const provided = builtinValues(useNow(1000));
 
   return (
     <>
@@ -54,6 +57,18 @@ export function VariablesTab() {
           )}
           {pruned !== null && <span className="text-xs text-stage-400">{t("settings.variablesPruned", { count: pruned })}</span>}
         </div>
+      </Section>
+
+      <Section title={t("settings.builtinsTitle")} description={t("settings.builtinsHint")}>
+        <ul className="flex flex-col gap-1">
+          {BUILTIN_VARIABLES.map((name) => (
+            <li key={name} className="grid grid-cols-[minmax(0,140px)_minmax(0,1fr)_auto] items-baseline gap-3">
+              <code className="truncate font-mono text-sm text-builtin">{name}</code>
+              <span className="text-xs text-stage-400">{t(`vars.builtins.${name}`)}</span>
+              <span className="font-mono text-xs text-stage-300">{provided[name] ?? ""}</span>
+            </li>
+          ))}
+        </ul>
       </Section>
 
       <Section title={t("settings.variablesList", { count: names.length })}>
