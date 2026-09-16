@@ -216,7 +216,7 @@ export function HomeAssistantServiceEditor({ action, onChange, button }: { actio
       <EntityPicker label={t("ha.entityOptional")} value={action.entity} onChange={(entity) => onChange({ ...action, entity })} />
       <div className="flex flex-col gap-1 text-xs text-stage-400">
         {t("ha.data")}
-        <PlaceholderField value={action.data} onChange={(data) => onChange({ ...action, data })} suggestions={suggestions} multiline rows={3} mono placeholder={'{ "brightness_pct": {{fader.desk}} }'} />
+        <PlaceholderField value={action.data} onChange={(data) => onChange({ ...action, data })} suggestions={suggestions} multiline rows={3} mono language="json" placeholder={'{ "brightness_pct": {{fader.desk}} }'} />
         <span className="text-stage-500">{t("ha.dataHint")}</span>
       </div>
     </div>
