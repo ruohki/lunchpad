@@ -521,7 +521,7 @@ export interface HttpOutcome {
 /** One thing to check before running an import. */
 export interface ImportFinding {
   level: "danger" | "warning" | "info";
-  kind: "secret" | "upload" | "request" | "insecure" | "login" | "fileWrite" | "program" | "script" | "keys" | "sound" | "speech" | "homeAssistant" | "streaming";
+  kind: "secret" | "upload" | "request" | "insecure" | "login" | "fileWrite" | "program" | "script" | "keys" | "launcher" | "command" | "sound" | "speech" | "homeAssistant" | "streaming";
   page: string;
   x: number;
   y: number;

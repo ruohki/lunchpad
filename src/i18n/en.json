@@ -1182,7 +1182,9 @@
       "sound": "Plays the sound file {{detail}}",
       "speech": "Speaks: {{detail}}",
       "homeAssistant": "Controls Home Assistant: {{detail}}",
-      "streaming": "Controls {{detail}}"
+      "streaming": "Controls {{detail}}",
+      "launcher": "Opens a launcher or a terminal with {{detail}}. Whatever is typed next runs on this computer, with your rights.",
+      "command": "Types what looks like a command or an address: {{detail}}"
     },
     "confirm": "I have checked these and want to import them.",
     "import": "Import",
