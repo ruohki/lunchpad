@@ -56,6 +56,7 @@ boa_engine = "0.22.0"
 regex = "1.13.1"
 semver = "1"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif", "bmp"] }
+tauri-plugin-window-state = "2"
 
 [target.'cfg(windows)'.dependencies]
 windows-core = "0.61"
