@@ -244,10 +244,11 @@ export function ActionsTab({ button, onChange, pages, layout, lists = ["down", "
               className="flex flex-col gap-1.5"
             >
               <AnimatePresence initial={false}>
-                {button[key].map((action) => (
+                {button[key].map((action, i) => (
                   <ActionRow
                     key={action.id}
                     action={action}
+                    depth={depths(button[key])[i]}
                     pages={pages}
                     layout={layout}
                     button={button}
@@ -271,8 +272,39 @@ export function ActionsTab({ button, onChange, pages, layout, lists = ["down", "
   );
 }
 
+/**
+ * Nesting depth of each row: a block's start marker sits at its parent's depth
+ * and everything up to its end marker one level in; middle and end markers sit
+ * at the block's own depth.
+ */
+function depths(list: Action[]): number[] {
+  let depth = 0;
+  return list.map((a) => {
+    switch (a.type) {
+      case "ifStart":
+      case "flipFlopStart":
+      case "pushToTalkStart": {
+        const at = depth;
+        depth += 1;
+        return at;
+      }
+      case "ifElse":
+      case "flipFlopMiddle":
+        return Math.max(0, depth - 1);
+      case "ifEnd":
+      case "flipFlopEnd":
+      case "pushToTalkEnd":
+        depth = Math.max(0, depth - 1);
+        return depth;
+      default:
+        return depth;
+    }
+  });
+}
+
 function ActionRow({
   action,
+  depth,
   pages,
   layout,
   button,
@@ -285,6 +317,8 @@ function ActionRow({
   onDragEnd,
 }: {
   action: Action;
+  /** How many blocks (branch, flip-flop, push-to-talk) the row sits in; each one indents it. */
+  depth: number;
   pages: Page[];
   layout: Layout | null;
   button: Button;
@@ -323,6 +357,7 @@ function ActionRow({
       exit={{ opacity: 0, x: 12 }}
       transition={{ type: "spring", stiffness: 500, damping: 40 }}
       whileDrag={{ scale: 1.01, boxShadow: "0 12px 30px -10px rgba(0,0,0,0.8)" }}
+      style={{ marginLeft: depth * 18 }}
       onContextMenu={(e: React.MouseEvent) => {
         // The editors' own fields keep the browser menu (paste into a text field, say).
         const target = e.target as HTMLElement;
