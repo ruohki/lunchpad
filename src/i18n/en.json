@@ -484,8 +484,7 @@
       "triggerTap": "pressed, then released",
       "triggerHold": "held actions",
       "colour": "Colour",
-      "msFrom": "From variable",
-      "msFromHint": "A variable holding the milliseconds, or a {{placeholder}} expression. The number is used when it is missing or not a number."
+      "msFromHint": "A number, or a {{variable}} expression such as {{heldMs}} or {{wait}}. When it does not come out as a number, the last plain number is used."
     },
     "types": {
       "delay": {

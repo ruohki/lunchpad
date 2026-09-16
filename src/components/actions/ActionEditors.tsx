@@ -1,5 +1,4 @@
-import { clsx } from "clsx";
-import { VariableNameField } from "./VariableNameField";
+import { PlaceholderField } from "./PlaceholderField";
 import { useVariableSuggestions } from "./VariableFields";
 import { useTranslation } from "react-i18next";
 import type { Action, Button, ButtonRef, ButtonTrigger, Layout, Page } from "../../lib/api";
@@ -228,22 +227,25 @@ function TargetPicker({
   );
 }
 
-/** Milliseconds to wait, or a variable that holds them. */
+/** Milliseconds to wait: a number, or a `{{variable}}` expression evaluated when the action runs. */
 function DelayEditor({ action, onChange, button }: { action: Extract<Action, { type: "delay" }>; onChange: (action: Action) => void; button?: Parameters<typeof useVariableSuggestions>[0] }) {
   const { t } = useTranslation();
   const suggestions = useVariableSuggestions(button);
+  const text = action.msFrom ?? String(action.ms);
+  const set = (value: string) => {
+    const trimmed = value.trim();
+    // A plain number is the number; anything else is an expression, with the last number as the fallback.
+    if (/^\d+$/.test(trimmed)) onChange({ ...action, ms: parseInt(trimmed, 10), msFrom: null });
+    else onChange({ ...action, msFrom: value });
+  };
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-end gap-3">
-        <label className={clsx("flex flex-col gap-1 text-xs text-stage-400", action.msFrom && "opacity-50")}>
-          {t("actions.fields.ms")}
-          <NumberInput value={action.ms} min={0} onChange={(ms) => onChange({ ...action, ms })} className="w-28" />
-        </label>
-        <div className="flex w-48 flex-col gap-1 text-xs text-stage-400">
-          {t("actions.fields.msFrom")}
-          <VariableNameField value={action.msFrom ?? ""} onChange={(v) => onChange({ ...action, msFrom: v || null })} suggestions={suggestions} placeholder={t("volume.fromPlaceholder")} />
+      <label className="flex flex-col gap-1 text-xs text-stage-400">
+        {t("actions.fields.ms")}
+        <div className="flex w-72">
+          <PlaceholderField mono value={text} onChange={set} suggestions={suggestions} placeholder="500" ariaLabel={t("actions.fields.ms")} />
         </div>
-      </div>
+      </label>
       <p className="text-xs text-stage-500">{t("actions.fields.msFromHint")}</p>
     </div>
   );

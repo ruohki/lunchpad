@@ -344,7 +344,7 @@ export function describeTarget(
 export function summarize(t: TFunction, action: Action, pages: Page[]): string {
   switch (action.type) {
     case "delay":
-      return action.msFrom ? t("actions.summary.delayFrom", { name: action.msFrom }) : t("actions.summary.delay", { ms: action.ms });
+      return action.msFrom?.trim() ? t("actions.summary.delayFrom", { name: action.msFrom.trim() }) : t("actions.summary.delay", { ms: action.ms });
     case "switchPage":
       return t("actions.summary.switchPage", { page: pages.find((p) => p.id === action.pageId)?.name ?? t("actions.summary.unknownPage") });
     case "setColor":
