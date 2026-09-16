@@ -20,6 +20,7 @@ pub mod obs;
 pub mod profile;
 pub mod script;
 pub mod homeassistant;
+pub mod hub;
 pub mod secrets;
 pub mod slobs;
 pub mod speech;
@@ -209,6 +210,7 @@ pub fn run() {
             let obs = obs::ObsHandle::spawn(Some(app.handle().clone()), settings.clone(), &runtime, Some(live.clone()));
             let slobs = slobs::SlobsHandle::spawn(Some(app.handle().clone()), settings.clone(), &runtime, Some(live));
             let home_assistant = homeassistant::HaHandle::spawn(Some(app.handle().clone()), settings.clone(), &runtime);
+            let hub = hub::HubHandle::spawn(app.handle().clone(), settings.clone());
 
             let sink = Arc::new(TauriSink {
                 app: app.handle().clone(),
@@ -252,7 +254,7 @@ pub fn run() {
             }
 
             let window_settings = settings.lock().settings.window.clone();
-            app.manage(AppState { manager: manager.clone(), profile, settings, engine, keyboard, audio, speech, obs, slobs, home_assistant, history: Mutex::new(Vec::new()), redo: Mutex::new(Vec::new()) });
+            app.manage(AppState { manager: manager.clone(), profile, settings, engine, keyboard, audio, speech, obs, slobs, home_assistant, hub, history: Mutex::new(Vec::new()), redo: Mutex::new(Vec::new()) });
             if let Err(e) = tray::setup(app.handle(), &window_settings) {
                 tracing::warn!(error = %e, "tray icon could not be created");
             }
@@ -306,6 +308,8 @@ pub fn run() {
             import_legacy_file,
             export_page,
             export_page_file,
+            export_profile_file,
+            export_button_file,
             import_page_json,
             review_import_json,
             review_import_file,
@@ -365,6 +369,24 @@ pub fn run() {
             delete_variables,
             clear_variables,
             prune_fader_variables,
+            // hub
+            hub_state,
+            hub_link_start,
+            hub_link_cancel,
+            hub_sign_out,
+            hub_set_url,
+            hub_fetch_listing,
+            hub_dismiss_delivery,
+            hub_review_delivery,
+            hub_apply_delivery,
+            hub_share,
+            hub_update_listing,
+            hub_sync_shared,
+            hub_forget_shared,
+            hub_backup_now,
+            hub_list_backups,
+            hub_delete_backup,
+            hub_restore_backup,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

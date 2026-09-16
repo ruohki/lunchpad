@@ -2,6 +2,7 @@
 
 pub mod device;
 pub mod diagnostics;
+pub mod hub;
 pub mod macros;
 pub mod media;
 pub mod profile;
@@ -30,6 +31,7 @@ pub struct AppState {
     pub obs: ObsHandle,
     pub slobs: SlobsHandle,
     pub home_assistant: crate::homeassistant::HaHandle,
+    pub hub: crate::hub::HubHandle,
     /// Profiles before each edit made from the UI, newest last (undo).
     pub history: Mutex<Vec<crate::profile::Profile>>,
     /// Profiles undone, newest last (redo); cleared by the next edit.
@@ -44,6 +46,7 @@ pub fn err(e: impl std::fmt::Display) -> String {
 
 pub use device::*;
 pub use diagnostics::*;
+pub use hub::*;
 pub use macros::*;
 pub use media::*;
 pub use profile::*;
