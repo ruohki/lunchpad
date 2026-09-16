@@ -307,6 +307,8 @@ pub fn run() {
             export_page,
             export_page_file,
             import_page_json,
+            review_import_json,
+            review_import_file,
             import_page_file,
             restore_profile_backup,
             read_image_data_uri,

@@ -1102,5 +1102,33 @@
     "hint_other": "{{count}} buttons on this page have no pad on the {{model}}. Drag one onto an empty pad to bring it back.",
     "position": "Column {{column}}, row {{row}}",
     "none": "Every button on this page has a pad."
+  },
+  "import": {
+    "title": "Check before importing",
+    "intro": "This file was made elsewhere. Before you run anything from it, look at what it does. Nothing has been imported yet.",
+    "summary": "Pages: {{pages}} · Buttons: {{buttons}} · Actions: {{actions}}",
+    "levels": {
+      "danger": "Needs a close look",
+      "warning": "Worth checking",
+      "info": "Good to know"
+    },
+    "kinds": {
+      "secret": "Uses your secret “{{detail}}”. Its value goes wherever this action sends it, so make sure you trust the destination.",
+      "upload": "Uploads a file from this computer: {{detail}}",
+      "request": "Calls a web address: {{detail}}",
+      "insecure": "Skips certificate checks for {{detail}}, so anyone on the network could read or alter the exchange.",
+      "login": "Carries a login written into the action: {{detail}}",
+      "fileWrite": "Writes a downloaded file to {{detail}}",
+      "program": "Starts a program on this computer: {{detail}}",
+      "script": "Runs a script: {{detail}}",
+      "keys": "Presses keys or types text: {{detail}}",
+      "sound": "Plays the sound file {{detail}}",
+      "speech": "Speaks: {{detail}}",
+      "homeAssistant": "Controls Home Assistant: {{detail}}",
+      "streaming": "Controls {{detail}}"
+    },
+    "where": "{{page}} · column {{column}}, row {{row}} · {{action}}",
+    "confirm": "I have checked these and want to import them.",
+    "import": "Import"
   }
 }

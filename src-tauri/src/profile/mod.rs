@@ -2,6 +2,7 @@
 
 pub mod legacy;
 pub mod model;
+pub mod review;
 pub mod service;
 
 pub mod store;

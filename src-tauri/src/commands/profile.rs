@@ -342,6 +342,42 @@ pub async fn export_page(page_id: String, state: State<'_, AppState>) -> CmdResu
     serde_json::to_string_pretty(page).map_err(err)
 }
 
+/// What an import would bring: how much, and what to check before running any of it.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportReview {
+    pub pages: usize,
+    pub buttons: usize,
+    pub actions: usize,
+    pub findings: Vec<crate::profile::review::Finding>,
+}
+
+/// The pages a file holds, whichever format it is in (nothing is applied).
+fn pages_in(json: &str) -> Result<Vec<Page>, String> {
+    if let Ok(page) = serde_json::from_str::<Page>(json) {
+        return Ok(vec![page]);
+    }
+    import_legacy(json).map(|(pages, _)| pages)
+}
+
+/// Look over a page or legacy file before importing it.
+#[tauri::command]
+pub async fn review_import_json(json: String) -> CmdResult<ImportReview> {
+    let pages = pages_in(&json)?;
+    let buttons = pages.iter().map(|p| p.buttons.len()).sum();
+    let actions = pages
+        .iter()
+        .flat_map(|p| p.buttons.iter().map(|b| b.button.down.len() + b.button.up.len() + b.button.hold.len()).chain(p.faders.iter().map(|f| f.on_change.len() + f.on_touch.len() + f.on_release.len())))
+        .sum();
+    Ok(ImportReview { pages: pages.len(), buttons, actions, findings: crate::profile::review::review(&pages) })
+}
+
+#[tauri::command]
+pub async fn review_import_file(path: String) -> CmdResult<ImportReview> {
+    let json = std::fs::read_to_string(&path).map_err(|e| format!("could not read {path}: {e}"))?;
+    review_import_json(json).await
+}
+
 /// Import a page exported by this app (new format) or by the legacy app.
 #[tauri::command]
 pub async fn import_page_json(json: String, app: AppHandle, state: State<'_, AppState>) -> CmdResult<ImportReport> {
