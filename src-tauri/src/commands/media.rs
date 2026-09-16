@@ -334,9 +334,11 @@ pub struct ScriptTest {
 pub async fn test_script(request: ScriptTest, state: State<'_, AppState>) -> CmdResult<crate::script::ScriptOutcome> {
     let globals = state.engine.globals();
     let env = state.engine.env();
+    let press = crate::macros::builtins::Press::sample();
+    let lunchpad = crate::macros::builtins::script_info(&state.profile.lock().profile, &press, &env);
     tauri::async_runtime::spawn_blocking(move || {
-        let builtins = crate::macros::builtins::values(&crate::macros::builtins::Press::sample(), &env);
-        crate::script::run(crate::script::ScriptInput { code: &request.code, locals: &request.locals, globals: &globals, builtins: &builtins })
+        let builtins = crate::macros::builtins::values(&press, &env);
+        crate::script::run(crate::script::ScriptInput { code: &request.code, locals: &request.locals, globals: &globals, builtins: &builtins, lunchpad })
     })
     .await
     .map_err(err)?

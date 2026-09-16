@@ -22,6 +22,7 @@ import { BUILTIN_ALTERNATION, BUILTIN_IDENTIFIERS, PLACEHOLDER, isBuiltinVariabl
   }
   Prism.languages.insertBefore("javascript", "keyword", {
     "builtin-variable": { pattern: new RegExp(`(\\b(?:vars|globals)\\.)(?:${BUILTIN_IDENTIFIERS})\\b`), lookbehind: true },
+    "lunchpad-object": { pattern: /\bLunchpad\b/, alias: "builtin-variable" },
   });
 }
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -55,8 +56,8 @@ const TEXT = "code-field font-mono text-sm leading-relaxed whitespace-pre-wrap b
  * underneath a transparent textarea, so typing, selection and the caret work
  * exactly as in a plain textarea while the colours come from the copy. The
  * copy is in the flow and sizes the field, so nothing ever scrolls out of
- * step. Typing `vars.` or `globals.` (JavaScript) or `{{` (Markdown) offers
- * the variable names under the caret. A button in the corner opens the same
+ * step. Typing `vars.`, `globals.` or `Lunchpad.` (JavaScript) or `{{`
+ * (Markdown) offers what fits under the caret. A button in the corner opens the same
  * text in a view that fills the window.
  */
 export function CodeField({ value, onChange, rows = 6, placeholder, className, ariaLabel, title, suggestions = [], globals = [], language = "javascript" }: Props) {
@@ -144,12 +145,14 @@ export function CodeField({ value, onChange, rows = 6, placeholder, className, a
   );
 }
 
-/** Where the text before the caret ends in `vars.`, `globals.` or `{{` plus a started name. */
+/** Where the text before the caret ends in `vars.`, `globals.`, `Lunchpad.` or `{{` plus a started name. */
 interface Access {
-  object: "vars" | "globals" | "placeholder";
+  object: "vars" | "globals" | "placeholder" | "lunchpad";
   partial: string;
   /** Index of the object's first character in the text. */
   from: number;
+  /** For `lunchpad`: the path typed before the dot, `Lunchpad` or `Lunchpad.button`. */
+  base?: string;
 }
 
 function accessBefore(value: string, caret: number | null, language: Language): Access | null {
@@ -159,14 +162,62 @@ function accessBefore(value: string, caret: number | null, language: Language): 
     const m = /\{\{([^{}\s]*)$/.exec(head);
     return m ? { object: "placeholder", partial: m[1], from: caret - m[0].length } : null;
   }
+  const lp = /\b(Lunchpad(?:\.(?:button|device|activePage))?)\.([A-Za-z0-9_$]*)$/.exec(head);
+  if (lp) return { object: "lunchpad", base: lp[1], partial: lp[2], from: caret - lp[0].length };
   const m = /(vars|globals)\.([A-Za-z0-9_$]*)$/.exec(head);
   return m ? { object: m[1] as "vars" | "globals", partial: m[2], from: caret - m[0].length } : null;
 }
 
 /** `vars.name` for a plain identifier, `vars["fader.gain"]` for anything else; `{{name}}` in Markdown. */
-function accessExpression(object: Access["object"], name: string): string {
+function accessExpression(object: "vars" | "globals" | "placeholder", name: string): string {
   if (object === "placeholder") return `{{${name}}}`;
   return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name) ? `${object}.${name}` : `${object}[${JSON.stringify(name)}]`;
+}
+
+/** One entry of the completion list: what it shows, what it inserts, and how far back the caret lands. */
+interface Choice {
+  key: string;
+  label: string;
+  insert: string;
+  caretBack: number;
+  builtin: boolean;
+}
+
+/** What the `Lunchpad` script object offers, by the path typed before the dot. */
+const LUNCHPAD_MEMBERS: Record<string, { name: string; label: string; insert: string; caretBack: number }[]> = {
+  Lunchpad: [
+    { name: "pages", label: "pages", insert: "pages", caretBack: 0 },
+    { name: "activePage", label: "activePage", insert: "activePage", caretBack: 0 },
+    { name: "device", label: "device", insert: "device", caretBack: 0 },
+    { name: "button", label: "button", insert: "button", caretBack: 0 },
+    { name: "switchPage", label: "switchPage(page)", insert: "switchPage()", caretBack: 1 },
+    { name: "runButton", label: "runButton(x, y, { page, trigger })", insert: "runButton()", caretBack: 1 },
+    { name: "setFader", label: "setFader(name, value, runActions)", insert: "setFader()", caretBack: 1 },
+    { name: "delay", label: "delay(ms)", insert: "delay()", caretBack: 1 },
+    { name: "stopAllMacros", label: "stopAllMacros()", insert: "stopAllMacros()", caretBack: 0 },
+    { name: "run", label: "run(action)", insert: "run()", caretBack: 1 },
+    { name: "log", label: "log(…values)", insert: "log()", caretBack: 1 },
+  ],
+  "Lunchpad.button": ["pageId", "x", "y", "caption"].map((n) => ({ name: n, label: n, insert: n, caretBack: 0 })),
+  "Lunchpad.device": ["model", "port", "firmware", "virtual"].map((n) => ({ name: n, label: n, insert: n, caretBack: 0 })),
+  "Lunchpad.activePage": ["id", "name"].map((n) => ({ name: n, label: n, insert: n, caretBack: 0 })),
+};
+
+function choicesFor(access: Access, suggestions: string[], globals: string[]): Choice[] {
+  const q = access.partial.toLowerCase();
+  if (access.object === "lunchpad") {
+    return (LUNCHPAD_MEMBERS[access.base ?? "Lunchpad"] ?? [])
+      .filter((m) => m.name.toLowerCase().startsWith(q) && m.name !== access.partial)
+      .map((m) => ({ key: m.name, label: `${access.base}.${m.label}`, insert: `${access.base}.${m.insert}`, caretBack: m.caretBack, builtin: true }));
+  }
+  const pool = access.object === "globals" ? globals : suggestions;
+  return pool
+    .filter((n) => n.toLowerCase().startsWith(q) && n !== access.partial)
+    .slice(0, 12)
+    .map((n) => {
+      const text = accessExpression(access.object as "vars" | "globals" | "placeholder", n);
+      return { key: n, label: text, insert: text, caretBack: 0, builtin: isBuiltinVariable(n) };
+    });
 }
 
 type Language = "javascript" | "markdown";
@@ -206,28 +257,22 @@ function Surface({
   const [highlighted, setHighlighted] = useState(0);
 
   const access = useMemo(() => accessBefore(value, caret, language), [value, caret, language]);
-  const matches = useMemo(() => {
-    if (!access) return [];
-    const pool = access.object === "globals" ? globals : suggestions;
-    const q = access.partial.toLowerCase();
-    return pool.filter((n) => n.toLowerCase().startsWith(q) && n !== access.partial).slice(0, 12);
-  }, [access, suggestions, globals]);
+  const matches = useMemo(() => (access ? choicesFor(access, suggestions, globals) : []), [access, suggestions, globals]);
   const open = typing && !!access && matches.length > 0;
   // The list sits under the caret's line; the copy is laid out like the textarea, so it knows where that is.
   const at = () => (access && caret !== null ? typedRect(copy.current, access.from, caret) : null);
 
   const track = (e: React.SyntheticEvent<HTMLTextAreaElement>) => setCaret(e.currentTarget.selectionStart);
 
-  const insert = (name: string) => {
+  const insert = (choice: Choice) => {
     if (!access || caret === null) return;
-    const expression = accessExpression(access.object, name);
     const after = value.slice(caret);
     // Typing inside an existing `{{...}}` keeps one closing pair.
     const rest = access.object === "placeholder" && after.startsWith("}}") ? after.slice(2) : after;
-    const next = value.slice(0, access.from) + expression + rest;
+    const next = value.slice(0, access.from) + choice.insert + rest;
     onChange(next);
     setTyping(false);
-    const at = access.from + expression.length;
+    const at = access.from + choice.insert.length - choice.caretBack;
     requestAnimationFrame(() => {
       const el = textareaRef.current;
       if (!el) return;
@@ -286,25 +331,25 @@ function Surface({
         aria-expanded={open}
         className={clsx(TEXT, pad, "absolute inset-0 h-full w-full resize-none overflow-hidden bg-transparent text-transparent caret-stage-100 outline-none placeholder:text-stage-500")}
       />
-      <Popover open={open} anchor={textareaRef} at={at} onClose={() => setTyping(false)} width={280} className="p-1.5">
+      <Popover open={open} anchor={textareaRef} at={at} onClose={() => setTyping(false)} width={access?.object === "lunchpad" ? 360 : 280} className="p-1.5">
         <ul role="listbox" className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
-          {matches.map((name, i) => (
+          {matches.map((choice, i) => (
             <li
-              key={name}
+              key={choice.key}
               role="option"
               aria-selected={i === highlighted}
               onMouseEnter={() => setHighlighted(i)}
               onMouseDown={(e) => {
                 e.preventDefault();
-                insert(name);
+                insert(choice);
               }}
               className={clsx(
                 "cursor-pointer rounded-md px-2.5 py-1.5 font-mono text-sm",
                 i === highlighted && "bg-stage-700",
-                isBuiltinVariable(name) ? "text-builtin" : i === highlighted ? "text-stage-100" : "text-stage-200",
+                choice.builtin ? "text-builtin" : i === highlighted ? "text-stage-100" : "text-stage-200",
               )}
             >
-              {access ? accessExpression(access.object, name) : name}
+              {choice.label}
             </li>
           ))}
         </ul>

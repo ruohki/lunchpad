@@ -3,6 +3,12 @@
 //! `velocity`), `globals`, and the trigger values as bare globals; the
 //! completion value (or `return` value) becomes the result, and writes to
 //! `vars.*` / `globals.*` flow back into the macro's variables.
+//!
+//! `Lunchpad` describes the surroundings (`pages`, `activePage`, `device`,
+//! `button`) and queues actions (`switchPage`, `runButton`, `setFader`,
+//! `delay`, `stopAllMacros`, or any action as JSON through `run`) that the
+//! engine executes in order once the snippet has finished; `log` writes to
+//! the application log.
 
 use boa_engine::property::Attribute;
 use boa_engine::{js_string, Context, JsValue, Script, Source};
@@ -17,6 +23,10 @@ pub struct ScriptOutcome {
     pub locals: HashMap<String, String>,
     pub globals: HashMap<String, String>,
     pub elapsed_ms: u64,
+    /// Actions queued through `Lunchpad.*`, as the JSON the engine deserialises.
+    pub actions: Vec<serde_json::Value>,
+    /// Lines written with `Lunchpad.log`.
+    pub logs: Vec<String>,
 }
 
 pub struct ScriptInput<'a> {
@@ -24,7 +34,38 @@ pub struct ScriptInput<'a> {
     pub locals: &'a HashMap<String, String>,
     pub globals: &'a HashMap<String, String>,
     pub builtins: &'a HashMap<&'static str, String>,
+    /// What `Lunchpad` describes: `{ pages, activePage, device, button }` (`Null` for none).
+    pub lunchpad: serde_json::Value,
 }
+
+/// Defines `Lunchpad` before the snippet runs. Queued actions and log lines
+/// collect in plain arrays the engine reads back afterwards.
+const PRELUDE: &str = r#"
+var __lp_queue = [];
+var __lp_log = [];
+var Lunchpad = (function (info) {
+  info = (typeof info === "object" && info) || {};
+  function queue(action) { __lp_queue.push(action); }
+  return Object.freeze({
+    pages: info.pages || [],
+    activePage: info.activePage || null,
+    device: info.device || null,
+    button: info.button || null,
+    run: function (action) { queue(action); },
+    switchPage: function (page) { queue({ type: "switchPage", pageId: String(page) }); },
+    runButton: function (x, y, options) {
+      var o = options || {};
+      queue({ type: "runButton", target: { pageId: o.page == null ? null : String(o.page), x: Number(x), y: Number(y) }, trigger: o.trigger || "press" });
+    },
+    setFader: function (fader, value, runActions) { queue({ type: "setFader", fader: String(fader), value: String(value), runActions: runActions !== false }); },
+    delay: function (ms) { queue({ type: "delay", ms: Math.max(0, Math.round(Number(ms) || 0)), msFrom: null }); },
+    stopAllMacros: function () { queue({ type: "stopAllMacros" }); },
+    log: function () {
+      __lp_log.push(Array.prototype.map.call(arguments, function (a) { return typeof a === "string" ? a : JSON.stringify(a); }).join(" "));
+    },
+  });
+})(typeof __lp_info === "undefined" ? null : __lp_info);
+"#;
 
 const LOOP_LIMIT: u64 = 2_000_000;
 
@@ -56,6 +97,13 @@ pub fn run(input: ScriptInput<'_>) -> Result<ScriptOutcome, String> {
         ctx.register_global_property(js_string!(*name), js, Attribute::all()).map_err(|e| e.to_string())?;
     }
 
+    let info = JsValue::from_json(&input.lunchpad, &mut ctx).map_err(|e| e.to_string())?;
+    ctx.register_global_property(js_string!("__lp_info"), info, Attribute::all()).map_err(|e| e.to_string())?;
+    Script::parse(Source::from_bytes(PRELUDE.as_bytes()), None, &mut ctx)
+        .map_err(|e| e.to_string())?
+        .evaluate(&mut ctx)
+        .map_err(|e| e.to_string())?;
+
     let script = parse(input.code, &mut ctx)?;
     let value = script.evaluate(&mut ctx).map_err(|e| e.to_string())?;
     let result = stringify(&value, &mut ctx);
@@ -72,8 +120,18 @@ pub fn run(input: ScriptInput<'_>) -> Result<ScriptOutcome, String> {
     let new_vars = read_back(&mut ctx, "vars");
     // Anything in `vars` that differs from what came in becomes a local.
     let locals: HashMap<String, String> = new_vars.into_iter().filter(|(k, v)| merged.get(k) != Some(v) || input.locals.contains_key(k)).collect();
+    let read_list = |ctx: &mut Context, name: &str| -> Vec<serde_json::Value> {
+        let global = ctx.global_object();
+        let Ok(list) = global.get(js_string!(name), ctx) else { return Vec::new() };
+        match list.to_json(ctx) {
+            Ok(Some(serde_json::Value::Array(items))) => items,
+            _ => Vec::new(),
+        }
+    };
+    let actions = read_list(&mut ctx, "__lp_queue").into_iter().map(whole_numbers).collect();
+    let logs = read_list(&mut ctx, "__lp_log").into_iter().map(json_text).collect();
 
-    Ok(ScriptOutcome { result, locals, globals: new_globals, elapsed_ms: started.elapsed().as_millis() as u64 })
+    Ok(ScriptOutcome { result, locals, globals: new_globals, elapsed_ms: started.elapsed().as_millis() as u64, actions, logs })
 }
 
 /// Parse the snippet as a script, so its completion value (the last expression)
@@ -103,6 +161,21 @@ fn stringify(value: &JsValue, ctx: &mut Context) -> String {
     }
 }
 
+/// JavaScript numbers come back as floats; the engine's integer fields (a
+/// pad's `x`, a delay's `ms`) need `1`, not `1.0`.
+fn whole_numbers(value: serde_json::Value) -> serde_json::Value {
+    use serde_json::Value;
+    match value {
+        Value::Number(n) => match n.as_f64() {
+            Some(f) if f.fract() == 0.0 && f.abs() < 1e15 => Value::from(f as i64),
+            _ => Value::Number(n),
+        },
+        Value::Array(items) => Value::Array(items.into_iter().map(whole_numbers).collect()),
+        Value::Object(map) => Value::Object(map.into_iter().map(|(k, v)| (k, whole_numbers(v))).collect()),
+        other => other,
+    }
+}
+
 /// JSON value as macro text: strings bare, whole numbers without ".0".
 fn json_text(json: serde_json::Value) -> String {
     match json {
@@ -125,7 +198,7 @@ mod tests {
         let mut builtins = HashMap::new();
         builtins.insert("velocity", "100".to_string());
         builtins.insert("pageId", "default".to_string());
-        run(ScriptInput { code, locals: &locals, globals: &globals, builtins: &builtins }).expect("script ok")
+        run(ScriptInput { code, locals: &locals, globals: &globals, builtins: &builtins, lunchpad: serde_json::Value::Null }).expect("script ok")
     }
 
     #[test]
@@ -173,8 +246,27 @@ formatDateTime(new Date(2026, 8, 13, 15, 5));"#;
         let locals = HashMap::new();
         let globals = HashMap::new();
         let builtins = HashMap::new();
-        let err = run(ScriptInput { code: "const = ;", locals: &locals, globals: &globals, builtins: &builtins }).unwrap_err();
+        let err = run(ScriptInput { code: "const = ;", locals: &locals, globals: &globals, builtins: &builtins, lunchpad: serde_json::Value::Null }).unwrap_err();
         assert!(err.contains("SyntaxError"), "{err}");
+    }
+
+    #[test]
+    fn lunchpad_object_queues_actions_and_logs() {
+        let locals = HashMap::new();
+        let globals = HashMap::new();
+        let builtins = HashMap::new();
+        let info = serde_json::json!({ "pages": [{ "id": "p1", "name": "Stream" }], "activePage": { "id": "p1", "name": "Stream" }, "device": null, "button": { "pageId": "p1", "x": 2, "y": 3, "caption": "Go" } });
+        let code = r#"Lunchpad.switchPage("Scenes"); Lunchpad.runButton(1, 2, { trigger: "tap" }); Lunchpad.delay(250); Lunchpad.log("hi", { a: 1 }); Lunchpad.pages.length + Lunchpad.button.x"#;
+        let out = run(ScriptInput { code, locals: &locals, globals: &globals, builtins: &builtins, lunchpad: info }).expect("script ok");
+        assert_eq!(out.result, "3");
+        assert_eq!(out.logs, vec!["hi {\"a\":1}".to_string()]);
+        assert_eq!(out.actions.len(), 3);
+        assert_eq!(out.actions[0], serde_json::json!({ "type": "switchPage", "pageId": "Scenes" }));
+        assert_eq!(out.actions[1], serde_json::json!({ "type": "runButton", "target": { "pageId": null, "x": 1, "y": 2 }, "trigger": "tap" }));
+        assert_eq!(out.actions[2], serde_json::json!({ "type": "delay", "ms": 250, "msFrom": null }));
+        // Without surroundings the object still exists and stays frozen.
+        let out = run(ScriptInput { code: "Lunchpad.pages.length + (Object.isFrozen(Lunchpad) ? 10 : 0)", locals: &locals, globals: &globals, builtins: &builtins, lunchpad: serde_json::Value::Null }).expect("script ok");
+        assert_eq!(out.result, "10");
     }
 
     #[test]
@@ -182,6 +274,6 @@ formatDateTime(new Date(2026, 8, 13, 15, 5));"#;
         let locals = HashMap::new();
         let globals = HashMap::new();
         let builtins = HashMap::new();
-        assert!(run(ScriptInput { code: "while (true) {}", locals: &locals, globals: &globals, builtins: &builtins }).is_err());
+        assert!(run(ScriptInput { code: "while (true) {}", locals: &locals, globals: &globals, builtins: &builtins, lunchpad: serde_json::Value::Null }).is_err());
     }
 }

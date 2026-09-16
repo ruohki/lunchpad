@@ -265,8 +265,9 @@ pub async fn execute_external(ctx: &RunContext, action: &Action) {
             let input_locals = ctx.locals.lock().clone();
             let input_globals = ctx.globals_snapshot();
             let builtins = super::builtins::values(&ctx.press(), &ctx.env());
+            let lunchpad = ctx.script_info();
             let code = code.clone();
-            let job = tokio::task::spawn_blocking(move || script::run(ScriptInput { code: &code, locals: &input_locals, globals: &input_globals, builtins: &builtins }));
+            let job = tokio::task::spawn_blocking(move || script::run(ScriptInput { code: &code, locals: &input_locals, globals: &input_globals, builtins: &builtins, lunchpad }));
             match job.await {
                 Ok(Ok(out)) => {
                     tracing::debug!(action = %action.id, ms = out.elapsed_ms, result = %out.result.chars().take(120).collect::<String>(), "script done");
@@ -280,6 +281,10 @@ pub async fn execute_external(ctx: &RunContext, action: &Action) {
                     if let Some(name) = save_to {
                         ctx.set_var(name, out.result, *save_scope);
                     }
+                    for line in &out.logs {
+                        tracing::info!(action = %action.id, "script: {line}");
+                    }
+                    run_queued(ctx, action, out.actions).await;
                 }
                 Ok(Err(e)) => tracing::warn!(action = %action.id, error = %e, "script failed"),
                 Err(e) => tracing::warn!(action = %action.id, error = %e, "script task failed"),
@@ -287,6 +292,41 @@ pub async fn execute_external(ctx: &RunContext, action: &Action) {
         }
 
         _ => {}
+    }
+}
+
+/// Actions a script queued through `Lunchpad.*`: run in order once the script
+/// is done, with the script's own context. Flow markers only mean something
+/// inside a list and are left out; a page may be named instead of identified.
+async fn run_queued(ctx: &RunContext, script: &Action, queued: Vec<serde_json::Value>) {
+    for value in queued {
+        if ctx.token.is_cancelled() {
+            return;
+        }
+        let kind = match serde_json::from_value::<ActionKind>(value.clone()) {
+            Ok(kind) => kind,
+            Err(e) => {
+                tracing::warn!(action = %script.id, error = %e, json = %value, "script queued an action the engine does not understand");
+                continue;
+            }
+        };
+        let kind = match kind {
+            ActionKind::IfStart { .. }
+            | ActionKind::IfElse { .. }
+            | ActionKind::IfEnd { .. }
+            | ActionKind::FlipFlopStart { .. }
+            | ActionKind::FlipFlopMiddle { .. }
+            | ActionKind::FlipFlopEnd { .. }
+            | ActionKind::PushToTalkStart { .. }
+            | ActionKind::PushToTalkEnd { .. } => {
+                tracing::warn!(action = %script.id, "script queued a flow marker, which only works inside an action list");
+                continue;
+            }
+            ActionKind::SwitchPage { page_id } => ActionKind::SwitchPage { page_id: ctx.page_id_for(&page_id) },
+            other => other,
+        };
+        let action = Action { id: uuid::Uuid::new_v4().to_string(), wait: true, kind };
+        Box::pin(super::engine::execute(ctx, &action)).await;
     }
 }
 

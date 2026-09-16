@@ -1013,11 +1013,14 @@
     "minimize": "Done"
   },
   "script": {
-    "hint": "Read variables as vars.name, shared ones as globals.name; assign to them to change them. velocity, x, y and pageId are available. The last expression (or return) is the result.",
+    "hint": "vars and globals hold the variables, Lunchpad drives the app, and the last expression (or return) is the result.",
     "saveTo": "Save result to",
     "test": "Run test",
     "result": "Ran in {{ms}} ms",
-    "globalsChanged": "Changed shared variables: {{names}}"
+    "globalsChanged": "Changed shared variables: {{names}}",
+    "queued_one": "Would run {{count}} action: {{names}} (a test runs none)",
+    "queued_other": "Would run {{count}} actions: {{names}} (a test runs none)",
+    "docs": "Scripting reference"
   },
   "branch": {
     "variable": "Variable",
