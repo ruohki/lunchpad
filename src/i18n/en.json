@@ -483,7 +483,9 @@
       "triggerRelease": "released actions",
       "triggerTap": "pressed, then released",
       "triggerHold": "held actions",
-      "colour": "Colour"
+      "colour": "Colour",
+      "msFrom": "From variable",
+      "msFromHint": "A variable holding the milliseconds, or a {{placeholder}} expression. The number is used when it is missing or not a number."
     },
     "types": {
       "delay": {
@@ -669,7 +671,8 @@
       "unknownPage": "missing page",
       "thisButton": "this button",
       "button": "column {{column}}, row {{row}}",
-      "onPage": "{{button}} on {{page}}"
+      "onPage": "{{button}} on {{page}}",
+      "delayFrom": "{{name}} ms"
     },
     "flipFlop": "Flip flop",
     "pushToTalk": "Push-to-talk",

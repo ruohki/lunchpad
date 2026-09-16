@@ -183,7 +183,7 @@ export function createActions(type: ActionType): Action[] {
   const make = (kind: ActionKind, id = newActionId()): Action => ({ id, wait: true, ...kind });
   switch (type) {
     case "delay":
-      return [make({ type: "delay", ms: 500 })];
+      return [make({ type: "delay", ms: 500, msFrom: null })];
     case "switchPage":
       return [make({ type: "switchPage", pageId: "default" })];
     case "setColor":
@@ -344,7 +344,7 @@ export function describeTarget(
 export function summarize(t: TFunction, action: Action, pages: Page[]): string {
   switch (action.type) {
     case "delay":
-      return t("actions.summary.delay", { ms: action.ms });
+      return action.msFrom ? t("actions.summary.delayFrom", { name: action.msFrom }) : t("actions.summary.delay", { ms: action.ms });
     case "switchPage":
       return t("actions.summary.switchPage", { page: pages.find((p) => p.id === action.pageId)?.name ?? t("actions.summary.unknownPage") });
     case "setColor":
