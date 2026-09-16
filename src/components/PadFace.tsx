@@ -115,7 +115,7 @@ export function PadFace({ button, cell, active, corners = "square", limited = fa
           src={button.look.uri}
           alt=""
           draggable={false}
-          className={clsx("pointer-events-none w-[82%] object-contain", align === "bottom" ? "h-[30%]" : "h-[82%]")}
+          className={clsx("pointer-events-none w-[82%] rounded-[10%] object-contain", align === "bottom" ? "h-[30%]" : "h-[82%]")}
         />
       )}
     </div>
