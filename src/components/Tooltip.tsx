@@ -14,6 +14,8 @@ interface Props {
    * Needed around disabled buttons, which swallow pointer events themselves.
    */
   wrap?: boolean;
+  /** `wide` for notes with several lines: more room and padding, left-aligned. */
+  size?: "default" | "wide";
 }
 
 const GAP = 8;
@@ -23,7 +25,7 @@ const GAP = 8;
  * native `title` attribute. The wrapper has no box of its own, so the child
  * keeps its place in flex and grid layouts.
  */
-export function Tooltip({ content, children, side = "top", delay = 450, wrap = false }: Props) {
+export function Tooltip({ content, children, side = "top", delay = 450, wrap = false, size = "default" }: Props) {
   const wrapper = useRef<HTMLSpanElement>(null);
   const tip = useRef<HTMLDivElement>(null);
   const timer = useRef<number | null>(null);
@@ -116,7 +118,10 @@ export function Tooltip({ content, children, side = "top", delay = 450, wrap = f
               exit={{ opacity: 0, y: dy, scale: 0.98 }}
               transition={{ duration: 0.12, ease: "easeOut" }}
               style={{ top: pos?.top ?? 0, left: pos?.left ?? 0 }}
-              className="pointer-events-none fixed z-[60] max-w-xs break-words rounded-md border border-stage-700 bg-stage-950 px-2 py-1 text-xs leading-snug text-stage-100 shadow-xl"
+              className={
+                "pointer-events-none fixed z-[60] break-words rounded-md border border-stage-700 bg-stage-950 text-xs leading-snug text-stage-100 shadow-xl " +
+                (size === "wide" ? "max-w-sm px-3 py-2 text-left" : "max-w-xs px-2 py-1")
+              }
             >
               {content}
             </motion.div>
