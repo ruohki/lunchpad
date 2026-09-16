@@ -350,6 +350,8 @@ pub struct ImportReview {
     pub buttons: usize,
     pub actions: usize,
     pub findings: Vec<crate::profile::review::Finding>,
+    /// The pages as they would be imported, for reading before confirming.
+    pub content: Vec<Page>,
 }
 
 /// The pages a file holds, whichever format it is in (nothing is applied).
@@ -369,7 +371,8 @@ pub async fn review_import_json(json: String) -> CmdResult<ImportReview> {
         .iter()
         .flat_map(|p| p.buttons.iter().map(|b| b.button.down.len() + b.button.up.len() + b.button.hold.len()).chain(p.faders.iter().map(|f| f.on_change.len() + f.on_touch.len() + f.on_release.len())))
         .sum();
-    Ok(ImportReview { pages: pages.len(), buttons, actions, findings: crate::profile::review::review(&pages) })
+    let findings = crate::profile::review::review(&pages);
+    Ok(ImportReview { pages: pages.len(), buttons, actions, findings, content: pages })
 }
 
 #[tauri::command]

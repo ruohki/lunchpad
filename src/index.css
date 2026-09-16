@@ -187,4 +187,19 @@ body {
 .code-field .token.builtin-variable {
   color: var(--color-builtin);
 }
+.code-field .token.property {
+  color: var(--color-stage-100);
+}
+/* Placeholders inside a reviewed import's code and JSON; a secret stands out. */
+.code-field .import-placeholder {
+  color: var(--color-accent-300);
+  background: color-mix(in oklab, var(--color-accent-500) 15%, transparent);
+  border-radius: 2px;
+}
+.code-field .import-secret {
+  color: var(--color-danger);
+  background: color-mix(in oklab, var(--color-danger) 18%, transparent);
+  border-radius: 2px;
+  font-weight: 600;
+}
 

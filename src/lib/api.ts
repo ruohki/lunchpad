@@ -525,8 +525,12 @@ export interface ImportFinding {
   page: string;
   x: number;
   y: number;
+  /** The button's caption, or the fader's name */
+  caption: string;
   /** The action's type */
   action: string;
+  /** The action's id inside `content` */
+  actionId: string;
   detail: string;
 }
 
@@ -536,6 +540,8 @@ export interface ImportReview {
   buttons: number;
   actions: number;
   findings: ImportFinding[];
+  /** The pages as they would be imported, for reading before confirming. */
+  content: Page[];
 }
 
 export interface DownloadCacheInfo {
