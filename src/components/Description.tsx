@@ -1,5 +1,6 @@
 import { Markdown } from "../lib/markdown";
 import { builtinValues, expandPlaceholders, usesClock } from "../lib/placeholders";
+import { useBuiltinEnv } from "../lib/useBuiltins";
 import { useNow } from "../lib/useNow";
 import { useProfileStore } from "../store/profile";
 import { useVariablesStore } from "../store/variables";
@@ -12,7 +13,8 @@ import { useVariablesStore } from "../store/variables";
 export function Description({ text, pageId, caption }: { text: string; pageId: string | null; caption: string }) {
   const globals = useVariablesStore((s) => s.globals);
   const pageName = useProfileStore((s) => s.profile?.pages.find((p) => p.id === pageId)?.name ?? "");
+  const env = useBuiltinEnv();
   const now = useNow(usesClock(text) ? 1000 : 0);
-  const vars = { ...globals, ...builtinValues(now, pageId === null ? null : { id: pageId, name: pageName }, caption) };
+  const vars = { ...globals, ...builtinValues(now, pageId === null ? null : { id: pageId, name: pageName }, caption, env) };
   return <Markdown text={expandPlaceholders(text, vars)} />;
 }

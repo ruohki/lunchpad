@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api, BUILTIN_VARIABLES, type DownloadCacheInfo } from "../../lib/api";
 import { builtinValues } from "../../lib/placeholders";
+import { useBuiltinEnv } from "../../lib/useBuiltins";
 import { useNow } from "../../lib/useNow";
 import { useVariablesStore } from "../../store/variables";
 import { Tooltip } from "../Tooltip";
@@ -19,7 +20,7 @@ export function VariablesTab() {
   const [pruned, setPruned] = useState<number | null>(null);
   const names = useMemo(() => Object.keys(globals).sort((a, b) => a.localeCompare(b)), [globals]);
   const faderCount = names.filter((n) => n.startsWith("fader.")).length;
-  const provided = builtinValues(useNow(1000));
+  const provided = builtinValues(useNow(1000), null, undefined, useBuiltinEnv());
 
   return (
     <>

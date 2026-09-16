@@ -4,6 +4,13 @@ use super::{AppState, CmdResult};
 use crate::macros::{ActionList, ButtonTrigger, RunningMacro};
 use tauri::State;
 
+/// The provided variables that never change while the app runs (the app, the
+/// machine, the folders), for the interface to fill descriptions with.
+#[tauri::command]
+pub async fn builtin_info(state: State<'_, AppState>) -> CmdResult<std::collections::HashMap<String, String>> {
+    Ok(crate::macros::builtins::info(&state.engine.env()).into_iter().map(|(k, v)| (k.to_string(), v)).collect())
+}
+
 #[tauri::command]
 pub async fn get_running_macros(state: State<'_, AppState>) -> CmdResult<Vec<RunningMacro>> {
     Ok(state.engine.running())

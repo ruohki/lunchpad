@@ -226,6 +226,7 @@ pub fn run() {
                 home_assistant: Some(home_assistant.clone()),
                 settings: Some(settings.clone()),
                 downloads: Some(http::download_dir(app.handle())),
+                config_dir: Some(config_dir.clone()),
             };
             let engine = MacroEngine::new(profile.clone(), running_pads, sink, services, runtime);
             // Shared variables survive restarts.
@@ -245,6 +246,9 @@ pub fn run() {
                 manager.lock().add_pressure_listener(Arc::new(move |event| for_pressure.on_pressure(event)));
                 let for_controls = engine.clone();
                 manager.lock().add_control_listener(Arc::new(move |event| for_controls.on_control(event)));
+                let for_state = engine.clone();
+                manager.lock().add_state_listener(Arc::new(move |state| for_state.set_device(state.device.clone())));
+                engine.set_device(manager.lock().state().device);
             }
 
             let window_settings = settings.lock().settings.window.clone();
@@ -355,6 +359,7 @@ pub fn run() {
             open_download_folder,
             test_script,
             get_variables,
+            builtin_info,
             delete_variables,
             clear_variables,
             prune_fader_variables,

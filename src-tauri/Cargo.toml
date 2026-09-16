@@ -35,6 +35,8 @@ tokio-util = "0.7"
 enigo = "0.5"
 uuid = { version = "1", features = ["v4"] }
 chrono = "0.4"
+fastrand = "2"
+gethostname = "1"
 percent-encoding = "2"
 base64 = "0.22"
 sha2 = "0.10"

@@ -2,7 +2,7 @@ import { clsx } from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import Prism from "prismjs";
 import "prismjs/components/prism-markdown";
-import { BUILTIN_ALTERNATION, PLACEHOLDER, isBuiltinVariable } from "../lib/placeholders";
+import { BUILTIN_ALTERNATION, BUILTIN_IDENTIFIERS, PLACEHOLDER, isBuiltinVariable } from "../lib/placeholders";
 
 // `{{name}}` stands out in Markdown notes (at the top level, inside emphasis and in headings),
 // and the names Lunchpad provides get their own colour there and after `vars.` in scripts.
@@ -21,7 +21,7 @@ import { BUILTIN_ALTERNATION, PLACEHOLDER, isBuiltinVariable } from "../lib/plac
     if (title.inside) Object.assign(title.inside, tokens);
   }
   Prism.languages.insertBefore("javascript", "keyword", {
-    "builtin-variable": { pattern: new RegExp(`(\\b(?:vars|globals)\\.)(?:${BUILTIN_ALTERNATION})\\b`), lookbehind: true },
+    "builtin-variable": { pattern: new RegExp(`(\\b(?:vars|globals)\\.)(?:${BUILTIN_IDENTIFIERS})\\b`), lookbehind: true },
   });
 }
 import { useEffect, useMemo, useRef, useState } from "react";

@@ -3,6 +3,8 @@ import { api, events } from "../lib/api";
 
 interface VariablesStore {
   globals: Record<string, string>;
+  /** Provided values that never change while the app runs (app version, machine, folders). */
+  info: Record<string, string>;
   /** Extra names offered by completion while a context provides them (fader editor). */
   hints: string[];
   init: () => Promise<() => void>;
@@ -14,9 +16,14 @@ interface VariablesStore {
 
 export const useVariablesStore = create<VariablesStore>((set) => ({
   globals: {},
+  info: {},
   hints: [],
   init: async () => {
     const unlisten = await events.onVariables((globals) => set({ globals }));
+    api
+      .builtinInfo()
+      .then((info) => set({ info }))
+      .catch(() => {});
     try {
       set({ globals: await api.getVariables() });
     } catch {

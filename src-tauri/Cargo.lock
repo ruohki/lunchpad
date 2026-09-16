@@ -2976,6 +2976,8 @@ dependencies = [
  "chrono",
  "crossbeam-channel",
  "enigo",
+ "fastrand",
+ "gethostname",
  "hex",
  "keyring",
  "midir",
