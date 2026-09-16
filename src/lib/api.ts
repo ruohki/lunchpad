@@ -378,7 +378,7 @@ export type Keystroke =
 
 /** Mirrors `ActionKind` in src-tauri/src/macros/model.rs (serde tag "type"). */
 export type ActionKind =
-  | { type: "delay"; ms: number }
+  | { type: "delay"; ms: number; msFrom: string | null }
   | { type: "switchPage"; pageId: string }
   | { type: "setColor"; color: PadColor; target: ButtonRef | null }
   | { type: "runButton"; target: ButtonRef; trigger: ButtonTrigger }

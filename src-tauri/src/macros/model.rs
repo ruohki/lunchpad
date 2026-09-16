@@ -83,8 +83,12 @@ pub enum ActionKind {
         #[serde(default = "default_true")]
         restore_all_at_end: bool,
     },
+    #[serde(rename_all = "camelCase")]
     Delay {
         ms: u64,
+        /// A variable (or `{{template}}`) holding the milliseconds; `ms` when it is missing or not a number.
+        #[serde(default)]
+        ms_from: Option<String>,
     },
     #[serde(rename_all = "camelCase")]
     SwitchPage {
@@ -649,9 +653,9 @@ mod tests {
 
     #[test]
     fn action_json_shape() {
-        let a = Action { id: "1".into(), wait: false, kind: ActionKind::Delay { ms: 250 } };
+        let a = Action { id: "1".into(), wait: false, kind: ActionKind::Delay { ms: 250, ms_from: None } };
         let json = serde_json::to_string(&a).unwrap();
-        assert_eq!(json, r#"{"id":"1","wait":false,"type":"delay","ms":250}"#);
+        assert_eq!(json, r#"{"id":"1","wait":false,"type":"delay","ms":250,"msFrom":null}"#);
         let back: Action = serde_json::from_str(&json).unwrap();
         assert_eq!(back, a);
     }

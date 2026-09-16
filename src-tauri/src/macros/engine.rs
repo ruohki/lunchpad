@@ -1036,9 +1036,10 @@ fn persist_flip(ctx: &RunContext, start_id: &str, next_is_a: bool) {
 async fn execute(ctx: &RunContext, action: &Action) {
     let inner = &ctx.inner;
     match &action.kind {
-        ActionKind::Delay { ms } => {
+        ActionKind::Delay { ms, ms_from } => {
+            let wait = super::exec::number_from(ctx, ms_from, *ms as f32).max(0.0).round() as u64;
             tokio::select! {
-                _ = tokio::time::sleep(Duration::from_millis(*ms)) => {}
+                _ = tokio::time::sleep(Duration::from_millis(wait)) => {}
                 _ = ctx.token.cancelled() => {}
             }
         }
@@ -1531,7 +1532,7 @@ mod tests {
     #[tokio::test]
     async fn delay_runs_and_finishes() {
         let (engine, profile) = engine();
-        set_button(&profile, 0, 0, vec![a(ActionKind::Delay { ms: 20 })], vec![], false);
+        set_button(&profile, 0, 0, vec![a(ActionKind::Delay { ms: 20, ms_from: None })], vec![], false);
         let rx = engine.start(DEFAULT_PAGE_ID, 0, 0, ActionList::Down, 127, 0, None).unwrap();
         assert_eq!(engine.running().len(), 1);
         wait_done(rx).await;
@@ -1569,7 +1570,7 @@ mod tests {
     #[tokio::test]
     async fn loop_until_stop_this_on_release() {
         let (engine, profile) = engine();
-        set_button(&profile, 1, 1, vec![a(ActionKind::Delay { ms: 5 })], vec![a(ActionKind::StopThisMacro)], true);
+        set_button(&profile, 1, 1, vec![a(ActionKind::Delay { ms: 5, ms_from: None })], vec![a(ActionKind::StopThisMacro)], true);
         let rx = engine.start(DEFAULT_PAGE_ID, 1, 1, ActionList::Down, 127, 0, None).unwrap();
         tokio::time::sleep(Duration::from_millis(40)).await;
         assert_eq!(engine.running().len(), 1, "still looping");
@@ -1582,7 +1583,7 @@ mod tests {
     #[tokio::test]
     async fn restart_keeps_newest_runner() {
         let (engine, profile) = engine();
-        set_button(&profile, 2, 2, vec![a(ActionKind::RestartThisMacro), a(ActionKind::Delay { ms: 60 })], vec![], false);
+        set_button(&profile, 2, 2, vec![a(ActionKind::RestartThisMacro), a(ActionKind::Delay { ms: 60, ms_from: None })], vec![], false);
         let first = engine.start(DEFAULT_PAGE_ID, 2, 2, ActionList::Down, 127, 0, None).unwrap();
         tokio::time::sleep(Duration::from_millis(10)).await;
         let second = engine.start(DEFAULT_PAGE_ID, 2, 2, ActionList::Down, 127, 0, None).unwrap();
@@ -1651,7 +1652,7 @@ mod tests {
     #[tokio::test]
     async fn run_button_waits_for_target_and_refuses_deep_recursion() {
         let (engine, profile) = engine();
-        set_button(&profile, 5, 5, vec![a(ActionKind::Delay { ms: 30 }), a(ActionKind::SetColor { color: PadColor::Palette { index: 7 }, target: None })], vec![], false);
+        set_button(&profile, 5, 5, vec![a(ActionKind::Delay { ms: 30, ms_from: None }), a(ActionKind::SetColor { color: PadColor::Palette { index: 7 }, target: None })], vec![], false);
         set_button(
             &profile,
             6,
@@ -1682,15 +1683,15 @@ mod tests {
     #[tokio::test]
     async fn stop_all_cancels_everything_and_no_wait_runs_concurrently() {
         let (engine, profile) = engine();
-        let mut slow = a(ActionKind::Delay { ms: 40 });
+        let mut slow = a(ActionKind::Delay { ms: 40, ms_from: None });
         slow.wait = false;
-        set_button(&profile, 0, 1, vec![slow, a(ActionKind::Delay { ms: 40 })], vec![], false);
+        set_button(&profile, 0, 1, vec![slow, a(ActionKind::Delay { ms: 40, ms_from: None })], vec![], false);
         let started = Instant::now();
         let rx = engine.start(DEFAULT_PAGE_ID, 0, 1, ActionList::Down, 127, 0, None).unwrap();
         wait_done(rx).await;
         assert!(started.elapsed() < Duration::from_millis(75), "no-wait action overlapped the next one");
 
-        set_button(&profile, 0, 2, vec![a(ActionKind::Delay { ms: 500 })], vec![], false);
+        set_button(&profile, 0, 2, vec![a(ActionKind::Delay { ms: 500, ms_from: None })], vec![], false);
         let rx = engine.start(DEFAULT_PAGE_ID, 0, 2, ActionList::Down, 127, 0, None).unwrap();
         engine.stop_all();
         tokio::time::timeout(Duration::from_millis(100), wait_done(rx)).await.expect("stopped");

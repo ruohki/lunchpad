@@ -1,3 +1,6 @@
+import { clsx } from "clsx";
+import { VariableNameField } from "./VariableNameField";
+import { useVariableSuggestions } from "./VariableFields";
 import { useTranslation } from "react-i18next";
 import type { Action, Button, ButtonRef, ButtonTrigger, Layout, Page } from "../../lib/api";
 import { ColorField } from "../ColorField";
@@ -49,12 +52,7 @@ export function ActionEditor({ action, onChange, pages, layout, button }: Props)
 
   switch (action.type) {
     case "delay":
-      return (
-        <label className="flex items-center gap-2 text-xs text-stage-400">
-          {t("actions.fields.ms")}
-          <NumberInput value={action.ms} min={0} onChange={(ms) => onChange({ ...action, ms })} className="w-28" />
-        </label>
-      );
+      return <DelayEditor action={action} onChange={onChange} button={button} />;
 
     case "switchPage":
       return (
@@ -226,6 +224,27 @@ function TargetPicker({
           </label>
         </>
       )}
+    </div>
+  );
+}
+
+/** Milliseconds to wait, or a variable that holds them. */
+function DelayEditor({ action, onChange, button }: { action: Extract<Action, { type: "delay" }>; onChange: (action: Action) => void; button?: Parameters<typeof useVariableSuggestions>[0] }) {
+  const { t } = useTranslation();
+  const suggestions = useVariableSuggestions(button);
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-end gap-3">
+        <label className={clsx("flex flex-col gap-1 text-xs text-stage-400", action.msFrom && "opacity-50")}>
+          {t("actions.fields.ms")}
+          <NumberInput value={action.ms} min={0} onChange={(ms) => onChange({ ...action, ms })} className="w-28" />
+        </label>
+        <div className="flex w-48 flex-col gap-1 text-xs text-stage-400">
+          {t("actions.fields.msFrom")}
+          <VariableNameField value={action.msFrom ?? ""} onChange={(v) => onChange({ ...action, msFrom: v || null })} suggestions={suggestions} placeholder={t("volume.fromPlaceholder")} />
+        </div>
+      </div>
+      <p className="text-xs text-stage-500">{t("actions.fields.msFromHint")}</p>
     </div>
   );
 }

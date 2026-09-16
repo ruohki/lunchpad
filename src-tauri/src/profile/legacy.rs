@@ -210,7 +210,7 @@ fn import_action(raw: &Value, report: &mut ImportReport) -> Option<Action> {
                 .unwrap_or_default(),
             restore_all_at_end: b(raw, "restoreAllAtEnd", true),
         },
-        "DELAY" => ActionKind::Delay { ms: raw.get("delay").and_then(Value::as_f64).unwrap_or(1000.0).max(0.0) as u64 },
+        "DELAY" => ActionKind::Delay { ms: raw.get("delay").and_then(Value::as_f64).unwrap_or(1000.0).max(0.0) as u64, ms_from: None },
         "SWITCH_PAGE" => ActionKind::SwitchPage { page_id: s(raw, "pageId") },
         "SET_COLOR" => ActionKind::SetColor {
             color: raw.get("color").and_then(import_color).unwrap_or(PadColor::Palette { index: 12 }),
@@ -335,7 +335,7 @@ mod tests {
             }
             other => panic!("{other:?}"),
         }
-        assert_eq!(b.down[1].kind, ActionKind::Delay { ms: 250 });
+        assert_eq!(b.down[1].kind, ActionKind::Delay { ms: 250, ms_from: None });
         match &b.down[2].kind {
             ActionKind::Hotkey { keystrokes, .. } => {
                 assert_eq!(keystrokes[0], Keystroke::Key { event: KeyEvent::Tap, key: "f5".into(), modifiers: vec!["control".into()] });

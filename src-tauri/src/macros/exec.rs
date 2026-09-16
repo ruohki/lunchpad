@@ -316,7 +316,7 @@ fn number_text(value: f64) -> String {
 
 /// A number typed in the editor, unless a variable / placeholder holds one
 /// (faders write `value`, `percent`, …).
-fn number_from(ctx: &RunContext, from: &Option<String>, fallback: f32) -> f32 {
+pub(super) fn number_from(ctx: &RunContext, from: &Option<String>, fallback: f32) -> f32 {
     let Some(raw) = from.as_deref().map(str::trim).filter(|s| !s.is_empty()) else { return fallback };
     let template = if raw.contains("{{") { raw.to_string() } else { format!("{{{{{raw}}}}}") };
     let expanded = ctx.expand(&template);
