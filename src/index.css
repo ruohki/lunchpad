@@ -145,4 +145,32 @@ body {
 .code-field .token.punctuation {
   color: var(--color-stage-300);
 }
+/* Markdown */
+.code-field .token.title {
+  color: var(--color-stage-100);
+  font-weight: 600;
+}
+.code-field .token.bold {
+  font-weight: 600;
+}
+.code-field .token.italic {
+  font-style: italic;
+}
+.code-field .token.strike {
+  text-decoration: line-through;
+}
+.code-field .token.url {
+  color: var(--color-ok);
+}
+.code-field .token.code-block {
+  color: var(--color-stage-100);
+}
+.code-field .token.code-language {
+  color: var(--color-stage-400);
+}
+.code-field .token.blockquote,
+.code-field .token.list,
+.code-field .token.hr {
+  color: var(--color-accent-400);
+}
 

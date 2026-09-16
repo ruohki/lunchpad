@@ -9,7 +9,9 @@ import { buttonsOutside } from "../lib/grid";
 import { useDeviceStore } from "../store/device";
 import { useProfileStore, type PadRef } from "../store/profile";
 import { useUiStore } from "../store/ui";
+import { Markdown } from "../lib/markdown";
 import { PadFace } from "./PadFace";
+import { Tooltip } from "./Tooltip";
 import { IconClose } from "./ui";
 
 /** Pointer distance before a press on a tile becomes a drag. */
@@ -115,8 +117,8 @@ export function OutsidePanel() {
               {outside.length === 0 ? t("outside.none") : t("outside.hint", { count: outside.length, model: layout ? t(`models.${layout.model}`) : "" })}
             </p>
             <ul className="grid grid-cols-3 gap-2">
-              {outside.map((b) => (
-                <li key={`${b.x},${b.y}`} className="flex flex-col items-center gap-1">
+              {outside.map((b) => {
+                const tile = (
                   <div
                     role="button"
                     aria-label={t("outside.position", { column: b.x + 1, row: b.y + 1 })}
@@ -126,9 +128,20 @@ export function OutsidePanel() {
                   >
                     <PadFace button={b} cell={TILE - 8} active={false} limited={layout?.limitedColor ?? false} />
                   </div>
-                  <span className="text-[10px] text-stage-500">{t("outside.position", { column: b.x + 1, row: b.y + 1 })}</span>
-                </li>
-              ))}
+                );
+                return (
+                  <li key={`${b.x},${b.y}`} className="flex flex-col items-center gap-1">
+                    {b.description ? (
+                      <Tooltip content={<Markdown text={b.description} />} size="wide">
+                        {tile}
+                      </Tooltip>
+                    ) : (
+                      tile
+                    )}
+                    <span className="text-[10px] text-stage-500">{t("outside.position", { column: b.x + 1, row: b.y + 1 })}</span>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </motion.aside>

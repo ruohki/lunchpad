@@ -580,6 +580,8 @@ export interface Button {
   /** pressed actions wait until the press is known to be a tap (true) or run at once (false) */
   holdWait: boolean;
   stateLink: StateLink | null;
+  /** Markdown shown as a tooltip over the pad. */
+  description: string;
 }
 
 export interface PlacedButton extends Button {
@@ -654,6 +656,7 @@ export function emptyButton(): Button {
     holdMs: 500,
     holdWait: true,
     stateLink: null,
+    description: "",
     loop: false,
     down: [],
     up: [],

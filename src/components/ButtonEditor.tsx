@@ -10,6 +10,7 @@ import { useProfileStore } from "../store/profile";
 import { ActionsTab } from "./actions/ActionsTab";
 import { ColorField } from "./ColorField";
 import { PadFace } from "./PadFace";
+import { CodeField } from "./CodeField";
 import { RgbField } from "./RgbField";
 import { Select } from "./Select";
 import { Slider } from "./Slider";
@@ -237,6 +238,22 @@ function EditorForm({ pageId, x, y, initial, limited, pages, layout, onCancel, o
                 {!imageLook?.uri && !imageError && <span className="text-xs text-stage-400">{t("editor.imageHint")}</span>}
               </div>
             )}
+          </section>
+
+          <section className="flex flex-col gap-3">
+            <div>
+              <h3 className="text-sm font-medium text-stage-100">{t("editor.description")}</h3>
+              <p className="mt-1 text-xs text-stage-400">{t("editor.descriptionHint")}</p>
+            </div>
+            <CodeField
+              language="markdown"
+              rows={3}
+              value={button.description ?? ""}
+              onChange={(description) => setButton({ ...button, description })}
+              placeholder={t("editor.descriptionPlaceholder")}
+              ariaLabel={t("editor.description")}
+              title={t("editor.description")}
+            />
           </section>
 
           {ledKind === "none" ? (

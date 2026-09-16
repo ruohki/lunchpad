@@ -1,6 +1,7 @@
 import { clsx } from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import Prism from "prismjs";
+import "prismjs/components/prism-markdown";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -22,6 +23,7 @@ interface Props {
   suggestions?: string[];
   /** Shared variable names offered after `globals.`. */
   globals?: string[];
+  language?: "javascript" | "markdown";
 }
 
 const TEXT = "code-field font-mono text-sm leading-relaxed whitespace-pre-wrap break-words px-2.5 py-1.5";
@@ -35,7 +37,7 @@ const TEXT = "code-field font-mono text-sm leading-relaxed whitespace-pre-wrap b
  * caret. A button in the corner opens the same text in a view that fills the
  * window.
  */
-export function CodeField({ value, onChange, rows = 6, placeholder, className, ariaLabel, title, suggestions = [], globals = [] }: Props) {
+export function CodeField({ value, onChange, rows = 6, placeholder, className, ariaLabel, title, suggestions = [], globals = [], language = "javascript" }: Props) {
   const { t } = useTranslation();
   const [maximized, setMaximized] = useState(false);
   const small = useRef<HTMLTextAreaElement>(null);
@@ -61,7 +63,7 @@ export function CodeField({ value, onChange, rows = 6, placeholder, className, a
     return () => window.removeEventListener("keydown", onKey, true);
   }, [maximized]);
 
-  const surface = { value, onChange, placeholder, ariaLabel, suggestions, globals };
+  const surface = { value, onChange, placeholder, ariaLabel, suggestions, globals, language };
 
   return (
     <>
@@ -151,6 +153,7 @@ function Surface({
   textareaRef,
   suggestions,
   globals,
+  language,
 }: {
   value: string;
   onChange: (next: string) => void;
@@ -163,8 +166,9 @@ function Surface({
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   suggestions: string[];
   globals: string[];
+  language: "javascript" | "markdown";
 }) {
-  const html = useMemo(() => Prism.highlight(value, Prism.languages.javascript, "javascript"), [value]);
+  const html = useMemo(() => Prism.highlight(value, Prism.languages[language], language), [value, language]);
   const pad = extraPadding ? "pr-9" : "";
   const copy = useRef<HTMLPreElement>(null);
   const [caret, setCaret] = useState<number | null>(null);

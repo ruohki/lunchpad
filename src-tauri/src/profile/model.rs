@@ -170,6 +170,9 @@ pub struct Button {
     /// Show the active colour while a streaming app is in a given state.
     #[serde(default)]
     pub state_link: Option<StateLink>,
+    /// Markdown shown as a tooltip over the pad.
+    #[serde(default)]
+    pub description: String,
 }
 
 fn default_true() -> bool {
@@ -448,6 +451,7 @@ impl Default for Button {
             hold_ms: default_hold_ms(),
             hold_wait: true,
             state_link: None,
+            description: String::new(),
         }
     }
 }

@@ -20,6 +20,7 @@ import { limitedRgb } from "../lib/colors";
 import { padAt, sameRef, useDragStore } from "../lib/drag";
 import { buttonsOutside, cornerRadius, cornersOf, isControl, isKey, legendSize, noteName, type Corners } from "../lib/grid";
 import { PadLabel } from "./PadLabel";
+import { Markdown } from "../lib/markdown";
 import { Tooltip } from "./Tooltip";
 
 interface Props {
@@ -594,6 +595,7 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
   const missing = useProfileStore((s) => s.missingFiles);
   const hasMissing = !!button && [...button.down, ...button.up, ...button.hold].some((a) => a.type === "playSound" && missing.includes(a.file));
   const [mouseDown, setMouseDown] = useState(false);
+  const dragging = useDragStore((s) => s.drag !== null);
   const reduced = useReducedMotion();
   const lit = pressed || mouseDown || running || linked;
   const control = isControl(pad.shape);
@@ -806,22 +808,9 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
           ? t("grid.key", { name: noteName(pad.note) })
           : t("grid.padLabel", { column: pad.x + 1, row: pad.y + 1 });
 
-  return (
-    <div
-      data-pad={`${pad.x},${pad.y}`}
-      className={clsx(
-        "relative flex h-full w-full justify-center transition-opacity",
-        alignClass,
-        dropTarget === "move" && "ring-2 ring-accent-400",
-        dropTarget === "copy" && "ring-2 ring-ok",
-        dropTarget === "blocked" && "ring-2 ring-danger",
-        dragSource && "opacity-40",
-      )}
-      // Built without undefined entries: React writes an undefined longhand as "", which
-      // resets the padding-top the shorthand just set and squashes a round button.
-      style={{ borderRadius: radius, ...(pad.shape === "round" ? { padding: cell * 0.08 } : {}), ...(hangTop ? { paddingTop: topInset } : {}) }}
-      onContextMenu={(e) => onContextMenu(e, pad, !!button, fader?.id ?? null)}
-    >
+  // A description shows as a tooltip, except while a button is being dragged over the pad.
+  const note = button?.description ? <Markdown text={button.description} /> : null;
+  const face = (
       <motion.button
         type="button"
         aria-label={name}
@@ -902,6 +891,31 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
           )
         )}
       </motion.button>
+  );
+
+  return (
+    <div
+      data-pad={`${pad.x},${pad.y}`}
+      className={clsx(
+        "relative flex h-full w-full justify-center transition-opacity",
+        alignClass,
+        dropTarget === "move" && "ring-2 ring-accent-400",
+        dropTarget === "copy" && "ring-2 ring-ok",
+        dropTarget === "blocked" && "ring-2 ring-danger",
+        dragSource && "opacity-40",
+      )}
+      // Built without undefined entries: React writes an undefined longhand as "", which
+      // resets the padding-top the shorthand just set and squashes a round button.
+      style={{ borderRadius: radius, ...(pad.shape === "round" ? { padding: cell * 0.08 } : {}), ...(hangTop ? { paddingTop: topInset } : {}) }}
+      onContextMenu={(e) => onContextMenu(e, pad, !!button, fader?.id ?? null)}
+    >
+      {note ? (
+        <Tooltip content={dragging ? null : note} size="wide">
+          {face}
+        </Tooltip>
+      ) : (
+        face
+      )}
     </div>
   );
 });
