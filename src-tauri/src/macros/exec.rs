@@ -264,15 +264,7 @@ pub async fn execute_external(ctx: &RunContext, action: &Action) {
         ActionKind::RunScript { code, save_to, save_scope } => {
             let input_locals = ctx.locals.lock().clone();
             let input_globals = ctx.globals_snapshot();
-            let mut builtins: HashMap<&'static str, String> = HashMap::new();
-            builtins.insert("velocity", ctx.velocity.to_string());
-            builtins.insert("velocity01", format!("{:.3}", ctx.velocity as f32 / 127.0));
-            let pressure = ctx.variables().get("pressure").cloned().unwrap_or_else(|| "0".into());
-            builtins.insert("pressure01", format!("{:.3}", pressure.parse::<f32>().unwrap_or(0.0) / 127.0));
-            builtins.insert("pressure", pressure);
-            builtins.insert("x", ctx.x.to_string());
-            builtins.insert("y", ctx.y.to_string());
-            builtins.insert("pageId", ctx.page_id.clone());
+            let builtins = super::builtins::values(&ctx.press());
             let code = code.clone();
             let job = tokio::task::spawn_blocking(move || script::run(ScriptInput { code: &code, locals: &input_locals, globals: &input_globals, builtins: &builtins }));
             match job.await {

@@ -15,6 +15,7 @@
 //! available to every action through [`RunContext`], and a button with `hold`
 //! actions tells a tap (down list on release) from a long press (hold list).
 
+use super::builtins;
 use super::exec::execute_external;
 use super::model::*;
 use super::services::Services;
@@ -596,19 +597,30 @@ impl RunContext {
         &self.inner.services
     }
 
-    /// Placeholder values: built-ins, then locals, then globals.
+    /// Placeholder values: globals, then locals, then the provided variables on top.
     pub fn variables(&self) -> HashMap<String, String> {
         let mut vars: HashMap<String, String> = self.inner.globals.lock().clone();
         vars.extend(self.locals.lock().iter().map(|(k, v)| (k.clone(), v.clone())));
-        vars.insert("velocity".into(), self.velocity.to_string());
-        vars.insert("velocity01".into(), format!("{:.3}", self.velocity as f32 / 127.0));
-        let pressure = self.inner.pressure.lock().get(&(self.x, self.y)).copied().unwrap_or(0);
-        vars.insert("pressure".into(), pressure.to_string());
-        vars.insert("pressure01".into(), format!("{:.3}", pressure as f32 / 127.0));
-        vars.insert("x".into(), self.x.to_string());
-        vars.insert("y".into(), self.y.to_string());
-        vars.insert("pageId".into(), self.page_id.clone());
+        vars.extend(builtins::values(&self.press()).into_iter().map(|(k, v)| (k.to_string(), v)));
         vars
+    }
+
+    /// The press as the provided variables describe it.
+    pub fn press(&self) -> builtins::Press {
+        let pressure = self.inner.pressure.lock().get(&(self.x, self.y)).copied().unwrap_or(0);
+        let (page_name, caption) = {
+            let store = self.inner.profile.lock();
+            let page = store.profile.pages.iter().find(|p| p.id == self.page_id);
+            let caption = page
+                .and_then(|p| p.get(self.x, self.y))
+                .map(|b: &crate::profile::model::Button| match &b.look {
+                    crate::profile::model::Look::Text { caption, .. } => caption.clone(),
+                    _ => String::new(),
+                })
+                .unwrap_or_default();
+            (page.map(|p| p.name.clone()).unwrap_or_default(), caption)
+        };
+        builtins::Press { velocity: self.velocity, pressure, x: self.x, y: self.y, page_id: self.page_id.clone(), page_name, caption }
     }
 
     pub fn globals_snapshot(&self) -> HashMap<String, String> {
@@ -646,6 +658,10 @@ impl RunContext {
         if name.is_empty() {
             return;
         }
+        if builtins::is_builtin(name) {
+            tracing::warn!(name, "a provided variable cannot be changed");
+            return;
+        }
         match scope {
             VarScope::Local => {
                 self.locals.lock().insert(name.to_string(), value);
@@ -658,7 +674,14 @@ impl RunContext {
         }
     }
 
-    pub fn merge_globals(&self, values: HashMap<String, String>) {
+    pub fn merge_globals(&self, mut values: HashMap<String, String>) {
+        values.retain(|name, _| {
+            let ok = !builtins::is_builtin(name);
+            if !ok {
+                tracing::warn!(name, "a provided variable cannot be changed");
+            }
+            ok
+        });
         if values.is_empty() {
             return;
         }

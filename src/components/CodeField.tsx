@@ -2,20 +2,27 @@ import { clsx } from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import Prism from "prismjs";
 import "prismjs/components/prism-markdown";
-import { PLACEHOLDER } from "../lib/placeholders";
+import { BUILTIN_ALTERNATION, PLACEHOLDER, isBuiltinVariable } from "../lib/placeholders";
 
-// `{{name}}` stands out in Markdown notes: at the top level, inside emphasis and in headings.
+// `{{name}}` stands out in Markdown notes (at the top level, inside emphasis and in headings),
+// and the names Lunchpad provides get their own colour there and after `vars.` in scripts.
 {
-  const placeholder = { pattern: new RegExp(PLACEHOLDER.source), alias: "variable" };
-  const md = Prism.languages.insertBefore("markdown", "bold", { placeholder }) as Record<string, unknown>;
+  const tokens = {
+    "builtin-placeholder": { pattern: new RegExp(`\\{\\{(?:${BUILTIN_ALTERNATION})\\}\\}`), alias: ["placeholder", "builtin"] },
+    placeholder: { pattern: new RegExp(PLACEHOLDER.source), alias: "variable" },
+  };
+  const md = Prism.languages.insertBefore("markdown", "bold", tokens) as Record<string, unknown>;
   type Nested = { inside?: Record<string, unknown> & { content?: { inside?: Record<string, unknown> } } };
   for (const token of ["bold", "italic", "strike", "url"]) {
     const inside = (md[token] as Nested | undefined)?.inside?.content?.inside;
-    if (inside) inside.placeholder = placeholder;
+    if (inside) Object.assign(inside, tokens);
   }
   for (const title of (md.title as Nested[] | undefined) ?? []) {
-    if (title.inside) title.inside.placeholder = placeholder;
+    if (title.inside) Object.assign(title.inside, tokens);
   }
+  Prism.languages.insertBefore("javascript", "keyword", {
+    "builtin-variable": { pattern: new RegExp(`(\\b(?:vars|globals)\\.)(?:${BUILTIN_ALTERNATION})\\b`), lookbehind: true },
+  });
 }
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -291,7 +298,11 @@ function Surface({
                 e.preventDefault();
                 insert(name);
               }}
-              className={clsx("cursor-pointer rounded-md px-2.5 py-1.5 font-mono text-sm", i === highlighted ? "bg-stage-700 text-stage-100" : "text-stage-200")}
+              className={clsx(
+                "cursor-pointer rounded-md px-2.5 py-1.5 font-mono text-sm",
+                i === highlighted && "bg-stage-700",
+                isBuiltinVariable(name) ? "text-builtin" : i === highlighted ? "text-stage-100" : "text-stage-200",
+              )}
             >
               {access ? accessExpression(access.object, name) : name}
             </li>

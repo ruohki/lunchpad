@@ -53,7 +53,7 @@ export function SaveToFields({
     <div className="flex flex-wrap items-end gap-3">
       <div className="flex flex-col gap-1 text-xs text-stage-400">
         {label ?? t("vars.saveTo")}
-        <VariableNameField value={name ?? ""} onChange={(v) => onChange(v.trim() ? v : null, scope)} suggestions={suggestions} className="w-44" ariaLabel={label ?? t("vars.saveTo")} />
+        <VariableNameField write value={name ?? ""} onChange={(v) => onChange(v.trim() ? v : null, scope)} suggestions={suggestions} className="w-44" ariaLabel={label ?? t("vars.saveTo")} />
       </div>
       <ScopeSelect value={scope} onChange={(s) => onChange(name, s)} />
     </div>

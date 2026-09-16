@@ -288,14 +288,7 @@ pub async fn test_http_request(request: HttpTest, app: AppHandle, state: State<'
         file_name: request.file_name,
         reuse: request.reuse,
     };
-    let mut vars: HashMap<&str, String> = HashMap::new();
-    vars.insert("velocity", "127".into());
-    vars.insert("velocity01", "1.000".into());
-    vars.insert("pressure", "0".into());
-    vars.insert("pressure01", "0.000".into());
-    vars.insert("x", "0".into());
-    vars.insert("y", "0".into());
-    vars.insert("pageId", "default".into());
+    let mut vars: HashMap<&str, String> = crate::macros::builtins::values(&crate::macros::builtins::Press::sample());
     let secrets: Vec<(String, String)> = state.settings.lock().secrets.users().into_iter().map(|(name, value)| (format!("secret.{name}"), value)).collect();
     for (name, value) in &secrets {
         vars.insert(name.as_str(), value.clone());
@@ -341,14 +334,7 @@ pub struct ScriptTest {
 pub async fn test_script(request: ScriptTest, state: State<'_, AppState>) -> CmdResult<crate::script::ScriptOutcome> {
     let globals = state.engine.globals();
     tauri::async_runtime::spawn_blocking(move || {
-        let mut builtins: HashMap<&'static str, String> = HashMap::new();
-        builtins.insert("velocity", "127".into());
-        builtins.insert("velocity01", "1.000".into());
-        builtins.insert("pressure", "0".into());
-        builtins.insert("pressure01", "0.000".into());
-        builtins.insert("x", "0".into());
-        builtins.insert("y", "0".into());
-        builtins.insert("pageId", "default".into());
+        let builtins = crate::macros::builtins::values(&crate::macros::builtins::Press::sample());
         crate::script::run(crate::script::ScriptInput { code: &request.code, locals: &request.locals, globals: &globals, builtins: &builtins })
     })
     .await

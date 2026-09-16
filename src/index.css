@@ -25,6 +25,8 @@
   --color-ok: #3ddc84;
   --color-warn: #ffc857;
   --color-danger: #ff5c5c;
+  /* Variables Lunchpad provides (velocity, date, time …) */
+  --color-builtin: #8cc4ff;
 }
 
 :root {
@@ -177,5 +179,12 @@ body {
   color: var(--color-accent-300);
   background: color-mix(in oklab, var(--color-accent-500) 15%, transparent);
   border-radius: 2px;
+}
+.code-field .token.placeholder.builtin {
+  color: var(--color-builtin);
+  background: color-mix(in oklab, var(--color-builtin) 15%, transparent);
+}
+.code-field .token.builtin-variable {
+  color: var(--color-builtin);
 }
 

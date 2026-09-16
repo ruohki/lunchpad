@@ -12,7 +12,6 @@ import { isLinkActive } from "../lib/stateLink";
 import { useMacroStore } from "../store/macros";
 import { useMediaStore } from "../store/media";
 import { useProfileStore, type PadRef } from "../store/profile";
-import { useVariablesStore } from "../store/variables";
 import { useUiStore } from "../store/ui";
 import { ContextMenu, type MenuEntry, type MenuState } from "./ContextMenu";
 import { PadFace } from "./PadFace";
@@ -21,8 +20,7 @@ import { limitedRgb } from "../lib/colors";
 import { padAt, sameRef, useDragStore } from "../lib/drag";
 import { buttonsOutside, cornerRadius, cornersOf, isControl, isKey, legendSize, noteName, type Corners } from "../lib/grid";
 import { PadLabel } from "./PadLabel";
-import { Markdown } from "../lib/markdown";
-import { expandPlaceholders } from "../lib/placeholders";
+import { Description } from "./Description";
 import { Tooltip } from "./Tooltip";
 
 interface Props {
@@ -810,10 +808,9 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
           ? t("grid.key", { name: noteName(pad.note) })
           : t("grid.padLabel", { column: pad.x + 1, row: pad.y + 1 });
 
-  // A description shows as a tooltip, its `{{name}}` placeholders filled with the shared
-  // variables' current values, except while a button is being dragged over the pad.
-  const description = useVariablesStore((s) => (button?.description ? expandPlaceholders(button.description, s.globals) : ""));
-  const note = description ? <Markdown text={description} /> : null;
+  // A description shows as a tooltip with its placeholders filled, except while a button is
+  // being dragged over the pad.
+  const note = button?.description ? <Description text={button.description} pageId={activePageId} caption={button.look.type === "text" ? button.look.caption : ""} /> : null;
   const face = (
       <motion.button
         type="button"

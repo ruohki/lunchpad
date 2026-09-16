@@ -34,6 +34,7 @@ tokio = { version = "1", features = ["rt-multi-thread", "time", "sync", "macros"
 tokio-util = "0.7"
 enigo = "0.5"
 uuid = { version = "1", features = ["v4"] }
+chrono = "0.4"
 percent-encoding = "2"
 base64 = "0.22"
 sha2 = "0.10"

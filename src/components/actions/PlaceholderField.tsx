@@ -3,7 +3,7 @@ import { useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../../icons/Icon";
 import { typedRect } from "../../lib/caret";
-import { PLACEHOLDER } from "../../lib/placeholders";
+import { PLACEHOLDER, isBuiltinVariable } from "../../lib/placeholders";
 import { Popover } from "../Popover";
 import { Tooltip } from "../Tooltip";
 
@@ -58,7 +58,7 @@ function highlight(value: string, language: Props["language"]): ReactNode[] {
     if (language === "json") jsonParts(before, out, key);
     else if (before) out.push(before);
     out.push(
-      <span key={key()} className="rounded-sm bg-accent-500/15 text-accent-300">
+      <span key={key()} className={isBuiltinVariable(m[0].slice(2, -2)) ? "rounded-sm bg-builtin/15 text-builtin" : "rounded-sm bg-accent-500/15 text-accent-300"}>
         {m[0]}
       </span>,
     );
@@ -253,7 +253,11 @@ export function PlaceholderField({ value, onChange, suggestions, multiline = fal
                 e.preventDefault();
                 insert(name);
               }}
-              className={clsx("cursor-pointer rounded-md px-2.5 py-1.5 font-mono text-sm", i === highlighted ? "bg-stage-700 text-stage-100" : "text-stage-200")}
+              className={clsx(
+                "cursor-pointer rounded-md px-2.5 py-1.5 font-mono text-sm",
+                i === highlighted && "bg-stage-700",
+                isBuiltinVariable(name) ? "text-builtin" : i === highlighted ? "text-stage-100" : "text-stage-200",
+              )}
             >
               {`{{${name}}}`}
             </li>

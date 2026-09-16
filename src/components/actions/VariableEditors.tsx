@@ -23,7 +23,7 @@ export function SetVariableEditor({ action, onChange, button }: { action: SetVar
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1 text-xs text-stage-400">
           {t("vars.name")}
-          <VariableNameField value={action.name} onChange={(name) => onChange({ ...action, name })} suggestions={suggestions} className="w-44" ariaLabel={t("vars.name")} />
+          <VariableNameField write value={action.name} onChange={(name) => onChange({ ...action, name })} suggestions={suggestions} className="w-44" ariaLabel={t("vars.name")} />
         </div>
         <label className="flex min-w-60 flex-1 flex-col gap-1 text-xs text-stage-400">
           {t("vars.value")}
@@ -45,7 +45,7 @@ export function AddToVariableEditor({ action, onChange, button }: { action: AddA
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1 text-xs text-stage-400">
           {t("vars.name")}
-          <VariableNameField value={action.name} onChange={(name) => onChange({ ...action, name })} suggestions={suggestions} className="w-44" ariaLabel={t("vars.name")} />
+          <VariableNameField write value={action.name} onChange={(name) => onChange({ ...action, name })} suggestions={suggestions} className="w-44" ariaLabel={t("vars.name")} />
         </div>
         <label className="flex w-48 flex-col gap-1 text-xs text-stage-400">
           {t("vars.amount")}
