@@ -1019,7 +1019,64 @@
     "globalsChanged": "Changed shared variables: {{names}}",
     "queued_one": "Would run {{count}} action: {{names}} (a test runs none)",
     "queued_other": "Would run {{count}} actions: {{names}} (a test runs none)",
-    "docs": "Scripting reference"
+    "docs": "Scripting reference",
+    "api": {
+      "pages": {
+        "doc": "Every page, as [{ id, name }]."
+      },
+      "activePage": {
+        "doc": "The page shown right now, { id, name }, or null."
+      },
+      "device": {
+        "doc": "The connected device, { model, port, firmware, virtual }, or null."
+      },
+      "button": {
+        "doc": "The button running this script, { pageId, x, y, caption }."
+      },
+      "switchPage": {
+        "doc": "Shows a page once the script is done.",
+        "params": {
+          "page": "A page id or a page name."
+        }
+      },
+      "runButton": {
+        "doc": "Runs a button's actions once the script is done.",
+        "params": {
+          "x": "Column, 0 at the left.",
+          "y": "Row, 0 at the bottom.",
+          "options": "{ page, trigger }: a page id (default: this button's page) and press, release, tap or hold (default: press)."
+        }
+      },
+      "setFader": {
+        "doc": "Moves a fader once the script is done.",
+        "params": {
+          "name": "The fader's name, variable key or id.",
+          "value": "A number or a {{placeholder}}, clamped to the fader's range.",
+          "runActions": "Whether the fader's actions run; default true."
+        }
+      },
+      "delay": {
+        "doc": "Waits between the queued actions.",
+        "params": {
+          "ms": "Milliseconds."
+        }
+      },
+      "stopAllMacros": {
+        "doc": "Stops every macro, this one included; nothing queued after it runs."
+      },
+      "run": {
+        "doc": "Queues any action, given as its JSON.",
+        "params": {
+          "action": "An action object such as { type: \"playSound\", file: \"…\" }; fields left out take their defaults."
+        }
+      },
+      "log": {
+        "doc": "Writes to the application log and the test output.",
+        "params": {
+          "values": "Anything; objects are written as JSON."
+        }
+      }
+    }
   },
   "branch": {
     "variable": "Variable",

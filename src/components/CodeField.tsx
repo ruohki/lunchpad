@@ -25,7 +25,7 @@ import { BUILTIN_ALTERNATION, BUILTIN_IDENTIFIERS, PLACEHOLDER, isBuiltinVariabl
     "lunchpad-object": { pattern: /\bLunchpad\b/, alias: "builtin-variable" },
   });
 }
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { typedRect } from "../lib/caret";
@@ -181,34 +181,83 @@ interface Choice {
   insert: string;
   caretBack: number;
   builtin: boolean;
+  /** A `Lunchpad` member: its description lives under `script.api.<name>.doc`. */
+  member?: string;
 }
 
+interface Member {
+  name: string;
+  label: string;
+  insert: string;
+  caretBack: number;
+  /** Parameter names of a function; the hints live under `script.api.<name>.params.<param>`. */
+  params?: string[];
+}
+
+const property = (name: string): Member => ({ name, label: name, insert: name, caretBack: 0 });
+const method = (name: string, params: string[], shown = params.join(", ")): Member => ({ name, label: `${name}(${shown})`, insert: `${name}()`, caretBack: params.length ? 1 : 0, params });
+
 /** What the `Lunchpad` script object offers, by the path typed before the dot. */
-const LUNCHPAD_MEMBERS: Record<string, { name: string; label: string; insert: string; caretBack: number }[]> = {
+const LUNCHPAD_MEMBERS: Record<string, Member[]> = {
   Lunchpad: [
-    { name: "pages", label: "pages", insert: "pages", caretBack: 0 },
-    { name: "activePage", label: "activePage", insert: "activePage", caretBack: 0 },
-    { name: "device", label: "device", insert: "device", caretBack: 0 },
-    { name: "button", label: "button", insert: "button", caretBack: 0 },
-    { name: "switchPage", label: "switchPage(page)", insert: "switchPage()", caretBack: 1 },
-    { name: "runButton", label: "runButton(x, y, { page, trigger })", insert: "runButton()", caretBack: 1 },
-    { name: "setFader", label: "setFader(name, value, runActions)", insert: "setFader()", caretBack: 1 },
-    { name: "delay", label: "delay(ms)", insert: "delay()", caretBack: 1 },
-    { name: "stopAllMacros", label: "stopAllMacros()", insert: "stopAllMacros()", caretBack: 0 },
-    { name: "run", label: "run(action)", insert: "run()", caretBack: 1 },
-    { name: "log", label: "log(…values)", insert: "log()", caretBack: 1 },
+    property("pages"),
+    property("activePage"),
+    property("device"),
+    property("button"),
+    method("switchPage", ["page"]),
+    method("runButton", ["x", "y", "options"], "x, y, { page, trigger }"),
+    method("setFader", ["name", "value", "runActions"]),
+    method("delay", ["ms"]),
+    method("stopAllMacros", []),
+    method("run", ["action"]),
+    method("log", ["values"], "…values"),
   ],
-  "Lunchpad.button": ["pageId", "x", "y", "caption"].map((n) => ({ name: n, label: n, insert: n, caretBack: 0 })),
-  "Lunchpad.device": ["model", "port", "firmware", "virtual"].map((n) => ({ name: n, label: n, insert: n, caretBack: 0 })),
-  "Lunchpad.activePage": ["id", "name"].map((n) => ({ name: n, label: n, insert: n, caretBack: 0 })),
+  "Lunchpad.button": ["pageId", "x", "y", "caption"].map(property),
+  "Lunchpad.device": ["model", "port", "firmware", "virtual"].map(property),
+  "Lunchpad.activePage": ["id", "name"].map(property),
 };
+
+/** The `Lunchpad` call the caret is inside, and which argument is being typed. */
+interface CallSite {
+  member: Member;
+  /** Index of `Lunchpad` in the text. */
+  from: number;
+  arg: number;
+}
+
+function callAt(value: string, caret: number | null, language: Language): CallSite | null {
+  if (caret === null || language !== "javascript") return null;
+  const head = value.slice(0, caret);
+  // Brackets still open at the caret, with the commas seen at each level; strings are skipped.
+  const stack: { char: string; at: number; commas: number }[] = [];
+  let quote: string | null = null;
+  for (let i = 0; i < head.length; i++) {
+    const c = head[i];
+    if (quote) {
+      if (c === "\\") i++;
+      else if (c === quote) quote = null;
+      continue;
+    }
+    if (c === '"' || c === "'" || c === "`") quote = c;
+    else if (c === "(" || c === "[" || c === "{") stack.push({ char: c, at: i, commas: 0 });
+    else if (c === ")" || c === "]" || c === "}") stack.pop();
+    else if (c === "," && stack.length) stack[stack.length - 1].commas += 1;
+  }
+  // The nearest open call, even from inside an object or array argument.
+  const call = [...stack].reverse().find((b) => b.char === "(");
+  if (!call) return null;
+  const m = /\bLunchpad\.([A-Za-z_$][\w$]*)$/.exec(head.slice(0, call.at));
+  if (!m) return null;
+  const member = LUNCHPAD_MEMBERS.Lunchpad.find((x) => x.name === m[1] && x.params);
+  return member ? { member, from: call.at - m[0].length, arg: call.commas } : null;
+}
 
 function choicesFor(access: Access, suggestions: string[], globals: string[]): Choice[] {
   const q = access.partial.toLowerCase();
   if (access.object === "lunchpad") {
     return (LUNCHPAD_MEMBERS[access.base ?? "Lunchpad"] ?? [])
       .filter((m) => m.name.toLowerCase().startsWith(q) && m.name !== access.partial)
-      .map((m) => ({ key: m.name, label: `${access.base}.${m.label}`, insert: `${access.base}.${m.insert}`, caretBack: m.caretBack, builtin: true }));
+      .map((m) => ({ key: m.name, label: `${access.base}.${m.label}`, insert: `${access.base}.${m.insert}`, caretBack: m.caretBack, builtin: true, member: access.base === "Lunchpad" ? m.name : undefined }));
   }
   const pool = access.object === "globals" ? globals : suggestions;
   return pool
@@ -249,6 +298,7 @@ function Surface({
   globals: string[];
   language: Language;
 }) {
+  const { t } = useTranslation();
   const html = useMemo(() => Prism.highlight(value, Prism.languages[language], language), [value, language]);
   const pad = extraPadding ? "pr-9" : "";
   const copy = useRef<HTMLPreElement>(null);
@@ -261,6 +311,13 @@ function Surface({
   const open = typing && !!access && matches.length > 0;
   // The list sits under the caret's line; the copy is laid out like the textarea, so it knows where that is.
   const at = () => (access && caret !== null ? typedRect(copy.current, access.from, caret) : null);
+
+  // Inside a `Lunchpad.…(` call the signature shows, with the argument being typed marked, until Escape.
+  const [focused, setFocused] = useState(false);
+  const [dismissedAt, setDismissedAt] = useState<number | null>(null);
+  const call = useMemo(() => callAt(value, caret, language), [value, caret, language]);
+  const hintOpen = focused && !open && !!call && dismissedAt !== caret;
+  const hintAt = () => (call && caret !== null ? typedRect(copy.current, call.from, caret) : null);
 
   const track = (e: React.SyntheticEvent<HTMLTextAreaElement>) => setCaret(e.currentTarget.selectionStart);
 
@@ -304,7 +361,11 @@ function Surface({
         onClick={track}
         onKeyUp={track}
         onSelect={track}
-        onBlur={() => setTyping(false)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => {
+          setTyping(false);
+          setFocused(false);
+        }}
         onKeyDown={(e) => {
           if (!open) return;
           if (e.key === "ArrowDown") {
@@ -331,7 +392,10 @@ function Surface({
         aria-expanded={open}
         className={clsx(TEXT, pad, "absolute inset-0 h-full w-full resize-none overflow-hidden bg-transparent text-transparent caret-stage-100 outline-none placeholder:text-stage-500")}
       />
-      <Popover open={open} anchor={textareaRef} at={at} onClose={() => setTyping(false)} width={access?.object === "lunchpad" ? 360 : 280} className="p-1.5">
+      <Popover open={hintOpen} anchor={textareaRef} at={hintAt} onClose={() => setDismissedAt(caret)} width={380} className="p-2.5">
+        {call && <SignatureHint call={call} />}
+      </Popover>
+      <Popover open={open} anchor={textareaRef} at={at} onClose={() => setTyping(false)} width={access?.object === "lunchpad" ? 420 : 280} className="p-1.5">
         <ul role="listbox" className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
           {matches.map((choice, i) => (
             <li
@@ -350,10 +414,39 @@ function Surface({
               )}
             >
               {choice.label}
+              {choice.member && <span className="block font-sans text-xs text-stage-400">{t(`script.api.${choice.member}.doc`)}</span>}
             </li>
           ))}
         </ul>
       </Popover>
+    </div>
+  );
+}
+
+/** `Lunchpad.name(a, b)` with the argument being typed marked, what the call does, and what that argument is. */
+function SignatureHint({ call }: { call: CallSite }) {
+  const { t } = useTranslation();
+  const { member, arg } = call;
+  const params = member.params ?? [];
+  const active = params.length ? Math.min(arg, params.length - 1) : -1;
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="font-mono text-sm text-stage-100">
+        <span className="text-builtin">Lunchpad</span>.{member.name}(
+        {params.map((name, i) => (
+          <Fragment key={name}>
+            {i > 0 && ", "}
+            <span className={i === active ? "rounded-sm bg-stage-700 px-1 text-accent-300" : "text-stage-300"}>{name === "values" ? "…values" : name}</span>
+          </Fragment>
+        ))}
+        )
+      </div>
+      <p className="text-xs text-stage-400">{t(`script.api.${member.name}.doc`)}</p>
+      {active >= 0 && (
+        <p className="text-xs text-stage-300">
+          <span className="font-mono text-stage-100">{params[active]}</span>: {t(`script.api.${member.name}.params.${params[active]}`)}
+        </p>
+      )}
     </div>
   );
 }
