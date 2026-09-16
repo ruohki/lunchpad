@@ -190,6 +190,9 @@ pub struct Settings {
     /// Names of the user's secrets (`{{secret.<name>}}`); the values are in the credential store.
     #[serde(default)]
     pub secrets: Vec<String>,
+    /// The community hub: its address and who is signed in (the token is in the credential store).
+    #[serde(default)]
+    pub hub: crate::hub::HubSettings,
 }
 
 fn default_version() -> u32 {
@@ -215,6 +218,7 @@ impl Default for Settings {
             window: WindowSettings::default(),
             developer_mode: false,
             secrets: Vec::new(),
+            hub: crate::hub::HubSettings::default(),
         }
     }
 }

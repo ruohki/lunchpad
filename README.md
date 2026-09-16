@@ -45,6 +45,17 @@ OBS Studio needs its built-in WebSocket server (Tools → WebSocket Server Setti
 
 Pads can turn any entity on, off or toggle it, set a brightness, colour temperature, cover position, fan speed, volume, number or target temperature, fixed or from a fader, and call any service with JSON data. The editors complete entity ids and names from your instance. Enter the address and a long-lived access token in Settings → Home Assistant; the token, like the OBS password and the Streamlabs token, is kept in the system's credential store rather than in the settings file.
 
+### Community hub
+
+Buttons, pages and whole configurations can be shared on the community hub (the `lunchpad-extra/hub`
+project). Sign in once under Settings → Community hub: the browser opens on the hub, you sign in
+with Discord, GitHub or Google and confirm, and the app is linked. From then on “Send to Lunchpad”
+on the hub delivers things to the app's inbox, where they go through the same review as an
+imported file before they are placed on a pad or added as a page. Only a token for the app is
+stored (in the credential store); secrets never leave the computer. Pages, single buttons
+(right-click → Export button…) and the whole configuration (Settings → Pages & backup → Export
+everything…) can be exported as files for uploading.
+
 ### Tray and updates
 
 Lunchpad lives in the tray with the same menu as before: show the window, stay on top, minimize to tray, run at startup, stop all running macros. Installed copies check the GitHub releases of this repository and offer new versions inside the app.
