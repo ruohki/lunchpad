@@ -32,16 +32,19 @@ pub enum SecretKey {
     ObsPassword,
     SlobsToken,
     HomeAssistantToken,
+    /// The community hub's token for this app, from the sign-in under Settings → Community hub.
+    HubToken,
 }
 
 impl SecretKey {
-    pub const ALL: [SecretKey; 3] = [SecretKey::ObsPassword, SecretKey::SlobsToken, SecretKey::HomeAssistantToken];
+    pub const ALL: [SecretKey; 4] = [SecretKey::ObsPassword, SecretKey::SlobsToken, SecretKey::HomeAssistantToken, SecretKey::HubToken];
 
     fn name(self) -> &'static str {
         match self {
             SecretKey::ObsPassword => "obs.password",
             SecretKey::SlobsToken => "slobs.token",
             SecretKey::HomeAssistantToken => "home-assistant.token",
+            SecretKey::HubToken => "hub.token",
         }
     }
 }

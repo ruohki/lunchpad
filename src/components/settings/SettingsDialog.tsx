@@ -1,11 +1,13 @@
 import { clsx } from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useUiStore } from "../../store/ui";
 import { IconClose } from "../ui";
 import { AboutTab } from "./AboutTab";
 import { DiagnosticsTab } from "./DiagnosticsTab";
 import { HomeAssistantTab } from "./HomeAssistantTab";
+import { HubTab } from "./HubTab";
 import { InterfaceTab } from "./InterfaceTab";
 import { KeyboardTab } from "./KeyboardTab";
 import { LaunchpadTab } from "./LaunchpadTab";
@@ -16,7 +18,7 @@ import { SlobsTab } from "./SlobsTab";
 import { SoundTab } from "./SoundTab";
 import { VariablesTab } from "./VariablesTab";
 
-export type SettingsTab = "launchpad" | "sound" | "keyboard" | "interface" | "obs" | "slobs" | "homeAssistant" | "pages" | "variables" | "secrets" | "about" | "diagnostics";
+export type SettingsTab = "launchpad" | "sound" | "keyboard" | "interface" | "obs" | "slobs" | "homeAssistant" | "hub" | "pages" | "variables" | "secrets" | "about" | "diagnostics";
 
 interface NavGroup {
   group: string;
@@ -26,7 +28,7 @@ interface NavGroup {
 /** Add an integration here (and a tab component) and it shows up in the navigation. */
 const NAV: NavGroup[] = [
   { group: "general", tabs: ["launchpad", "sound", "keyboard", "interface"] },
-  { group: "integrations", tabs: ["obs", "slobs", "homeAssistant"] },
+  { group: "integrations", tabs: ["hub", "obs", "slobs", "homeAssistant"] },
   { group: "data", tabs: ["pages", "variables", "secrets"] },
   { group: "about", tabs: ["about", "diagnostics"] },
 ];
@@ -39,6 +41,7 @@ const TABS: Record<SettingsTab, () => React.ReactElement> = {
   obs: ObsTab,
   slobs: SlobsTab,
   homeAssistant: HomeAssistantTab,
+  hub: HubTab,
   pages: PagesTab,
   variables: VariablesTab,
   secrets: SecretsTab,
@@ -60,6 +63,12 @@ export function SettingsDialog({ open, onClose }: Props) {
     lastTab = next;
     setTab(next);
   };
+  const takeSettingsTab = useUiStore((s) => s.takeSettingsTab);
+  useEffect(() => {
+    if (!open) return;
+    const wanted = takeSettingsTab();
+    if (wanted) select(wanted);
+  }, [open, takeSettingsTab]);
   const Body = TABS[tab];
 
   return (
@@ -86,7 +95,7 @@ export function SettingsDialog({ open, onClose }: Props) {
             <nav className="flex w-52 shrink-0 flex-col border-r border-stage-800 bg-stage-900/80 p-3" aria-label={t("settings.title")}>
               <div className="px-2 pb-3 pt-1 text-sm font-semibold text-stage-100">{t("settings.title")}</div>
               {NAV.map((g) => (
-                <div key={g.group} className="mb-4 flex flex-col gap-1">
+                <div key={g.group} className="mb-2.5 flex flex-col gap-0.5">
                   <div className="px-2 pb-1 text-[11px] text-stage-500">{t(`settings.groups.${g.group}`)}</div>
                   {g.tabs.map((id) => (
                     <button
@@ -96,7 +105,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                       aria-selected={tab === id}
                       onClick={() => select(id)}
                       className={clsx(
-                        "relative flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm transition-colors",
+                        "relative flex w-full items-center rounded-md px-2 py-1 text-left text-sm transition-colors",
                         tab === id ? "text-stage-100" : "text-stage-400 hover:bg-stage-800 hover:text-stage-200",
                       )}
                     >
