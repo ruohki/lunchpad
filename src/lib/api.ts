@@ -245,6 +245,109 @@ export interface TrayLabels {
   quit: string;
 }
 
+export interface HubUser {
+  id: string;
+  handle: string;
+  name: string;
+  image: string | null;
+}
+
+/** What the settings keep about the community hub; the token is in the credential store. */
+export interface HubSettings {
+  url: string;
+  user: HubUser | null;
+}
+
+export type HubStatus = "signedOut" | "linking" | "connecting" | "connected" | "offline";
+
+/** A button, page or configuration sent to this app from the hub, waiting in the inbox. */
+export interface HubDelivery {
+  id: string;
+  kind: "button" | "page" | "profile";
+  title: string;
+  listingId: string;
+  listingUrl: string;
+  versionNumber: number;
+  author: { handle: string; name: string } | null;
+  risk: "safe" | "caution" | "danger";
+  /** The export format of the content; newer than this app's is refused at the review. */
+  formatVersion: number | null;
+  /** The Lunchpad that wrote it, when its export said so. */
+  appVersion: string | null;
+  content: unknown;
+  receivedAt: number;
+  fetched: boolean;
+}
+
+export interface HubState {
+  url: string;
+  status: HubStatus;
+  user: HubUser | null;
+  link: { verifyUrl: string; expiresAt: number } | null;
+  error: string | null;
+  inbox: HubDelivery[];
+  shared: HubSharedItem[];
+}
+
+/** What to share on the hub from the app. */
+export type HubShareTarget = { kind: "button"; pageId: string; x: number; y: number } | { kind: "page"; pageId: string };
+
+export interface HubShareRequest {
+  target: HubShareTarget;
+  title: string;
+  summary: string;
+  description: string;
+  tags: string[];
+  visibility: "public" | "unlisted";
+  /** The hub's model id of the connected Launchpad, when known */
+  model: string | null;
+}
+
+export interface HubShareResult {
+  id: string;
+  url: string;
+  shareUrl: string;
+  status: "published" | "pending" | "rejected" | "hidden";
+  statusReason: string | null;
+  title: string;
+  versionNumber: number;
+}
+
+/** Something shared from this app, remembered so it can be updated from the same place. */
+export interface HubSharedItem {
+  listingId: string;
+  kind: "button" | "page";
+  title: string;
+  url: string;
+  shareUrl: string;
+  pageId: string;
+  x: number | null;
+  y: number | null;
+  status: "published" | "pending" | "rejected" | "hidden" | "";
+  sharedAt: number;
+}
+
+export interface HubUpdateRequest {
+  listingId: string;
+  target: HubShareTarget;
+  changelog: string;
+}
+
+/** A private configuration backup on the hub (without its content). */
+export interface HubBackup {
+  id: string;
+  name: string;
+  appVersion: string | null;
+  formatVersion: number;
+  model: string | null;
+  stats: { pages: number; buttons: number; faders: number; actions: number };
+  bytes: number;
+  createdAt: number;
+}
+
+/** Where a delivery goes when it is imported. */
+export type HubApplyTarget = { kind: "button"; pageId: string; x: number; y: number } | { kind: "page" } | { kind: "profile"; mode: ImportMode };
+
 export interface Settings {
   version: number;
   device: SavedDevice | null;
@@ -259,6 +362,7 @@ export interface Settings {
   developerMode: boolean;
   /** Names of the user's secrets, used as `{{secret.<name>}}`; the values stay in the credential store. */
   secrets: string[];
+  hub: HubSettings;
 }
 
 /** A knob, a touch strip that stays put, or one that springs back to the middle. */
@@ -790,6 +894,10 @@ export const api = {
     invoke<ImportReport>("import_legacy_file", { path, mode }),
   exportPage: (pageId: string) => invoke<string>("export_page", { pageId }),
   exportPageFile: (pageId: string, path: string) => invoke<void>("export_page_file", { pageId, path }),
+  /** The whole profile as a file, for sharing a configuration on the hub. */
+  exportProfileFile: (path: string) => invoke<void>("export_profile_file", { path }),
+  /** One button as a file, for sharing it on the hub. */
+  exportButtonFile: (pageId: string, x: number, y: number, path: string) => invoke<void>("export_button_file", { pageId, x, y, path }),
   /** Look over a page or legacy file before importing it; nothing is applied. */
   reviewImportFile: (path: string) => invoke<ImportReview>("review_import_file", { path }),
   reviewImportJson: (json: string) => invoke<ImportReview>("review_import_json", { json }),
@@ -854,6 +962,32 @@ export const api = {
   /** Open the download folder in the file manager. */
   openDownloadFolder: () => invoke<void>("open_download_folder"),
 
+  hubState: () => invoke<HubState>("hub_state"),
+  /** Open the browser on the hub's sign-in; the app picks the result up by itself. */
+  hubLinkStart: () => invoke<HubState>("hub_link_start"),
+  hubLinkCancel: () => invoke<HubState>("hub_link_cancel"),
+  hubSignOut: () => invoke<HubState>("hub_sign_out"),
+  hubSetUrl: (url: string) => invoke<HubState>("hub_set_url", { url }),
+  /** Put a listing (by share link or id) into the inbox. */
+  hubFetchListing: (reference: string) => invoke<HubState>("hub_fetch_listing", { reference }),
+  hubDismissDelivery: (id: string) => invoke<HubState>("hub_dismiss_delivery", { id }),
+  /** Look over a delivery like a file import; nothing is applied. */
+  hubReviewDelivery: (id: string, target: HubApplyTarget | null) => invoke<ImportReview>("hub_review_delivery", { id, target }),
+  hubApplyDelivery: (id: string, target: HubApplyTarget) => invoke<ImportReport>("hub_apply_delivery", { id, target }),
+  /** Publish a button or a page on the hub as the signed-in user. */
+  hubShare: (request: HubShareRequest) => invoke<HubShareResult>("hub_share", { request }),
+  /** A new version of something shared from this app, taken from where it is now. */
+  hubUpdateListing: (request: HubUpdateRequest) => invoke<HubShareResult>("hub_update_listing", { request }),
+  /** Statuses and titles from the hub; things deleted there are forgotten. */
+  hubSyncShared: () => invoke<HubState>("hub_sync_shared"),
+  hubForgetShared: (listingId: string) => invoke<HubState>("hub_forget_shared", { listingId }),
+  /** Store the whole profile on the hub as a private backup. */
+  hubBackupNow: (name: string, model: string | null) => invoke<HubBackup>("hub_backup_now", { name, model }),
+  hubListBackups: () => invoke<HubBackup[]>("hub_list_backups"),
+  hubDeleteBackup: (id: string) => invoke<HubBackup[]>("hub_delete_backup", { id }),
+  /** Put a backup into the inbox; restoring goes through the review like an import. */
+  hubRestoreBackup: (id: string) => invoke<HubState>("hub_restore_backup", { id }),
+
   getRunningMacros: () => invoke<RunningMacro[]>("get_running_macros"),
   stopAllMacros: () => invoke<void>("stop_all_macros"),
   stopMacrosAt: (pageId: string, x: number, y: number) => invoke<void>("stop_macros_at", { pageId, x, y }),
@@ -890,6 +1024,7 @@ export const events = {
   onHistory: (cb: (state: HistoryState) => void): Promise<UnlistenFn> => listen<HistoryState>("history:changed", (e) => cb(e.payload)),
   onVariables: (cb: (globals: Record<string, string>) => void): Promise<UnlistenFn> =>
     listen<Record<string, string>>("vars:changed", (e) => cb(e.payload)),
+  onHubState: (cb: (state: HubState) => void): Promise<UnlistenFn> => listen<HubState>("hub:state", (e) => cb(e.payload)),
 };
 
 export const padKey = (x: number, y: number) => `${x},${y}`;

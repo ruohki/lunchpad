@@ -7,6 +7,7 @@ import { useUpdateStore } from "../store/update";
 import { Button, IconClose } from "./ui";
 import { useState } from "react";
 import { useUiStore } from "../store/ui";
+import { useHubStore } from "../store/hub";
 import { buttonsOutside } from "../lib/grid";
 
 /** Bottom-right stack for errors and import results. */
@@ -39,7 +40,21 @@ export function Notices() {
   const dismissUpdate = useUpdateStore((s) => s.dismiss);
   const installUpdate = useUpdateStore((s) => s.install);
 
+  const arrival = useHubStore((s) => s.arrival);
+  const dismissArrival = useHubStore((s) => s.dismissArrival);
+  const openInbox = useHubStore((s) => s.openInbox);
+
   const items: { key: string; tone: "error" | "info"; title: string; lines: string[]; onClose: () => void; action?: { label: string; run: () => void } }[] = [];
+  if (arrival) {
+    items.push({
+      key: `hub-${arrival.id}`,
+      tone: "info",
+      title: t("hub.arrivedTitle"),
+      lines: [t("hub.arrivedLine", { title: arrival.title, by: arrival.author ? t("hub.by", { name: arrival.author.name }) : "" }).replace(/\s{2,}/g, " ")],
+      onClose: dismissArrival,
+      action: { label: t("hub.openInbox"), run: openInbox },
+    });
+  }
   if (inputProblem) {
     items.push({
       key: "input",

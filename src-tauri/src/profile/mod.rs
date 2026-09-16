@@ -1,5 +1,6 @@
 //! Pages and buttons ("the profile"): what each pad shows and does.
 
+pub mod images;
 pub mod legacy;
 pub mod model;
 pub mod review;

@@ -10,6 +10,8 @@ import { Button } from "../ui";
 import { Section } from "./SettingsDialog";
 import { buttonsOutside } from "../../lib/grid";
 import { useDeviceStore } from "../../store/device";
+import { useHubStore } from "../../store/hub";
+import { useUiStore } from "../../store/ui";
 import { ImportReviewDialog } from "./ImportReviewDialog";
 
 const inputCls = "w-full rounded-md bg-stage-800 px-2.5 py-1.5 text-sm text-stage-100 outline-none focus:ring-1 focus:ring-accent-400";
@@ -32,6 +34,22 @@ export function PagesTab() {
   const layout = useDeviceStore((s) => s.layout);
   const pages = profile?.pages ?? [];
 
+  const hubSignedIn = useHubStore((s) => s.state?.status === "connected" || s.state?.status === "connecting" || s.state?.status === "offline");
+  const shared = useHubStore((s) => s.state?.shared);
+  const openShare = useUiStore((s) => s.openShare);
+  const openUpdate = useUiStore((s) => s.openUpdate);
+  const openSettingsTab = useUiStore((s) => s.openSettings);
+  const closeSettings = useUiStore((s) => s.closeSettings);
+  const sharePage = (page: Page) => {
+    if (!hubSignedIn) {
+      openSettingsTab("hub");
+      return;
+    }
+    closeSettings();
+    const item = (shared ?? []).find((i) => i.kind === "page" && i.pageId === page.id);
+    if (item) openUpdate(item, { kind: "page", pageId: page.id });
+    else openShare({ kind: "page", pageId: page.id });
+  };
   const [pending, setPending] = useState<{ review: ImportReview; run: () => Promise<unknown> } | null>(null);
   // A file made elsewhere is looked over first; anything worth checking is shown before it lands.
   const reviewThen = async (path: string, run: () => Promise<unknown>) => {
@@ -46,6 +64,10 @@ export function PagesTab() {
   const pickAndImportPage = async () => {
     const path = await open({ multiple: false, directory: false, filters: [{ name: t("settings.filePage"), extensions: ["json"] }] });
     if (typeof path === "string") await reviewThen(path, () => importPageFile(path));
+  };
+  const exportAll = async () => {
+    const path = await save({ defaultPath: "lunchpad-configuration.json", filters: [{ name: t("settings.fileProfile"), extensions: ["json"] }] });
+    if (path) await api.exportProfileFile(path).catch((e) => useProfileStore.setState({ error: String(e) }));
   };
   const exportPage = async (page: Page) => {
     const path = await save({ defaultPath: `${page.name}.lunchpad-page.json`, filters: [{ name: t("settings.filePage"), extensions: ["json"] }] });
@@ -79,6 +101,12 @@ export function PagesTab() {
           <Button size="sm" onClick={() => void pickAndImportPage()}>
             {t("settings.importPage")}
           </Button>
+          <Button size="sm" onClick={() => void exportAll()}>
+            {t("settings.exportAll")}
+          </Button>
+          <Button size="sm" onClick={() => openSettingsTab("hub")}>
+            {t("settings.backupToHub")}
+          </Button>
         </div>
         <Reorder.Group axis="y" values={pages} onReorder={reorder} className="flex flex-col gap-1.5">
           {pages.map((page, index) => (
@@ -96,6 +124,8 @@ export function PagesTab() {
               onDuplicate={() => void duplicatePage(page.id)}
               onMove={(to) => void movePage(page.id, to)}
               onExport={() => void exportPage(page)}
+              onShare={() => sharePage(page)}
+              sharedBefore={(shared ?? []).some((i) => i.kind === "page" && i.pageId === page.id)}
               onRemove={() => void removePage(page.id)}
             />
           ))}
@@ -147,6 +177,8 @@ function PageRow({
   onDuplicate,
   onMove,
   onExport,
+  onShare,
+  sharedBefore,
   onRemove,
 }: {
   page: Page;
@@ -161,6 +193,8 @@ function PageRow({
   onDuplicate: () => void;
   onMove: (to: number) => void;
   onExport: () => void;
+  onShare: () => void;
+  sharedBefore: boolean;
   onRemove: () => void;
 }) {
   const { t } = useTranslation();
@@ -241,6 +275,11 @@ function PageRow({
         <Tooltip content={t("pages.export")}>
           <button type="button" aria-label={t("pages.export")} onClick={onExport} className={iconBtn}>
             <Icon name="PageOpen" />
+          </button>
+        </Tooltip>
+        <Tooltip content={sharedBefore ? t("pages.update") : t("pages.share")}>
+          <button type="button" aria-label={sharedBefore ? t("pages.update") : t("pages.share")} onClick={onShare} className={iconBtn + (sharedBefore ? " text-accent-400" : "")}>
+            <Icon name="Globe" />
           </button>
         </Tooltip>
         <Tooltip content={page.id === DEFAULT_PAGE_ID ? t("pages.removeDefault") : t("pages.remove")}>

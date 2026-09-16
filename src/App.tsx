@@ -22,6 +22,9 @@ import { api } from "./lib/api";
 import i18n from "./i18n";
 import { useVariablesStore } from "./store/variables";
 import { FaderEditor } from "./components/FaderEditor";
+import { HubInbox } from "./components/HubInbox";
+import { ShareDialog } from "./components/ShareDialog";
+import { useHubStore } from "./store/hub";
 
 export default function App() {
   const initDevice = useDeviceStore((s) => s.init);
@@ -30,6 +33,7 @@ export default function App() {
   const initSettings = useSettingsStore((s) => s.init);
   const initMedia = useMediaStore((s) => s.init);
   const initVariables = useVariablesStore((s) => s.init);
+  const initHub = useHubStore((s) => s.init);
   const ready = useDeviceStore((s) => s.ready);
   const status = useDeviceStore((s) => s.status);
   const layout = useDeviceStore((s) => s.layout);
@@ -45,12 +49,14 @@ export default function App() {
     let disposeSettings: (() => void) | undefined;
     let disposeMedia: (() => void) | undefined;
     let disposeVariables: (() => void) | undefined;
+    let disposeHub: (() => void) | undefined;
     void initDevice().then((fn) => (disposeDevice = fn));
     void initProfile().then((fn) => (disposeProfile = fn));
     void initMacros().then((fn) => (disposeMacros = fn));
     void initSettings().then((fn) => (disposeSettings = fn));
     void initMedia().then((fn) => (disposeMedia = fn));
     void initVariables().then((fn) => (disposeVariables = fn));
+    void initHub().then((fn) => (disposeHub = fn));
     void api.setTrayLabels({
       discord: i18n.t("tray.discord"),
       show: i18n.t("tray.show"),
@@ -70,8 +76,9 @@ export default function App() {
       disposeSettings?.();
       disposeMedia?.();
       disposeVariables?.();
+      disposeHub?.();
     };
-  }, [initDevice, initProfile, initMacros, initSettings, initMedia, initVariables]);
+  }, [initDevice, initProfile, initMacros, initSettings, initMedia, initVariables, initHub]);
 
   const undo = useProfileStore((s) => s.undo);
   const redo = useProfileStore((s) => s.redo);
@@ -144,6 +151,8 @@ export default function App() {
           <ButtonEditor />
           <FaderEditor />
           <OutsidePanel />
+          <HubInbox />
+          <ShareDialog />
           <Notices />
         </main>
       </div>

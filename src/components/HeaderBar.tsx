@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import logo from "../assets/lunchpad-icon.png";
 import { useDeviceStore } from "../store/device";
+import { useHubStore } from "../store/hub";
 import { useSettingsStore } from "../store/settings";
 
 /**
@@ -14,6 +15,8 @@ export function HeaderBar({ children }: { children?: React.ReactNode }) {
   const status = useDeviceStore((s) => s.status);
   const device = useDeviceStore((s) => s.device);
   const developerMode = useSettingsStore((s) => s.settings?.developerMode ?? false);
+  const inboxCount = useHubStore((s) => s.state?.inbox.length ?? 0);
+  const openInbox = useHubStore((s) => s.openInbox);
 
   const statusText =
     status === "connected" && device
@@ -34,6 +37,12 @@ export function HeaderBar({ children }: { children?: React.ReactNode }) {
       <div className="flex min-w-0 flex-1 items-end overflow-hidden">{children}</div>
 
       <div className="ml-4 flex items-center gap-3">
+        {inboxCount > 0 && (
+          <button type="button" onClick={openInbox} className="flex items-center gap-1.5 rounded-md bg-accent-500/15 px-2 py-1 text-xs font-medium text-accent-300 hover:bg-accent-500/25">
+            <span className="h-1.5 w-1.5 rounded-full bg-accent-400" />
+            {t("hub.inboxCount", { count: inboxCount })}
+          </button>
+        )}
         {developerMode && (
           <div className="flex items-center gap-2 text-xs text-stage-400">
             <StatusDot status={status} />

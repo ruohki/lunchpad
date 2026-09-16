@@ -165,7 +165,8 @@
       "diagnostics": "Diagnostics",
       "homeAssistant": "Home Assistant",
       "variables": "Variables",
-      "secrets": "Secrets"
+      "secrets": "Secrets",
+      "hub": "Community hub"
     },
     "deviceTitle": "Connected device",
     "deviceModel": "Model",
@@ -233,7 +234,11 @@
     "secretsEmpty": "No secrets yet.",
     "secretsReplace": "Replace",
     "secretsSave": "Save",
-    "secretsRemove": "Remove {{name}}"
+    "secretsRemove": "Remove {{name}}",
+    "exportAll": "Export everything…",
+    "fileProfile": "Lunchpad configuration",
+    "fileButton": "Lunchpad button",
+    "backupToHub": "Back up to the hub…"
   },
   "pages": {
     "label": "Pages",
@@ -250,7 +255,9 @@
     "removeDefault": "The first page cannot be removed",
     "all": "All pages ({{count}})",
     "dragHandle": "Drag to reorder, or into another list",
-    "outside": "{{count}} outside the grid"
+    "outside": "{{count}} outside the grid",
+    "share": "Share on the hub…",
+    "update": "Update on the hub…"
   },
   "grid": {
     "editButton": "Edit button…",
@@ -271,7 +278,10 @@
     "key": "{{name}} key",
     "strip": "{{name}} strip",
     "noInput": "{{name}} (keyboard function, not usable here)",
-    "assignFader": "Assign a fader…"
+    "assignFader": "Assign a fader…",
+    "exportButton": "Export button…",
+    "share": "Share on the hub…",
+    "update": "Update on the hub…"
   },
   "editor": {
     "titleEdit": "Edit button",
@@ -1203,5 +1213,133 @@
       "onChange": "When the level changes",
       "onRelease": "When let go"
     }
+  },
+  "hub": {
+    "intro": "Share buttons, pages and whole configurations with other Lunchpad users, and send things from the hub straight into this app. Everything that arrives is shown to you before it is imported.",
+    "signIn": "Sign in to the hub",
+    "signInHint": "Opens the hub in your browser, where you sign in with Discord, GitHub or Google and confirm once. The hub gets a token for this app, nothing else: your secrets never leave this computer.",
+    "approveHint": "Sign in on the page that opened and confirm. This screen updates on its own.",
+    "openHub": "Open the hub",
+    "openLink": "Open the browser again",
+    "cancel": "Cancel",
+    "signedInAs": "Signed in as",
+    "signOut": "Sign out",
+    "connected": "Listening",
+    "offline": "Hub not reachable",
+    "inbox": "Hub inbox",
+    "inboxHint": "Things sent to this app from the hub. Review them here; nothing runs until you import it.",
+    "inboxEmpty": "Nothing waiting. Click “Send to Lunchpad” on the hub and it appears here.",
+    "inboxCount_one": "{{count}} waiting",
+    "inboxCount_other": "{{count}} waiting",
+    "openInbox": "Open the inbox",
+    "fetch": "Fetch",
+    "fetchLabel": "Or paste a hub link",
+    "fetchHint": "A share link (…/s/abcd1234) or a listing address. It lands in the inbox like something sent from the site.",
+    "url": "Hub address",
+    "urlHint": "Developer mode: another hub, for example one running on this machine. Sign out before changing it.",
+    "kinds": {
+      "button": "Button",
+      "page": "Page",
+      "profile": "Configuration"
+    },
+    "by": "by {{name}}",
+    "version": "version {{number}}",
+    "import": "Review and import…",
+    "dismiss": "Dismiss",
+    "viewOnHub": "View on the hub",
+    "risk": {
+      "safe": "Nothing to note",
+      "caution": "Worth checking",
+      "danger": "Needs a close look"
+    },
+    "target": {
+      "title": "Where should it go? The review comes next.",
+      "page": "Page",
+      "padHint": "Click a free pad. A pad that already has a button is replaced; pads of a fader are not available.",
+      "occupied": "This pad has a button; it will be replaced.",
+      "continue": "Continue to the review",
+      "back": "Back",
+      "pageHint": "The page is added next to your pages. It keeps its name and can be renamed afterwards.",
+      "profileAppend": "Add its pages to mine",
+      "profileReplace": "Replace all my pages",
+      "profileReplaceHint": "Your current pages are replaced. The previous profile can be brought back under Pages & backup → Restore."
+    },
+    "arrivedTitle": "From the hub",
+    "arrivedLine": "“{{title}}” {{by}} is waiting in the inbox.",
+    "errors": {
+      "noLayout": "Connect a Launchpad (or the virtual one) to choose a pad."
+    },
+    "waiting": "Waiting for you to finish in the browser…",
+    "madeWith": "needs Lunchpad {{version}} or newer",
+    "madeWithNewer": "needs Lunchpad {{version}} or newer; update the app to import it",
+    "share": {
+      "titleButton": "Share this button on the hub",
+      "titlePage": "Share this page on the hub",
+      "intro": "Everyone can find and install it. The hub scans what it does and refuses anything with a written-out token or password; use {{secret.name}} placeholders for those.",
+      "name": "Title",
+      "summary": "One line about it",
+      "summaryHint": "What it is for, in a sentence. Shown on the card.",
+      "description": "Description (Markdown, optional)",
+      "descriptionHint": "What it needs: OBS running, a secret named so-and-so, a sound file at a path.",
+      "tags": "Tags",
+      "tagsHint": "Up to 8. Enter, comma or space adds one.",
+      "visibility": "Visibility",
+      "public": "Public",
+      "publicHint": "Listed on the hub, found by search.",
+      "unlisted": "Unlisted",
+      "unlistedHint": "Only people with the link.",
+      "submit": "Share",
+      "sharing": "Sharing…",
+      "donePublished": "Shared. It is live on the hub.",
+      "donePending": "Uploaded. A moderator looks at it before it is listed; only you can see it until then.",
+      "doneRejected": "Uploaded, but not listed: {{reason}}",
+      "open": "Open on the hub",
+      "copyLink": "Copy link",
+      "copied": "Copied",
+      "signInFirst": "Sign in to the hub first (Settings → Community hub).",
+      "titleUpdateButton": "Update this button on the hub",
+      "titleUpdatePage": "Update this page on the hub",
+      "updateIntro": "Publishes what is on the pad right now as a new version of “{{title}}”. People who send it to Lunchpad get the newest version.",
+      "changelog": "What changed",
+      "changelogHint": "Shown with the version on the hub.",
+      "submitUpdate": "Publish update",
+      "doneUpdated": "Version {{number}} is live on the hub.",
+      "doneUpdatePending": "Version {{number}} uploaded. A moderator looks at it before it replaces the current one."
+    },
+    "backups": {
+      "title": "Configuration backups",
+      "hint": "Private copies of your whole configuration on the hub: every page with its buttons and faders, nothing else. Only you can see them; the newest 20 are kept. Restoring goes through the same review as an import.",
+      "now": "Back up now",
+      "name": "Name (optional)",
+      "namePlaceholder": "Before the big reshuffle",
+      "empty": "No backups yet.",
+      "restore": "Restore…",
+      "delete": "Delete",
+      "made": "Backed up as “{{name}}”.",
+      "summary": "{{pages}} · {{buttons}} · {{size}}",
+      "reload": "Reload"
+    },
+    "shared": {
+      "title": "Shared from this app",
+      "hint": "Buttons and pages you shared, and where they live in your pages. Update publishes the current state as a new version.",
+      "empty": "Nothing shared yet. Right-click a pad, or use the share icon next to a page under Pages & backup.",
+      "update": "Update…",
+      "open": "Open",
+      "forget": "Forget",
+      "sync": "Check the hub",
+      "where": {
+        "button": "column {{column}}, row {{row}} on “{{page}}”",
+        "page": "page “{{page}}”",
+        "gone": "no longer in your pages"
+      },
+      "status": {
+        "published": "Live",
+        "pending": "Waiting for review",
+        "rejected": "Rejected",
+        "hidden": "Hidden",
+        "": "Shared"
+      }
+    },
+    "connecting": "Connecting…"
   }
 }

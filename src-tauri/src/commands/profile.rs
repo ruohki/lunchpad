@@ -12,6 +12,68 @@ use tauri::{AppHandle, Emitter, State};
 
 pub const EVENT_PROFILE: &str = "profile:changed";
 
+/// Mark an export with the format it is in and the app that wrote it, so an older
+/// Lunchpad (or the hub) can refuse a file it does not understand instead of
+/// silently dropping what it does not know.
+pub(crate) fn with_export_meta(mut value: serde_json::Value) -> serde_json::Value {
+    if let serde_json::Value::Object(map) = &mut value {
+        map.insert("lunchpad".into(), serde_json::json!({ "format": PROFILE_VERSION, "app": env!("CARGO_PKG_VERSION") }));
+    }
+    value
+}
+
+/// Refuse content this app cannot be trusted to read: a newer format, or an
+/// export from a newer Lunchpad (which may carry actions and fields this one
+/// has never heard of). The exporting version is the minimum; older exports
+/// and files without a marker (older versions, legacy configurations) pass.
+pub(crate) fn check_export_format(value: &serde_json::Value) -> Result<(), String> {
+    let marker = value.get("lunchpad");
+    let app = marker.and_then(|m| m.get("app")).and_then(|a| a.as_str());
+    let format = marker
+        .and_then(|m| m.get("format"))
+        .and_then(|f| f.as_u64())
+        .or_else(|| value.get("version").and_then(|v| v.as_u64()).filter(|_| value.get("pages").map(|p| p.is_array()).unwrap_or(false)));
+    if let Some(format) = format {
+        if format > PROFILE_VERSION as u64 {
+            let made = app.map(|a| format!("Lunchpad {a}")).unwrap_or_else(|| "a newer Lunchpad".into());
+            return Err(format!("This was made with {made} (format {format}), newer than this app reads (format {PROFILE_VERSION}). Update Lunchpad to import it."));
+        }
+    }
+    if let Some(required) = app {
+        if let (Ok(required_v), Ok(own)) = (semver::Version::parse(required.trim_start_matches('v')), semver::Version::parse(env!("CARGO_PKG_VERSION"))) {
+            if required_v > own {
+                return Err(format!("This needs Lunchpad {required} or newer; this is {}. Update Lunchpad to import it.", env!("CARGO_PKG_VERSION")));
+            }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod version_tests {
+    use super::check_export_format;
+
+    #[test]
+    fn newer_exports_are_refused_and_older_ones_pass() {
+        let own = env!("CARGO_PKG_VERSION");
+        assert!(check_export_format(&serde_json::json!({ "id": "p", "lunchpad": { "format": 1, "app": own } })).is_ok());
+        assert!(check_export_format(&serde_json::json!({ "id": "p", "lunchpad": { "format": 1, "app": "0.9.0" } })).is_ok());
+        assert!(check_export_format(&serde_json::json!({ "id": "p" })).is_ok(), "no marker, no requirement");
+        let newer = check_export_format(&serde_json::json!({ "id": "p", "lunchpad": { "format": 1, "app": "99.0.0" } }));
+        assert!(newer.unwrap_err().contains("needs Lunchpad 99.0.0"));
+        let format = check_export_format(&serde_json::json!({ "id": "p", "lunchpad": { "format": 99, "app": "1.0.0" } }));
+        assert!(format.unwrap_err().contains("format 99"));
+        // A legacy configuration has no marker and a profile carries its format as `version`.
+        assert!(check_export_format(&serde_json::json!({ "version": 1, "activePage": "p", "pages": [] })).is_ok());
+    }
+}
+
+fn parse_checked(json: &str) -> Result<serde_json::Value, String> {
+    let value: serde_json::Value = serde_json::from_str(json).map_err(|e| format!("not valid JSON: {e}"))?;
+    check_export_format(&value)?;
+    Ok(value)
+}
+
 /// Run `f` on the profile, then persist, broadcast and repaint.
 const UNDO_DEPTH: usize = 30;
 pub const EVENT_HISTORY: &str = "history:changed";
@@ -34,7 +96,7 @@ fn emit_history(app: &AppHandle, state: &AppState) {
 
 /// Apply an edit from the UI. With `record`, the profile before the edit goes
 /// on the undo stack and the redo stack is dropped (page switches are not recorded).
-fn mutate<T>(app: &AppHandle, state: &AppState, record: bool, f: impl FnOnce(&mut Profile) -> Result<T, ProfileError>) -> CmdResult<T> {
+pub(crate) fn mutate<T>(app: &AppHandle, state: &AppState, record: bool, f: impl FnOnce(&mut Profile) -> Result<T, ProfileError>) -> CmdResult<T> {
     let before = if record { Some(state.profile.lock().profile.clone()) } else { None };
     let (result, profile) = crate::profile::mutate(&state.profile, f).map_err(err)?;
     if let Some(before) = before {
@@ -296,7 +358,7 @@ pub enum ImportMode {
     Replace,
 }
 
-fn apply_import(p: &mut Profile, mut pages: Vec<Page>, mode: ImportMode) {
+pub(crate) fn apply_import(p: &mut Profile, mut pages: Vec<Page>, mode: ImportMode) {
     match mode {
         ImportMode::Replace => {
             p.pages = pages;
@@ -334,12 +396,17 @@ pub async fn import_legacy_file(path: String, mode: ImportMode, app: AppHandle, 
     import_legacy_json(json, mode, app, state).await
 }
 
-/// Export one page as JSON (new format).
+/// Export one page as JSON (new format), marked with the format and app version,
+/// with the pictures of its buttons embedded so the file stands on its own.
 #[tauri::command]
 pub async fn export_page(page_id: String, state: State<'_, AppState>) -> CmdResult<String> {
-    let store = state.profile.lock();
-    let page = store.profile.page(&page_id).ok_or_else(|| format!("page {page_id} not found"))?;
-    serde_json::to_string_pretty(page).map_err(err)
+    let mut value = {
+        let store = state.profile.lock();
+        let page = store.profile.page(&page_id).ok_or_else(|| format!("page {page_id} not found"))?;
+        serde_json::to_value(page).map_err(err)?
+    };
+    crate::profile::images::embed_looks(&mut value)?;
+    serde_json::to_string_pretty(&with_export_meta(value)).map_err(err)
 }
 
 /// What an import would bring: how much, and what to check before running any of it.
@@ -356,8 +423,12 @@ pub struct ImportReview {
 
 /// The pages a file holds, whichever format it is in (nothing is applied).
 fn pages_in(json: &str) -> Result<Vec<Page>, String> {
-    if let Ok(page) = serde_json::from_str::<Page>(json) {
+    let value = parse_checked(json)?;
+    if let Ok(page) = serde_json::from_value::<Page>(value.clone()) {
         return Ok(vec![page]);
+    }
+    if let Ok(profile) = serde_json::from_value::<Profile>(value) {
+        return Ok(profile.pages);
     }
     import_legacy(json).map(|(pages, _)| pages)
 }
@@ -381,10 +452,21 @@ pub async fn review_import_file(path: String) -> CmdResult<ImportReview> {
     review_import_json(json).await
 }
 
-/// Import a page exported by this app (new format) or by the legacy app.
+/// Import a page exported by this app (new format), a whole configuration, or a legacy file.
 #[tauri::command]
 pub async fn import_page_json(json: String, app: AppHandle, state: State<'_, AppState>) -> CmdResult<ImportReport> {
-    if let Ok(mut page) = serde_json::from_str::<Page>(&json) {
+    let value = parse_checked(&json)?;
+    if let Ok(profile) = serde_json::from_value::<Profile>(value.clone()) {
+        let pages = profile.pages;
+        let buttons = pages.iter().map(|p| p.buttons.len()).sum();
+        let actions = pages.iter().flat_map(|p| p.buttons.iter().map(|b| b.button.down.len() + b.button.up.len() + b.button.hold.len())).sum();
+        let count = pages.len();
+        return mutate(&app, &state, true, |p| {
+            apply_import(p, pages, ImportMode::Append);
+            Ok(ImportReport { pages: count, buttons, actions, warnings: vec![] })
+        });
+    }
+    if let Ok(mut page) = serde_json::from_value::<Page>(value) {
         if page.buttons.iter().all(|b| b.button.look != Look::Text { caption: "".into(), size: 0, face: "".into(), color: "".into() }) {
             let buttons = page.buttons.len();
             let actions = page.buttons.iter().map(|b| b.button.down.len() + b.button.up.len()).sum();
@@ -396,6 +478,30 @@ pub async fn import_page_json(json: String, app: AppHandle, state: State<'_, App
         }
     }
     import_legacy_json(json, ImportMode::Append, app, state).await
+}
+
+/// Write the whole profile (every page) to a file chosen by the user, for sharing on the hub.
+#[tauri::command]
+pub async fn export_profile_file(path: String, state: State<'_, AppState>) -> CmdResult<()> {
+    let json = {
+        let store = state.profile.lock();
+        serde_json::to_string_pretty(&with_export_meta(serde_json::to_value(&store.profile).map_err(err)?)).map_err(err)?
+    };
+    std::fs::write(&path, json).map_err(|e| format!("could not write {path}: {e}"))
+}
+
+/// Write one button to a file chosen by the user, for sharing on the hub.
+#[tauri::command]
+pub async fn export_button_file(page_id: String, x: u8, y: u8, path: String, state: State<'_, AppState>) -> CmdResult<()> {
+    let mut value = {
+        let store = state.profile.lock();
+        let page = store.profile.page(&page_id).ok_or_else(|| format!("page {page_id} not found"))?;
+        let button = page.get(x, y).ok_or_else(|| "there is no button on that pad".to_string())?;
+        serde_json::to_value(button).map_err(err)?
+    };
+    crate::profile::images::embed_looks(&mut value)?;
+    let json = serde_json::to_string_pretty(&with_export_meta(value)).map_err(err)?;
+    std::fs::write(&path, json).map_err(|e| format!("could not write {path}: {e}"))
 }
 
 /// Write a page export to a file chosen by the user.

@@ -11,8 +11,10 @@ import { useDeviceStore } from "../store/device";
 import { isLinkActive } from "../lib/stateLink";
 import { useMacroStore } from "../store/macros";
 import { useMediaStore } from "../store/media";
+import { useHubStore } from "../store/hub";
 import { useProfileStore, type PadRef } from "../store/profile";
 import { useUiStore } from "../store/ui";
+import { save } from "@tauri-apps/plugin-dialog";
 import { ContextMenu, type MenuEntry, type MenuState } from "./ContextMenu";
 import { PadFace } from "./PadFace";
 import { IconGear } from "./ui";
@@ -68,6 +70,54 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
   const cutButton = useProfileStore((s) => s.cutButton);
   const pasteButton = useProfileStore((s) => s.pasteButton);
   const clearButton = useProfileStore((s) => s.clearButton);
+  const hubSignedIn = useHubStore((s) => s.state?.status === "connected" || s.state?.status === "connecting" || s.state?.status === "offline");
+  const shared = useHubStore((s) => s.state?.shared);
+  const openShare = useUiStore((s) => s.openShare);
+  const openUpdate = useUiStore((s) => s.openUpdate);
+  const openSettingsTab = useUiStore((s) => s.openSettings);
+  const sharedAt = useCallback(
+    (x: number, y: number) => {
+      const activePage = useProfileStore.getState().activePage();
+      return activePage ? (shared ?? []).find((i) => i.kind === "button" && i.pageId === activePage.id && i.x === x && i.y === y) ?? null : null;
+    },
+    [shared],
+  );
+  const updateButton = useCallback(
+    (x: number, y: number) => {
+      const item = sharedAt(x, y);
+      if (!item) return;
+      if (!hubSignedIn) {
+        openSettingsTab("hub");
+        return;
+      }
+      openUpdate(item, { kind: "button", pageId: item.pageId, x, y });
+    },
+    [sharedAt, hubSignedIn, openUpdate, openSettingsTab],
+  );
+  const shareButton = useCallback(
+    (x: number, y: number) => {
+      const activePage = useProfileStore.getState().activePage();
+      if (!activePage) return;
+      if (!hubSignedIn) {
+        openSettingsTab("hub");
+        return;
+      }
+      openShare({ kind: "button", pageId: activePage.id, x, y });
+    },
+    [hubSignedIn, openShare, openSettingsTab],
+  );
+  const exportButton = useCallback(
+    async (x: number, y: number) => {
+      const current = useProfileStore.getState();
+      const activePage = current.activePage();
+      const placed = activePage?.buttons.find((b) => b.x === x && b.y === y);
+      if (!activePage || !placed) return;
+      const caption = placed.look.type === "text" ? placed.look.caption.trim() : "";
+      const path = await save({ defaultPath: `${caption || "button"}.lunchpad-button.json`, filters: [{ name: t("settings.fileButton"), extensions: ["json"] }] });
+      if (path) await api.exportButtonFile(activePage.id, x, y, path).catch((e) => useProfileStore.setState({ error: String(e) }));
+    },
+    [t],
+  );
   const moveButton = useProfileStore((s) => s.moveButton);
   const moveFader = useProfileStore((s) => s.moveFader);
   const page = useProfileStore((s) => s.activePage());
@@ -231,6 +281,9 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
           { label: t("grid.copy"), disabled: !hasButton, onSelect: () => copyButton(pad.x, pad.y) },
           { label: t("grid.cut"), disabled: !hasButton, onSelect: () => void cutButton(pad.x, pad.y) },
           { label: t("grid.paste"), disabled: !clipboard, onSelect: () => void pasteButton(pad.x, pad.y) },
+          { label: t("grid.exportButton"), disabled: !hasButton, onSelect: () => void exportButton(pad.x, pad.y) },
+          { label: t("grid.share"), disabled: !hasButton, onSelect: () => shareButton(pad.x, pad.y) },
+          ...(hasButton && sharedAt(pad.x, pad.y) ? [{ label: t("grid.update"), onSelect: () => updateButton(pad.x, pad.y) }] : []),
           "divider",
           { label: t("grid.newFader"), onSelect: () => openFaderEditor(pad.x, pad.y) },
           "divider",
@@ -239,7 +292,7 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
         ],
       });
     },
-    [t, clipboard, openEditor, openFaderEditor, removeFader, copyButton, cutButton, pasteButton, clearButton, undo, redo, history, running, stopAll, outsideCount, openOutside],
+    [t, clipboard, openEditor, openFaderEditor, removeFader, copyButton, cutButton, pasteButton, exportButton, shareButton, sharedAt, updateButton, clearButton, undo, redo, history, running, stopAll, outsideCount, openOutside],
   );
 
   const dragButton = drag && !drag.fader ? (page?.buttons.find((b) => b.x === drag.from.x && b.y === drag.from.y) ?? null) : null;
