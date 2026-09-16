@@ -166,6 +166,13 @@ pub fn run() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        // The window comes back where and how it was left: size, position and whether it was
+        // maximized. Visibility is not part of it; "start hidden" decides that.
+        .plugin(
+            tauri_plugin_window_state::Builder::new()
+                .with_state_flags(tauri_plugin_window_state::StateFlags::SIZE | tauri_plugin_window_state::StateFlags::POSITION | tauri_plugin_window_state::StateFlags::MAXIMIZED)
+                .build(),
+        )
         .on_window_event(|window, event| {
             // "Minimize to tray": closing hides the window; the tray brings it back.
             if let WindowEvent::CloseRequested { api, .. } = event {
