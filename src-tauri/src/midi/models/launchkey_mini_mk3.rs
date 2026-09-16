@@ -12,7 +12,7 @@
 //! (solid), 2 (flashing) or 3 (pulsing). The scene buttons ">" and "Stop Solo
 //! Mute" are CC 104 / 105 on channel 1 with the same LED scheme. Play and
 //! Record are CC 115 / 117 on channel 16 with a white LED set by a brightness
-//! on channel 16. Shift is CC 108 on channel 16 and has no LED. The eight
+//! on channel 16. Shift, like Octave, Transpose, Arp and Fixed Chord, acts on the keyboard only. The eight
 //! knobs send CC 21..28 on channel 16 (0..127) and become control events.
 //! Transpose, Octave, Arp and Fixed Chord are keyboard functions that report
 //! nothing in DAW mode.
@@ -61,7 +61,6 @@ const BLACK_Y: u8 = 1;
 const WHITE_Y: u8 = 0;
 const CC_SCENE_UP: u8 = 104;
 const CC_SCENE_DOWN: u8 = 105;
-const CC_SHIFT: u8 = 108;
 const CC_PLAY: u8 = 115;
 const CC_RECORD: u8 = 117;
 const CC_KNOB_FIRST: u8 = 21;
@@ -147,7 +146,7 @@ impl LaunchpadDriver for LaunchkeyMiniMk3 {
                     // The side buttons are pad-wide and half a pad tall, black with a printed legend.
                     // Shift sits level with the knobs; Transpose hangs from the top of the upper pad
                     // row; Octave + and − share the lower pad row's height.
-                    (BUTTON_X, KNOB_Y) => spec(self, x, y, HalfPad, Left, Some("Shift")).with_led(LedKind::None),
+                    (BUTTON_X, KNOB_Y) => spec(self, x, y, HalfPad, Left, Some("Shift")).with_led(LedKind::None).without_input(),
                     (BUTTON_X, PAD_TOP_Y) => spec(self, x, y, HalfPad, Left, Some("Transpose")).with_led(LedKind::None).without_input().at_top(),
                     (BUTTON_X, PAD_BOTTOM_Y) => spec(self, x, y, HalfPad, Left, Some("+")).with_led(LedKind::None).without_input().at_top(),
                     (BUTTON_X, 2) => spec(self, x, y, HalfPad, Left, Some("−")).with_led(LedKind::None).without_input().at_bottom(),
@@ -255,7 +254,6 @@ impl LaunchpadDriver for LaunchkeyMiniMk3 {
             (SCENE_X, PAD_BOTTOM_Y) => Some((CC_SCENE_DOWN, true)),
             (ARP_X, TRANSPORT_Y) => Some((CC_PLAY, true)),
             (CHORD_X, TRANSPORT_Y) => Some((CC_RECORD, true)),
-            (BUTTON_X, KNOB_Y) => Some((CC_SHIFT, true)),
             (x, WHITE_Y) if x < WHITE_KEYS => Some((white_note(x), false)),
             (x, BLACK_Y) => black_note(x).map(|n| (n, false)),
             _ => None,
@@ -269,7 +267,6 @@ impl LaunchpadDriver for LaunchkeyMiniMk3 {
                 CC_SCENE_DOWN => Some((SCENE_X, PAD_BOTTOM_Y)),
                 CC_PLAY => Some((ARP_X, TRANSPORT_Y)),
                 CC_RECORD => Some((CHORD_X, TRANSPORT_Y)),
-                CC_SHIFT => Some((BUTTON_X, KNOB_Y)),
                 CC_KNOB_FIRST..=CC_KNOB_LAST => Some((PAD_X0 + (note - CC_KNOB_FIRST), KNOB_Y)),
                 _ => None,
             }
@@ -304,7 +301,7 @@ impl LaunchpadDriver for LaunchkeyMiniMk3 {
                 let (x, y) = self.note_to_xy(number, false)?;
                 Some(ButtonEvent { x, y, pressed: status == 0x90 && value >= threshold, note: number, cc: false, value })
             }
-            (0xB0, 0, CC_SCENE_UP | CC_SCENE_DOWN) | (0xB0, 15, CC_PLAY | CC_RECORD | CC_SHIFT) => {
+            (0xB0, 0, CC_SCENE_UP | CC_SCENE_DOWN) | (0xB0, 15, CC_PLAY | CC_RECORD) => {
                 let (x, y) = self.note_to_xy(number, true)?;
                 Some(ButtonEvent { x, y, pressed: value > 0, note: number, cc: true, value })
             }
@@ -374,7 +371,7 @@ mod tests {
         assert_eq!(d.note_to_xy(112, false), Some((3, 3)));
         assert_eq!(d.xy_to_note(11, 5), Some((104, true)));
         assert_eq!(d.note_to_xy(117, true), Some((13, 2)));
-        assert_eq!(d.xy_to_note(2, 6), Some((108, true)));
+        assert_eq!(d.xy_to_note(2, 6), None, "Shift acts on the keyboard only");
         assert_eq!(d.xy_to_note(2, 5), None, "Transpose has no DAW message");
         assert_eq!(d.xy_to_note(14, 5), None, "the right margin is empty");
         // Presses: pads on channel 1, buttons on their channels, knobs never.
