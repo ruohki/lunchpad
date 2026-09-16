@@ -529,6 +529,10 @@ export interface ScriptOutcome {
   locals: Record<string, string>;
   globals: Record<string, string>;
   elapsedMs: number;
+  /** Actions queued through `Lunchpad.*`; a test run lists them and runs none. */
+  actions: { type?: string }[];
+  /** Lines written with `Lunchpad.log`. */
+  logs: string[];
 }
 
 export type ActionType = ActionKind["type"];

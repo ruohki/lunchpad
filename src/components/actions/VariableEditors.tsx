@@ -1,3 +1,4 @@
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api, COMPARE_OPS, type Action, type Button as ButtonModel, type CompareOp, type ScriptOutcome } from "../../lib/api";
@@ -85,6 +86,8 @@ export function BranchEditor({ action, onChange, button }: { action: IfAction; o
   );
 }
 
+const SCRIPT_DOCS_URL = "https://docs.lunchp.ad/actions/system/run-script/";
+
 export function ScriptEditor({ action, onChange, button }: { action: ScriptAction; onChange: (next: Action) => void; button: ButtonModel }) {
   const { t } = useTranslation();
   const [outcome, setOutcome] = useState<ScriptOutcome | { error: string } | null>(null);
@@ -111,7 +114,12 @@ export function ScriptEditor({ action, onChange, button }: { action: ScriptActio
         suggestions={suggestions}
         globals={globalNames}
       />
-      <p className="text-xs text-stage-500">{t("script.hint")}</p>
+      <p className="text-xs text-stage-500">
+        {t("script.hint")}{" "}
+        <button type="button" onClick={() => void openUrl(SCRIPT_DOCS_URL)} className="text-accent-400 hover:underline">
+          {t("script.docs")}
+        </button>
+      </p>
       <div className="flex flex-wrap items-end gap-3">
         <SaveToFields name={action.saveTo} scope={action.saveScope} onChange={(saveTo, saveScope) => onChange({ ...action, saveTo, saveScope })} label={t("script.saveTo")} button={button} />
         <Button size="sm" onClick={() => void test()} disabled={!action.code.trim()}>
@@ -128,6 +136,10 @@ export function ScriptEditor({ action, onChange, button }: { action: ScriptActio
               <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-all text-stage-300">{outcome.result || "—"}</pre>
               {Object.keys(outcome.globals).length > 0 && (
                 <div className="mt-1 text-stage-500">{t("script.globalsChanged", { names: Object.keys(outcome.globals).join(", ") })}</div>
+              )}
+              {(outcome.logs ?? []).length > 0 && <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap break-all text-stage-400">{outcome.logs.join("\n")}</pre>}
+              {(outcome.actions ?? []).length > 0 && (
+                <div className="mt-1 text-builtin">{t("script.queued", { count: outcome.actions.length, names: outcome.actions.map((a) => a.type ?? "?").join(", ") })}</div>
               )}
             </>
           )}

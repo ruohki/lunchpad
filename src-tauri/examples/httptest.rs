@@ -38,6 +38,6 @@ async fn main() {
     let mut builtins = HashMap::new();
     builtins.insert("velocity", "99".to_string());
     let script = "const w = JSON.parse(vars.weather); globals.lastTemp = w.temp; return w.temp > 20 ? 'warm (' + velocity + ')' : 'cold'";
-    let result = run(ScriptInput { code: script, locals: &locals, globals: &globals, builtins: &builtins }).expect("script");
+    let result = run(ScriptInput { code: script, locals: &locals, globals: &globals, builtins: &builtins, lunchpad: serde_json::Value::Null }).expect("script");
     println!("script result: {:?}, globals: {:?}", result.result, result.globals);
 }

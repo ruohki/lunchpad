@@ -85,6 +85,21 @@ pub fn info(env: &Env) -> HashMap<&'static str, String> {
     ])
 }
 
+/// What the `Lunchpad` object describes to a script: the pages, the active
+/// one, the device and the pressed button.
+pub fn script_info(profile: &crate::profile::Profile, press: &Press, env: &Env) -> serde_json::Value {
+    let page = |p: &crate::profile::Page| serde_json::json!({ "id": p.id, "name": p.name });
+    let pages: Vec<serde_json::Value> = profile.pages.iter().map(page).collect();
+    let active = profile.pages.iter().find(|p| p.id == profile.active_page).map(page);
+    let device = env.device.as_ref().map(|d| serde_json::json!({ "model": d.model_name, "port": d.input_name, "firmware": d.firmware, "virtual": d.is_virtual }));
+    serde_json::json!({
+        "pages": pages,
+        "activePage": active,
+        "device": device,
+        "button": { "pageId": press.page_id, "x": press.x, "y": press.y, "caption": press.caption },
+    })
+}
+
 /// The provided variables for a press, the clock and the surroundings read now.
 pub fn values(press: &Press, env: &Env) -> HashMap<&'static str, String> {
     let now = Local::now();

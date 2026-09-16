@@ -692,6 +692,27 @@ impl RunContext {
         env_of(&self.inner)
     }
 
+    /// What the `Lunchpad` object describes to a script.
+    pub fn script_info(&self) -> serde_json::Value {
+        let store = self.inner.profile.lock();
+        builtins::script_info(&store.profile, &self.press(), &self.env())
+    }
+
+    /// A page id as given, or the id of the page with that name; unknown names stay as they are.
+    pub fn page_id_for(&self, id_or_name: &str) -> String {
+        let store = self.inner.profile.lock();
+        let pages = &store.profile.pages;
+        if pages.iter().any(|p| p.id == id_or_name) {
+            return id_or_name.to_string();
+        }
+        pages
+            .iter()
+            .find(|p| p.name == id_or_name)
+            .or_else(|| pages.iter().find(|p| p.name.eq_ignore_ascii_case(id_or_name)))
+            .map(|p| p.id.clone())
+            .unwrap_or_else(|| id_or_name.to_string())
+    }
+
     pub fn globals_snapshot(&self) -> HashMap<String, String> {
         self.inner.globals.lock().clone()
     }
@@ -1033,7 +1054,7 @@ fn persist_flip(ctx: &RunContext, start_id: &str, next_is_a: bool) {
     });
 }
 
-async fn execute(ctx: &RunContext, action: &Action) {
+pub(super) async fn execute(ctx: &RunContext, action: &Action) {
     let inner = &ctx.inner;
     match &action.kind {
         ActionKind::Delay { ms, ms_from } => {
