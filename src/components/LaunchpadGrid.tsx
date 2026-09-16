@@ -820,13 +820,21 @@ const Pad = memo(function Pad({ pad, cell, order, preview, limited, controlNumbe
    * fills the rows it spans; the Pro MK3's small ones take half a cell; the rest fill their cell.
    */
   // A square function button around the grid is the size of a pad: it fills its cell like one.
-  const sizeClass = pad.shape === "small" ? "h-1/2 w-1/2" : pad.shape === "rect" || pad.shape === "smallRect" ? "shrink-0" : pad.shape === "tallRect" ? "h-full shrink-0" : "h-full w-full";
+  const sizeClass = pad.shape === "small" ? "h-1/2 w-1/2" : pad.shape === "rect" || pad.shape === "smallRect" || pad.shape === "halfPad" ? "shrink-0" : pad.shape === "tallRect" ? "h-full shrink-0" : "h-full w-full";
   // Rounded buttons: a block of three rows over two pad rows (the middle one spanning the
   // two middle half-rows, the outer ones against the band's edges) fills its box with the
   // same gap between the buttons across and down. The buttons beside the encoders are
   // narrower, as on the Launchkey's panel.
   const sizeStyle =
-    pad.shape === "rect" ? { width: cell * 0.9, height: cell * 0.57 } : pad.shape === "smallRect" ? { width: cell * 0.54, height: cell * 0.46 } : pad.shape === "tallRect" ? { width: cell * 0.54 } : undefined;
+    pad.shape === "rect"
+      ? { width: cell * 0.9, height: cell * 0.57 }
+      : pad.shape === "smallRect"
+        ? { width: cell * 0.54, height: cell * 0.46 }
+        : pad.shape === "halfPad"
+          ? { width: cell * 0.9, height: cell * 0.42 }
+          : pad.shape === "tallRect"
+            ? { width: cell * 0.54 }
+            : undefined;
   /** Where a small button sits in its cell: against an edge when the layout says so. */
   const edge = pad.edge ?? "free";
   const alignClass = hangTop || edge === "top" ? "items-start" : edge === "bottom" ? "items-end" : "items-center";

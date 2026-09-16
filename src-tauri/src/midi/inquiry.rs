@@ -106,6 +106,11 @@ mod tests {
 
     #[test]
     fn real_launchkey_mini_mk4_reply() {
+        // Captured from a Launchkey Mini MK3 on 2026-09-16.
+        let mini3 = [0xF0, 0x7E, 0x00, 0x06, 0x02, 0x00, 0x20, 0x29, 0x02, 0x01, 0x00, 0x00, 0x00, 0x04, 0x01, 0x07, 0xF7];
+        let reply = parse_inquiry_reply(&mini3).expect("mini mk3 reply");
+        assert_eq!(reply.model(), Some(LaunchpadModel::LaunchkeyMiniMk3));
+        assert_eq!(reply.firmware, "0.4.1.7");
         // Captured from a Launchkey Mini MK4 25 on 2026-09-14 (MIDI interface; the DAW one answers member 00 01).
         let msg = [0xF0, 0x7E, 0x00, 0x06, 0x02, 0x00, 0x20, 0x29, 0x41, 0x01, 0x00, 0x00, 0x01, 0x01, 0x09, 0x5C, 0xF7];
         let reply = parse_inquiry_reply(&msg).expect("novation reply");

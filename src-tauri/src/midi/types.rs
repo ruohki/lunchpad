@@ -69,6 +69,8 @@ impl LaunchpadModel {
             (0x03, 0x01) => Some(LaunchpadModel::LaunchpadX),
             (0x13, 0x01) => Some(LaunchpadModel::LaunchpadMiniMk3),
             (0x23, 0x01) => Some(LaunchpadModel::LaunchpadProMk3),
+            // Captured from a Launchkey Mini MK3 on 2026-09-16 (both its MIDI and DAW ports answer).
+            (0x02, 0x01) => Some(LaunchpadModel::LaunchkeyMiniMk3),
             (0x41, 0x01) => Some(LaunchpadModel::LaunchkeyMiniMk4),
             // Launchpad S and Launchpad Mini (MK1/MK2)
             (0x20, _) | (0x36, _) => Some(LaunchpadModel::LaunchpadLegacy),
@@ -187,6 +189,8 @@ pub enum PadShape {
     /// Smaller rounded rectangular button (the function buttons beside the
     /// Launchkey's encoders: Arp, Scale, the mode arrows)
     SmallRect,
+    /// A button as wide as a pad and half as tall (Launchkey Mini MK3 side buttons).
+    HalfPad,
     /// White piano key, no LED (Launchkey)
     KeyWhite,
     /// Black piano key, no LED; placed at the `x` of the white key to its left (Launchkey)
