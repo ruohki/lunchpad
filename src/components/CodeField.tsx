@@ -30,6 +30,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { typedRect } from "../lib/caret";
 import { Popover } from "./Popover";
+import { Icon } from "../icons/Icon";
 import { Button } from "./ui";
 
 interface Props {
@@ -99,7 +100,7 @@ export function CodeField({ value, onChange, rows = 6, placeholder, className, a
           onClick={() => setMaximized(true)}
           className="absolute right-1 top-1 rounded-md px-1.5 py-0.5 text-sm leading-none text-stage-500 hover:bg-stage-700 hover:text-stage-200 focus-visible:outline-2 focus-visible:outline-accent-400"
         >
-          ⤢
+          <Icon name="Maximize2" />
         </button>
       </div>
 

@@ -378,7 +378,7 @@ function ActionRow({
             onPointerDown={(e) => controls.start(e)}
             className="cursor-grab touch-none select-none rounded px-1 py-1 text-stage-500 hover:bg-stage-700 hover:text-stage-200 active:cursor-grabbing"
           >
-            ⋮⋮
+            <Icon name="GripVertical" />
           </button>
         </Tooltip>
 
@@ -390,9 +390,7 @@ function ActionRow({
         >
           <div className="flex items-center gap-2">
             {hasBody && (
-              <span aria-hidden className={clsx("w-3 shrink-0 text-center text-[10px] leading-none text-stage-500 transition-transform", expanded && "rotate-90")}>
-                ▶
-              </span>
+              <Icon name="ChevronRight" className={clsx("w-3 shrink-0 text-xs text-stage-500 transition-transform", expanded && "rotate-90")} />
             )}
             <Icon name={ACTION_ICONS[action.type]} className="shrink-0 text-base text-stage-400" />
             <span className="flex min-w-0 items-baseline gap-2">
@@ -420,9 +418,9 @@ function ActionRow({
             type="button"
             aria-label={t("actions.remove")}
             onClick={onRemove}
-            className="rounded-md px-1.5 py-1 text-[10px] leading-none text-stage-400 hover:bg-danger/15 hover:text-danger"
+            className="rounded-md px-1.5 py-1 text-xs leading-none text-stage-400 hover:bg-danger/15 hover:text-danger"
           >
-            ✕
+            <Icon name="X" />
           </button>
         </Tooltip>
       </div>

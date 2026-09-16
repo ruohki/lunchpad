@@ -7,6 +7,7 @@ import { hexToRgb, hueKey, padColorAltRgb, padColorRgb, padCss, paletteByShade, 
 import { LEGACY_PALETTE, NOVATION_PALETTE } from "../lib/palette";
 import { HsvPicker } from "./HsvPicker";
 import { Popover } from "./Popover";
+import { Icon } from "../icons/Icon";
 import { Tooltip } from "./Tooltip";
 
 type Mode = PadColor["mode"];
@@ -51,9 +52,7 @@ export function ColorField({ value, onChange, limited, label }: Props) {
       >
         <Swatch color={value} size={26} />
         <span className="flex-1 truncate">{describe(t, value, limited)}</span>
-        <span aria-hidden className="text-stage-400">
-          ▾
-        </span>
+        <Icon name="ChevronDown" className="text-stage-400" />
       </button>
       <Popover open={open} anchor={triggerRef} onClose={() => setOpen(false)} width={360} className="p-3">
         {limited ? (

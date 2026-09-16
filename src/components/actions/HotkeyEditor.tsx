@@ -1,6 +1,7 @@
 import { clsx } from "clsx";
 import { Reorder, useDragControls } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { Icon } from "../../icons/Icon";
 import type { Action, Button, KeyEvent, Keystroke } from "../../lib/api";
 import { PlaceholderField } from "./PlaceholderField";
 import { useVariableSuggestions } from "./VariableFields";
@@ -91,7 +92,7 @@ function StepRow({ row, suggestions, onChange, onRemove }: { row: Row; suggestio
   return (
     <Reorder.Item value={row} dragListener={false} dragControls={controls} className="flex flex-wrap items-center gap-2 rounded-lg border border-stage-700 bg-stage-800/60 px-2 py-1.5">
       <button type="button" aria-label={t("actions.dragHandle")} onPointerDown={(e) => controls.start(e)} className="cursor-grab touch-none px-1 text-stage-500 hover:text-stage-200">
-        ⋮⋮
+        <Icon name="GripVertical" />
       </button>
       <Select<StepKind>
         size="sm"
@@ -149,8 +150,8 @@ function StepRow({ row, suggestions, onChange, onRemove }: { row: Row; suggestio
           </label>
         </>
       )}
-      <button type="button" aria-label={t("actions.remove")} onClick={onRemove} className="ml-auto rounded-md px-1.5 py-1 text-[10px] text-stage-400 hover:bg-danger/15 hover:text-danger">
-        ✕
+      <button type="button" aria-label={t("actions.remove")} onClick={onRemove} className="ml-auto rounded-md px-1.5 py-1 text-xs text-stage-400 hover:bg-danger/15 hover:text-danger">
+        <Icon name="X" />
       </button>
     </Reorder.Item>
   );

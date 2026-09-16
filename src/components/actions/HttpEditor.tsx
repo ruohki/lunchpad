@@ -1,6 +1,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Icon } from "../../icons/Icon";
 import { api, type Action, type Button as ButtonModel, type HttpAuth, type HttpMethod, type HttpOutcome, type HttpResponse } from "../../lib/api";
 import { PlaceholderField } from "./PlaceholderField";
 import { Select } from "../Select";
@@ -111,8 +112,8 @@ export function HttpEditor({ action, onChange, button }: { action: HttpAction; o
           <div key={i} className="flex gap-2">
             <input value={h.name} onChange={(e) => onChange({ ...action, headers: action.headers.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })} placeholder="X-Header" className={monoCls + " w-48"} spellCheck={false} />
             <PlaceholderField mono value={h.value} onChange={(value) => onChange({ ...action, headers: action.headers.map((x, j) => (j === i ? { ...x, value } : x)) })} suggestions={suggestions} placeholder={t("http.headerValue")} ariaLabel={t("http.headerValue")} />
-            <button type="button" aria-label={t("actions.remove")} onClick={() => onChange({ ...action, headers: action.headers.filter((_, j) => j !== i) })} className="rounded-md px-1.5 text-[10px] text-stage-400 hover:bg-danger/15 hover:text-danger">
-              ✕
+            <button type="button" aria-label={t("actions.remove")} onClick={() => onChange({ ...action, headers: action.headers.filter((_, j) => j !== i) })} className="rounded-md px-1.5 text-xs text-stage-400 hover:bg-danger/15 hover:text-danger">
+              <Icon name="X" />
             </button>
           </div>
         ))}
@@ -173,8 +174,8 @@ export function HttpEditor({ action, onChange, button }: { action: HttpAction; o
                     <Button size="sm" onClick={() => void pickFile().then((p) => p && update({ path: p }))}>
                       {t("launch.choose")}
                     </Button>
-                    <button type="button" aria-label={t("actions.remove")} onClick={() => onChange({ ...action, files: action.files.filter((_, j) => j !== i) })} className="rounded-md px-1.5 text-[10px] text-stage-400 hover:bg-danger/15 hover:text-danger">
-                      ✕
+                    <button type="button" aria-label={t("actions.remove")} onClick={() => onChange({ ...action, files: action.files.filter((_, j) => j !== i) })} className="rounded-md px-1.5 text-xs text-stage-400 hover:bg-danger/15 hover:text-danger">
+                      <Icon name="X" />
                     </button>
                   </div>
                 );

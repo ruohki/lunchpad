@@ -151,7 +151,7 @@ export function ImportReviewDialog({ review, onCancel, onConfirm }: { review: Im
 
               <section className="flex flex-col gap-2">
                 <button type="button" onClick={() => setShowAll((v) => !v)} className="flex items-center gap-2 text-left text-xs font-semibold uppercase tracking-wide text-stage-300 hover:text-stage-100">
-                  <span className="text-stage-500">{showAll ? "▾" : "▸"}</span>
+                  <Icon name={showAll ? "ChevronDown" : "ChevronRight"} className="text-stage-500" />
                   {t("import.everything")}
                 </button>
                 {showAll && (
