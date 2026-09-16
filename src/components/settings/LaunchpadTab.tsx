@@ -27,8 +27,11 @@ export function LaunchpadTab() {
           <p className="text-sm text-stage-300">{t("settings.virtualDevice", { model: t(`models.${device.model}`) })}</p>
         ) : device ? (
           <div className="grid grid-cols-2 gap-3">
-            <Field label={t("side.ports")}>{device.inputName === device.outputName ? device.inputName : `${device.inputName} → ${device.outputName}`}</Field>
+            <Field label={t("settings.deviceModel")}>{t(`models.${device.model}`)}</Field>
             <Field label={t("side.firmware")}>{device.firmware ?? t("side.unknown")}</Field>
+            <div className="col-span-2">
+              <Field label={t("side.ports")}>{device.inputName === device.outputName ? device.inputName : `${device.inputName} → ${device.outputName}`}</Field>
+            </div>
           </div>
         ) : savedDevice ? (
           <p className="text-sm text-stage-300">
