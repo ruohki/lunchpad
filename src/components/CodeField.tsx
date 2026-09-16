@@ -2,6 +2,21 @@ import { clsx } from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import Prism from "prismjs";
 import "prismjs/components/prism-markdown";
+import { PLACEHOLDER } from "../lib/placeholders";
+
+// `{{name}}` stands out in Markdown notes: at the top level, inside emphasis and in headings.
+{
+  const placeholder = { pattern: new RegExp(PLACEHOLDER.source), alias: "variable" };
+  const md = Prism.languages.insertBefore("markdown", "bold", { placeholder }) as Record<string, unknown>;
+  type Nested = { inside?: Record<string, unknown> & { content?: { inside?: Record<string, unknown> } } };
+  for (const token of ["bold", "italic", "strike", "url"]) {
+    const inside = (md[token] as Nested | undefined)?.inside?.content?.inside;
+    if (inside) inside.placeholder = placeholder;
+  }
+  for (const title of (md.title as Nested[] | undefined) ?? []) {
+    if (title.inside) title.inside.placeholder = placeholder;
+  }
+}
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -19,11 +34,11 @@ interface Props {
   ariaLabel?: string;
   /** Heading of the maximized view. */
   title?: string;
-  /** Variable names offered after `vars.`. */
+  /** Variable names offered after `vars.` (JavaScript) or `{{` (Markdown). */
   suggestions?: string[];
   /** Shared variable names offered after `globals.`. */
   globals?: string[];
-  language?: "javascript" | "markdown";
+  language?: Language;
 }
 
 const TEXT = "code-field font-mono text-sm leading-relaxed whitespace-pre-wrap break-words px-2.5 py-1.5";
@@ -33,9 +48,9 @@ const TEXT = "code-field font-mono text-sm leading-relaxed whitespace-pre-wrap b
  * underneath a transparent textarea, so typing, selection and the caret work
  * exactly as in a plain textarea while the colours come from the copy. The
  * copy is in the flow and sizes the field, so nothing ever scrolls out of
- * step. Typing `vars.` or `globals.` offers the variable names under the
- * caret. A button in the corner opens the same text in a view that fills the
- * window.
+ * step. Typing `vars.` or `globals.` (JavaScript) or `{{` (Markdown) offers
+ * the variable names under the caret. A button in the corner opens the same
+ * text in a view that fills the window.
  */
 export function CodeField({ value, onChange, rows = 6, placeholder, className, ariaLabel, title, suggestions = [], globals = [], language = "javascript" }: Props) {
   const { t } = useTranslation();
@@ -122,24 +137,32 @@ export function CodeField({ value, onChange, rows = 6, placeholder, className, a
   );
 }
 
-/** Where the text before the caret ends in `vars.` or `globals.` plus a started name. */
+/** Where the text before the caret ends in `vars.`, `globals.` or `{{` plus a started name. */
 interface Access {
-  object: "vars" | "globals";
+  object: "vars" | "globals" | "placeholder";
   partial: string;
   /** Index of the object's first character in the text. */
   from: number;
 }
 
-function accessBefore(value: string, caret: number | null): Access | null {
+function accessBefore(value: string, caret: number | null, language: Language): Access | null {
   if (caret === null) return null;
-  const m = /(vars|globals)\.([A-Za-z0-9_$]*)$/.exec(value.slice(0, caret));
-  return m ? { object: m[1] as Access["object"], partial: m[2], from: caret - m[0].length } : null;
+  const head = value.slice(0, caret);
+  if (language === "markdown") {
+    const m = /\{\{([^{}\s]*)$/.exec(head);
+    return m ? { object: "placeholder", partial: m[1], from: caret - m[0].length } : null;
+  }
+  const m = /(vars|globals)\.([A-Za-z0-9_$]*)$/.exec(head);
+  return m ? { object: m[1] as "vars" | "globals", partial: m[2], from: caret - m[0].length } : null;
 }
 
-/** `vars.name` for a plain identifier, `vars["fader.gain"]` for anything else. */
-function accessExpression(object: string, name: string): string {
+/** `vars.name` for a plain identifier, `vars["fader.gain"]` for anything else; `{{name}}` in Markdown. */
+function accessExpression(object: Access["object"], name: string): string {
+  if (object === "placeholder") return `{{${name}}}`;
   return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name) ? `${object}.${name}` : `${object}[${JSON.stringify(name)}]`;
 }
+
+type Language = "javascript" | "markdown";
 
 /** The highlighted copy with the transparent textarea on top of it, and the completion list. */
 function Surface({
@@ -166,7 +189,7 @@ function Surface({
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   suggestions: string[];
   globals: string[];
-  language: "javascript" | "markdown";
+  language: Language;
 }) {
   const html = useMemo(() => Prism.highlight(value, Prism.languages[language], language), [value, language]);
   const pad = extraPadding ? "pr-9" : "";
@@ -175,7 +198,7 @@ function Surface({
   const [typing, setTyping] = useState(false);
   const [highlighted, setHighlighted] = useState(0);
 
-  const access = useMemo(() => accessBefore(value, caret), [value, caret]);
+  const access = useMemo(() => accessBefore(value, caret, language), [value, caret, language]);
   const matches = useMemo(() => {
     if (!access) return [];
     const pool = access.object === "globals" ? globals : suggestions;
@@ -191,7 +214,10 @@ function Surface({
   const insert = (name: string) => {
     if (!access || caret === null) return;
     const expression = accessExpression(access.object, name);
-    const next = value.slice(0, access.from) + expression + value.slice(caret);
+    const after = value.slice(caret);
+    // Typing inside an existing `{{...}}` keeps one closing pair.
+    const rest = access.object === "placeholder" && after.startsWith("}}") ? after.slice(2) : after;
+    const next = value.slice(0, access.from) + expression + rest;
     onChange(next);
     setTyping(false);
     const at = access.from + expression.length;

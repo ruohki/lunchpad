@@ -9,7 +9,9 @@ import { buttonsOutside } from "../lib/grid";
 import { useDeviceStore } from "../store/device";
 import { useProfileStore, type PadRef } from "../store/profile";
 import { useUiStore } from "../store/ui";
+import { useVariablesStore } from "../store/variables";
 import { Markdown } from "../lib/markdown";
+import { expandPlaceholders } from "../lib/placeholders";
 import { PadFace } from "./PadFace";
 import { Tooltip } from "./Tooltip";
 import { IconClose } from "./ui";
@@ -32,6 +34,7 @@ export function OutsidePanel() {
   const page = useProfileStore((s) => s.activePage());
   const moveButton = useProfileStore((s) => s.moveButton);
   const setDrag = useDragStore((s) => s.setDrag);
+  const globals = useVariablesStore((s) => s.globals);
   const pageRef = useRef(page);
   pageRef.current = page;
 
@@ -132,7 +135,7 @@ export function OutsidePanel() {
                 return (
                   <li key={`${b.x},${b.y}`} className="flex flex-col items-center gap-1">
                     {b.description ? (
-                      <Tooltip content={<Markdown text={b.description} />} size="wide">
+                      <Tooltip content={<Markdown text={expandPlaceholders(b.description, globals)} />} size="wide">
                         {tile}
                       </Tooltip>
                     ) : (
