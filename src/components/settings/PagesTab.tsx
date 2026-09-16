@@ -222,7 +222,7 @@ function PageRow({
     >
       <Tooltip content={t("pages.dragHandle")}>
         <button type="button" aria-label={t("pages.dragHandle")} onPointerDown={(e) => controls.start(e)} className="cursor-grab touch-none select-none rounded px-1 py-1 text-stage-500 hover:bg-stage-700 hover:text-stage-200 active:cursor-grabbing">
-          ⋮⋮
+          <Icon name="GripVertical" />
         </button>
       </Tooltip>
       <div className="min-w-0 flex-1">
@@ -254,12 +254,12 @@ function PageRow({
       <div className="flex shrink-0 items-center gap-0.5">
         <Tooltip content={t("pages.rename")}>
           <button type="button" aria-label={t("pages.rename")} onClick={() => setEditing(true)} className={iconBtn}>
-            <Icon name="Pen" />
+            <Icon name="Pencil" />
           </button>
         </Tooltip>
         <Tooltip content={t("pages.duplicate")}>
           <button type="button" aria-label={t("pages.duplicate")} onClick={onDuplicate} className={iconBtn}>
-            <Icon name="PageCopy" />
+            <Icon name="Copy" />
           </button>
         </Tooltip>
         <Tooltip content={t("pages.moveUp")}>
@@ -274,7 +274,7 @@ function PageRow({
         </Tooltip>
         <Tooltip content={t("pages.export")}>
           <button type="button" aria-label={t("pages.export")} onClick={onExport} className={iconBtn}>
-            <Icon name="PageOpen" />
+            <Icon name="FileOutput" />
           </button>
         </Tooltip>
         <Tooltip content={sharedBefore ? t("pages.update") : t("pages.share")}>

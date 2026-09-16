@@ -1,5 +1,4 @@
-import { Icon } from "../icons/Icon";
-import type { IconName } from "../icons/icons";
+import { Icon, type IconName } from "../icons/Icon";
 
 /** Printed labels that are drawn as icons rather than text. */
 const CHEVRONS: Record<string, IconName> = { "∧": "ChevronUp", "∨": "ChevronDown", ">": "ChevronRight", "<": "ChevronLeft" };

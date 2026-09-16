@@ -1,5 +1,90 @@
 import { clsx } from "clsx";
-import { ICONS, type IconName } from "./icons";
+import {
+  ArrowDown,
+  ArrowLeftRight,
+  ArrowUp,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  CircleStop,
+  Code,
+  Copy,
+  File,
+  FileOutput,
+  Globe,
+  GripVertical,
+  House,
+  Keyboard,
+  LayoutGrid,
+  Maximize2,
+  Mic,
+  MicOff,
+  MousePointerClick,
+  Palette,
+  Pencil,
+  Radio,
+  RefreshCw,
+  RotateCcw,
+  Settings,
+  SlidersHorizontal,
+  Speech,
+  Split,
+  SquareTerminal,
+  Timer,
+  Trash,
+  Variable,
+  Video,
+  Volume2,
+  Workflow,
+  X,
+} from "lucide-react";
+
+/** Every icon the app draws, by its Lucide name; add one here to use it by name. */
+const ICONS = {
+  ArrowDown,
+  ArrowLeftRight,
+  ArrowUp,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  CircleStop,
+  Code,
+  Copy,
+  File,
+  FileOutput,
+  Globe,
+  GripVertical,
+  House,
+  Keyboard,
+  LayoutGrid,
+  Maximize2,
+  Mic,
+  MicOff,
+  MousePointerClick,
+  Palette,
+  Pencil,
+  Radio,
+  RefreshCw,
+  RotateCcw,
+  Settings,
+  SlidersHorizontal,
+  Speech,
+  Split,
+  SquareTerminal,
+  Timer,
+  Trash,
+  Variable,
+  Video,
+  Volume2,
+  Workflow,
+  X,
+};
+
+export type IconName = keyof typeof ICONS;
 
 interface Props {
   name: IconName;
@@ -7,17 +92,16 @@ interface Props {
   title?: string;
 }
 
-/** Inline SVG icon that inherits the text colour and sizes with the font (1em). */
+/** A Lucide icon that inherits the text colour and sizes with the font (1em). */
 export function Icon({ name, className, title }: Props) {
-  const icon = ICONS[name];
+  const Glyph = ICONS[name];
   return (
-    <svg
-      viewBox={icon.viewBox}
+    <Glyph
       role={title ? "img" : undefined}
       aria-hidden={title ? undefined : true}
       aria-label={title}
-      className={clsx("inline-block h-[1em] w-[1em] shrink-0 fill-current align-[-0.125em]", className)}
-      dangerouslySetInnerHTML={{ __html: icon.body }}
+      strokeWidth={2}
+      className={clsx("inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em]", className)}
     />
   );
 }

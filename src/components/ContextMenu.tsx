@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Icon } from "../icons/Icon";
 import { clsx } from "clsx";
 
 export interface MenuItem {
@@ -142,9 +143,7 @@ export function ContextMenu({ menu, onClose }: Props) {
                     {entry.icon && <span className="text-stage-400">{entry.icon}</span>}
                     {entry.submenu}
                   </span>
-                  <span aria-hidden className="text-xs text-stage-500">
-                    ▸
-                  </span>
+                  <Icon name="ChevronRight" className="text-xs text-stage-500" />
                 </button>
               );
             }

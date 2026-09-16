@@ -1,6 +1,7 @@
 import { clsx } from "clsx";
 import { useEffect, useRef, useState } from "react";
 import { Popover } from "./Popover";
+import { Icon } from "../icons/Icon";
 
 export interface SelectOption<T extends string> {
   value: T;
@@ -108,9 +109,7 @@ export function Select<T extends string>({ value, options, onChange, placeholder
         )}
       >
         <span className={clsx("truncate", !current && "text-stage-400")}>{current?.label ?? placeholder ?? ""}</span>
-        <span aria-hidden className="shrink-0 text-stage-400">
-          ▾
-        </span>
+        <Icon name="ChevronDown" className="shrink-0 text-stage-400" />
       </button>
       <Popover open={open} anchor={triggerRef} onClose={() => setOpen(false)}>
         <ul ref={listRef} role="listbox" tabIndex={-1} onKeyDown={onListKey} className="flex flex-col gap-0.5 outline-none">
