@@ -3,13 +3,14 @@ import { Reorder, useDragControls } from "framer-motion";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../../icons/Icon";
-import { DEFAULT_PAGE_ID, type ImportMode, type Page } from "../../lib/api";
+import { api, DEFAULT_PAGE_ID, type ImportMode, type ImportReview, type Page } from "../../lib/api";
 import { useProfileStore } from "../../store/profile";
 import { Tooltip } from "../Tooltip";
 import { Button } from "../ui";
 import { Section } from "./SettingsDialog";
 import { buttonsOutside } from "../../lib/grid";
 import { useDeviceStore } from "../../store/device";
+import { ImportReviewDialog } from "./ImportReviewDialog";
 
 const inputCls = "w-full rounded-md bg-stage-800 px-2.5 py-1.5 text-sm text-stage-100 outline-none focus:ring-1 focus:ring-accent-400";
 
@@ -31,13 +32,20 @@ export function PagesTab() {
   const layout = useDeviceStore((s) => s.layout);
   const pages = profile?.pages ?? [];
 
+  const [pending, setPending] = useState<{ review: ImportReview; run: () => Promise<unknown> } | null>(null);
+  // A file made elsewhere is looked over first; anything worth checking is shown before it lands.
+  const reviewThen = async (path: string, run: () => Promise<unknown>) => {
+    const review = await api.reviewImportFile(path).catch(() => null);
+    if (!review || review.findings.length === 0) await run();
+    else setPending({ review, run });
+  };
   const pickAndImportLegacy = async () => {
     const path = await open({ multiple: false, directory: false, filters: [{ name: t("settings.fileJson"), extensions: ["json", "txt"] }] });
-    if (typeof path === "string") await importLegacyFile(path, legacyMode);
+    if (typeof path === "string") await reviewThen(path, () => importLegacyFile(path, legacyMode));
   };
   const pickAndImportPage = async () => {
     const path = await open({ multiple: false, directory: false, filters: [{ name: t("settings.filePage"), extensions: ["json"] }] });
-    if (typeof path === "string") await importPageFile(path);
+    if (typeof path === "string") await reviewThen(path, () => importPageFile(path));
   };
   const exportPage = async (page: Page) => {
     const path = await save({ defaultPath: `${page.name}.lunchpad-page.json`, filters: [{ name: t("settings.filePage"), extensions: ["json"] }] });
@@ -113,6 +121,15 @@ export function PagesTab() {
           </Button>
         </div>
       </Section>
+      <ImportReviewDialog
+        review={pending?.review ?? null}
+        onCancel={() => setPending(null)}
+        onConfirm={() => {
+          const run = pending?.run;
+          setPending(null);
+          if (run) void run();
+        }}
+      />
     </>
   );
 }

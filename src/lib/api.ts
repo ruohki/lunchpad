@@ -518,6 +518,26 @@ export interface HttpOutcome {
   /** The server answered but the response could not be turned into a file */
   error: string | null;
 }
+/** One thing to check before running an import. */
+export interface ImportFinding {
+  level: "danger" | "warning" | "info";
+  kind: "secret" | "upload" | "request" | "insecure" | "login" | "fileWrite" | "program" | "script" | "keys" | "sound" | "speech" | "homeAssistant" | "streaming";
+  page: string;
+  x: number;
+  y: number;
+  /** The action's type */
+  action: string;
+  detail: string;
+}
+
+/** What an import would bring, before anything is applied. */
+export interface ImportReview {
+  pages: number;
+  buttons: number;
+  actions: number;
+  findings: ImportFinding[];
+}
+
 export interface DownloadCacheInfo {
   path: string;
   files: number;
@@ -764,6 +784,9 @@ export const api = {
     invoke<ImportReport>("import_legacy_file", { path, mode }),
   exportPage: (pageId: string) => invoke<string>("export_page", { pageId }),
   exportPageFile: (pageId: string, path: string) => invoke<void>("export_page_file", { pageId, path }),
+  /** Look over a page or legacy file before importing it; nothing is applied. */
+  reviewImportFile: (path: string) => invoke<ImportReview>("review_import_file", { path }),
+  reviewImportJson: (json: string) => invoke<ImportReview>("review_import_json", { json }),
   importPageJson: (json: string) => invoke<ImportReport>("import_page_json", { json }),
   importPageFile: (path: string) => invoke<ImportReport>("import_page_file", { path }),
   restoreProfileBackup: () => invoke<Profile>("restore_profile_backup"),
