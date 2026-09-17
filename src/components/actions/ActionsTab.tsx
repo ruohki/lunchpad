@@ -47,7 +47,7 @@ const MENU_GROUPS: { group: string; types: ActionType[]; submenu?: boolean }[] =
   { group: "input", types: ["hotkey", "mouse", "mousePosition"], submenu: true },
   { group: "window", types: ["getWindow", "setWindow", "getScreen"], submenu: true },
   { group: "stop", types: ["stopThisMacro", "restartThisMacro", "stopAllMacros"], submenu: true },
-  { group: "obs", types: ["obsSwitchScene", "obsToggleSource", "obsSetAudio", "obsToggleFilter", "obsStream", "obsSaveReplay", "obsStudioMode"], submenu: true },
+  { group: "obs", types: ["obsSwitchScene", "obsToggleSource", "obsSetAudio", "obsToggleFilter", "obsStream", "obsSaveReplay", "obsStudioMode", "obsTriggerHotkey"], submenu: true },
   { group: "slobs", types: ["slobsSwitchScene", "slobsToggleSource", "slobsSetAudio", "slobsToggleFilter", "slobsStream", "slobsSaveReplay", "slobsStudioMode"], submenu: true },
   { group: "homeAssistant", types: ["homeAssistantTurn", "homeAssistantSetValue", "homeAssistantCallService"], submenu: true },
 ];

@@ -1180,6 +1180,7 @@ pub(super) async fn execute(ctx: &RunContext, action: &Action) {
         | ActionKind::ObsStream { .. }
         | ActionKind::ObsSaveReplay
         | ActionKind::ObsStudioMode { .. }
+        | ActionKind::ObsTriggerHotkey { .. }
         | ActionKind::SlobsSwitchScene { .. }
         | ActionKind::SlobsToggleSource { .. }
         | ActionKind::SlobsSetAudio { .. }

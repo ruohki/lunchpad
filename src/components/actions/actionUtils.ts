@@ -44,6 +44,7 @@ export const ACTION_ICONS: Record<ActionType, IconName> = {
   obsStream: "Video",
   obsSaveReplay: "Video",
   obsStudioMode: "Video",
+  obsTriggerHotkey: "Video",
   slobsSwitchScene: "Radio",
   slobsToggleSource: "Radio",
   slobsSetAudio: "Radio",
@@ -300,6 +301,8 @@ export function createActions(type: ActionType): Action[] {
       return [make({ type: "obsSaveReplay" })];
     case "obsStudioMode":
       return [make({ type: "obsStudioMode", mode: "transition" })];
+    case "obsTriggerHotkey":
+      return [make({ type: "obsTriggerHotkey", by: "name", name: "", context: "", key: "", shift: false, control: false, alt: false, command: false })];
     case "slobsSwitchScene":
       return [make({ type: "slobsSwitchScene", scene: "", collection: "" })];
     case "slobsToggleSource":
@@ -460,6 +463,8 @@ export function summarize(t: TFunction, action: Action, pages: Page[]): string {
       return action.steps.map((step) => summarizeMouseStep(step, t)).join(", ");
     case "mousePosition":
       return t("actions.summary.mousePosition", { name: action.saveTo });
+    case "obsTriggerHotkey":
+      return action.by === "name" ? [action.name, action.context].filter(Boolean).join(" · ") : [action.control && "Ctrl", action.alt && "Alt", action.shift && "Shift", action.command && "Cmd", action.key].filter(Boolean).join("+");
     case "getScreen":
       return t("actions.summary.getScreen", { what: action.pick === "number" ? t("screen.numbered", { number: action.number || "?" }) : t(`screen.picks.${action.pick}`), name: action.saveTo });
     case "debug":

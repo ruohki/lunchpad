@@ -512,6 +512,7 @@ export type ActionKind =
   | { type: "obsStream"; target: ObsTarget; mode: ObsMode }
   | { type: "obsSaveReplay" }
   | { type: "obsStudioMode"; mode: StudioMode }
+  | { type: "obsTriggerHotkey"; by: ObsHotkeyBy; name: string; context: string; key: string; shift: boolean; control: boolean; alt: boolean; command: boolean }
   | { type: "slobsSwitchScene"; scene: string; collection: string }
   | { type: "slobsToggleSource"; scene: string; collection: string; source: string; visible: boolean; mode: VisibilityMode | null }
   | { type: "slobsSetAudio"; scene: string; collection: string; source: string; muted: boolean; muteMode: MuteMode | null; volumeDb: number; volumeFrom: string | null; volumeUnit: VolumeUnit; setVolume: boolean }
@@ -585,6 +586,7 @@ export interface ScreenInfo {
   dpi: number;
   primary: boolean;
 }
+export type ObsHotkeyBy = "name" | "keys";
 export type ScreenPick = "primary" | "number" | "foreground" | "pointer";
 export const SCREEN_PICKS: ScreenPick[] = ["primary", "number", "foreground", "pointer"];
 
@@ -767,6 +769,7 @@ export const AVAILABLE_ACTIONS: ReadonlySet<ActionType> = new Set<ActionType>([
   "obsStream",
   "obsSaveReplay",
   "obsStudioMode",
+  "obsTriggerHotkey",
   "slobsSwitchScene",
   "slobsToggleSource",
   "slobsSetAudio",
@@ -1009,6 +1012,8 @@ export const api = {
   obsDisconnect: () => invoke<ObsState>("obs_disconnect"),
   obsRefresh: () => invoke<ObsState>("obs_refresh"),
   obsFilters: (source: string) => invoke<string[]>("obs_filters", { source }),
+  /** Every hotkey name OBS knows, for the trigger-hotkey editor. */
+  obsHotkeys: () => invoke<string[]>("obs_hotkeys"),
   setObsSettings: (config: ObsSettings) => invoke<Settings>("set_obs_settings", { config }),
   slobsState: () => invoke<SlobsState>("slobs_state"),
   slobsConnect: () => invoke<SlobsState>("slobs_connect"),

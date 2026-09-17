@@ -143,6 +143,12 @@ pub async fn obs_refresh(state: State<'_, AppState>) -> CmdResult<ObsState> {
 }
 
 #[tauri::command]
+pub async fn obs_hotkeys(state: State<'_, AppState>) -> CmdResult<Vec<String>> {
+    let obs = state.obs.clone();
+    obs.hotkeys().await
+}
+
+#[tauri::command]
 pub async fn obs_filters(source: String, state: State<'_, AppState>) -> CmdResult<Vec<String>> {
     let obs = state.obs.clone();
     obs.filters(&source).await

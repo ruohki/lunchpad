@@ -364,6 +364,7 @@ pub fn run() {
             obs_disconnect,
             obs_refresh,
             obs_filters,
+            obs_hotkeys,
             set_obs_settings,
             slobs_state,
             slobs_connect,
