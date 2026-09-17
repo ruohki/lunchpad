@@ -1256,6 +1256,20 @@ mod tests {
         }
     }
 
+    /// A global once it reads `expected`, or whatever it reads when a generous
+    /// deadline passes: the control worker's poll and settle add up to a delay a
+    /// busy CI runner stretches unpredictably.
+    async fn global_once(engine: &MacroEngine, key: &str, expected: &str) -> Option<String> {
+        let deadline = Instant::now() + Duration::from_secs(3);
+        loop {
+            let value = engine.globals().get(key).cloned();
+            if value.as_deref() == Some(expected) || Instant::now() >= deadline {
+                return value;
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+    }
+
     #[tokio::test]
     async fn fader_press_sets_the_level_and_runs_its_actions() {
         let (engine, profile) = engine();
@@ -1304,10 +1318,8 @@ mod tests {
             engine.on_control(&ControlEvent { x: 3, y: 3, value: v, kind: ControlKind::Knob, released: false });
         }
         engine.on_control(&ControlEvent { x: 4, y: 3, value: 0.5, kind: ControlKind::Knob, released: false }); // no fader here: ignored
-        tokio::time::sleep(Duration::from_millis(250)).await;
-        let globals = engine.globals();
-        assert_eq!(globals.get("fader.gain").map(String::as_str), Some("75"));
-        assert_eq!(globals.get("applied").map(String::as_str), Some("75"));
+        assert_eq!(global_once(&engine, "applied", "75").await.as_deref(), Some("75"));
+        assert_eq!(engine.globals().get("fader.gain").map(String::as_str), Some("75"));
         let value = profile.lock().profile.page(DEFAULT_PAGE_ID).unwrap().faders[0].value;
         assert!((value - 75.0).abs() < 1e-9);
     }
@@ -1436,16 +1448,15 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(80)).await;
 
         engine.on_control(&ControlEvent { x: 3, y: 3, value: 0.8, kind: ControlKind::Knob, released: false });
-        tokio::time::sleep(Duration::from_millis(250)).await;
+        assert_eq!(global_once(&engine, "fader.gain", "80").await.as_deref(), Some("80"));
         let value = profile.lock().profile.page(DEFAULT_PAGE_ID).unwrap().faders[0].value;
         // The hardware value arrives as an f32 fraction, so compare loosely.
         assert!((value - 80.0).abs() < 1e-4, "the slider was moved to 80, the profile says {value}");
-        assert_eq!(engine.globals().get("fader.gain").map(String::as_str), Some("80"));
 
         // And again the other way round: hand, then hardware, in quick succession.
         assert!(engine.set_fader_level("gain", 10.0, false));
         engine.on_control(&ControlEvent { x: 3, y: 3, value: 0.35, kind: ControlKind::Knob, released: false });
-        tokio::time::sleep(Duration::from_millis(250)).await;
+        assert_eq!(global_once(&engine, "fader.gain", "35").await.as_deref(), Some("35"));
         let value = profile.lock().profile.page(DEFAULT_PAGE_ID).unwrap().faders[0].value;
         assert!((value - 35.0).abs() < 1e-4, "the slider was moved to 35, the profile says {value}");
     }
