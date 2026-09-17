@@ -439,6 +439,25 @@ impl ObsHandle {
         .await
     }
 
+    /// Every hotkey name OBS knows (`OBSBasic.StartStreaming`, `libobs.mute`, …), each once: OBS
+    /// repeats the per-source ones for every source that has them.
+    pub async fn hotkeys(&self) -> Result<Vec<String>, String> {
+        let list = self.with_client(async |c| c.hotkeys().list().await).await?;
+        let mut seen = std::collections::HashSet::new();
+        Ok(list.into_iter().filter(|name| seen.insert(name.clone())).collect())
+    }
+
+    /// Fires a hotkey by its name; `context` names the source for per-source hotkeys such as `libobs.mute`.
+    pub async fn trigger_hotkey(&self, name: &str, context: Option<&str>) -> Result<(), String> {
+        self.with_client(async |c| c.hotkeys().trigger_by_name(name, context).await).await
+    }
+
+    /// Fires whatever is bound to a key combination, as if it had been pressed in OBS.
+    pub async fn trigger_key_sequence(&self, key: &str, shift: bool, control: bool, alt: bool, command: bool) -> Result<(), String> {
+        let modifiers = obws::requests::hotkeys::KeyModifiers { shift, control, alt, command };
+        self.with_client(async |c| c.hotkeys().trigger_by_sequence(key, modifiers).await).await
+    }
+
     pub async fn save_replay(&self) -> Result<(), String> {
         self.with_client(async |c| c.replay_buffer().save().await).await
     }

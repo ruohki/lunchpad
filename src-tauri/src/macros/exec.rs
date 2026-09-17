@@ -291,6 +291,17 @@ pub async fn execute_external(ctx: &RunContext, action: &Action) {
             let Some(obs) = &services.obs else { return unavailable(action) };
             report(action, "OBS", obs.studio_mode(*mode).await);
         }
+        ActionKind::ObsTriggerHotkey { by, name, context, key, shift, control, alt, command } => {
+            let Some(obs) = &services.obs else { return unavailable(action) };
+            let result = match by {
+                ObsHotkeyBy::Name => {
+                    let (name, context) = (ctx.expand(name), ctx.expand(context));
+                    obs.trigger_hotkey(name.trim(), opt(&context)).await
+                }
+                ObsHotkeyBy::Keys => obs.trigger_key_sequence(&obs_key_id(&ctx.expand(key)), *shift, *control, *alt, *command).await,
+            };
+            report(action, "OBS", result);
+        }
 
         ActionKind::SlobsSwitchScene { scene, collection } => {
             let Some(slobs) = &services.slobs else { return unavailable(action) };
@@ -515,6 +526,30 @@ async fn find_window(ctx: &RunContext, target: WindowTarget, title: &str, matchi
     .await
     .map_err(|e| e.to_string())
     .and_then(|r| r)
+}
+
+/// OBS's key ids (`OBS_KEY_F5`, `OBS_KEY_SPACE`) from what a user might type: `F5`, `space`, `a`.
+fn obs_key_id(key: &str) -> String {
+    let key = key.trim();
+    if key.to_ascii_uppercase().starts_with("OBS_KEY_") {
+        return key.to_ascii_uppercase();
+    }
+    let name = match key.to_ascii_lowercase().as_str() {
+        "enter" | "return" => "RETURN".to_string(),
+        "esc" | "escape" => "ESCAPE".to_string(),
+        "pageup" | "page up" => "PAGEUP".to_string(),
+        "pagedown" | "page down" => "PAGEDOWN".to_string(),
+        "backspace" => "BACKSPACE".to_string(),
+        "delete" | "del" => "DELETE".to_string(),
+        "insert" | "ins" => "INSERT".to_string(),
+        "up" | "arrowup" => "UP".to_string(),
+        "down" | "arrowdown" => "DOWN".to_string(),
+        "left" | "arrowleft" => "LEFT".to_string(),
+        "right" | "arrowright" => "RIGHT".to_string(),
+        " " | "space" => "SPACE".to_string(),
+        other => other.replace(' ', "").to_ascii_uppercase(),
+    };
+    format!("OBS_KEY_{name}")
 }
 
 /// `<name>` = the screen as JSON plus `count` (empty when there is none), and every field beside it as `<name>.<field>`.

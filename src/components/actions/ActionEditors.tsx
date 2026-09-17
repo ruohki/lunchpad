@@ -150,6 +150,7 @@ export function ActionEditor({ action, onChange, pages, layout, button }: Props)
     case "obsToggleFilter":
     case "obsStream":
     case "obsStudioMode":
+    case "obsTriggerHotkey":
     case "slobsSwitchScene":
     case "slobsToggleSource":
     case "slobsSetAudio":

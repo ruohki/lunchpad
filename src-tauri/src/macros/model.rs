@@ -48,6 +48,17 @@ pub enum WindowOp {
     Screen,
 }
 
+/// How an OBS hotkey is picked.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum ObsHotkeyBy {
+    /// By the hotkey's name in OBS
+    #[default]
+    Name,
+    /// By the key combination bound in OBS
+    Keys,
+}
+
 /// Which screen a get-screen action means.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
@@ -385,6 +396,27 @@ pub enum ActionKind {
     /// Studio mode on/off, or push the preview scene to the program.
     ObsStudioMode {
         mode: StudioMode,
+    },
+    /// Fire an OBS hotkey over the websocket, without giving OBS the focus: by its name
+    /// (`OBSBasic.StartStreaming`; `context` names the source for per-source ones such as `libobs.mute`)
+    /// or by the key combination bound in OBS (`key` is an OBS key id such as `OBS_KEY_F5`).
+    ObsTriggerHotkey {
+        #[serde(default)]
+        by: ObsHotkeyBy,
+        #[serde(default)]
+        name: String,
+        #[serde(default)]
+        context: String,
+        #[serde(default)]
+        key: String,
+        #[serde(default)]
+        shift: bool,
+        #[serde(default)]
+        control: bool,
+        #[serde(default)]
+        alt: bool,
+        #[serde(default)]
+        command: bool,
     },
     /// Streamlabs Desktop: the same controls as OBS, by name.
     SlobsSwitchScene {

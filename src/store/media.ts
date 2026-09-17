@@ -7,6 +7,8 @@ interface MediaStore {
   obs: ObsState | null;
   /** OBS filters per source name */
   filters: Record<string, string[]>;
+  /** OBS hotkey names, once asked for */
+  hotkeys: string[] | null;
   slobs: SlobsState | null;
   homeAssistant: HaState | null;
   /** Streamlabs filters per source name */
@@ -19,6 +21,7 @@ interface MediaStore {
   obsDisconnect: () => Promise<void>;
   obsRefresh: () => Promise<void>;
   loadFilters: (source: string) => Promise<string[]>;
+  loadHotkeys: () => Promise<string[]>;
   loadSlobs: () => Promise<void>;
   slobsConnect: () => Promise<void>;
   slobsDisconnect: () => Promise<void>;
@@ -33,6 +36,7 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
   voices: null,
   obs: null,
   filters: {},
+  hotkeys: null,
   slobs: null,
   homeAssistant: null,
   slobsFilters: {},
@@ -94,6 +98,15 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
       return list;
     } catch {
       return get().filters[source] ?? [];
+    }
+  },
+  loadHotkeys: async () => {
+    try {
+      const list = await api.obsHotkeys();
+      set({ hotkeys: list });
+      return list;
+    } catch {
+      return get().hotkeys ?? [];
     }
   },
 

@@ -1,12 +1,20 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import type { Action, ActionType, Button, MuteMode, ObsMode, ObsTarget, StudioMode, VisibilityMode, VolumeUnit } from "../../lib/api";
+import type { Action, ActionType, Button, MuteMode, ObsHotkeyBy, ObsMode, ObsTarget, StudioMode, VisibilityMode, VolumeUnit } from "../../lib/api";
 import { useVariableSuggestions } from "./VariableFields";
 import { VariableNameField } from "./VariableNameField";
 import { useMediaStore } from "../../store/media";
 import { Select } from "../Select";
 import { Slider } from "../Slider";
-import { Toggle } from "../ui";
+import { Segmented, Toggle } from "../ui";
+import { clsx } from "clsx";
+import { KeyCapture } from "../KeyCapture";
+import { formatModifier, MODIFIERS, type Modifier } from "../../lib/keys";
+import { PlaceholderField } from "./PlaceholderField";
+
+type HotkeyAction = Extract<Action, { type: "obsTriggerHotkey" }>;
+/** The modifier list the key capture works with, from the action's four switches. */
+const hotkeyModifiers = (a: HotkeyAction): Modifier[] => MODIFIERS.filter((m) => a[m]);
 
 const CURRENT = "__current__";
 const inputCls = "rounded-md bg-stage-800 px-2.5 py-1.5 text-sm text-stage-100 outline-none placeholder:text-stage-500 focus:ring-1 focus:ring-accent-400";
@@ -33,6 +41,9 @@ export interface ProviderView {
   load: () => Promise<void>;
   refresh: () => Promise<void>;
   loadFilters: (source: string) => Promise<string[]>;
+  /** OBS only: every hotkey name the app knows */
+  hotkeys: string[];
+  loadHotkeys: () => Promise<string[]>;
 }
 
 const NONE: string[] = [];
@@ -49,6 +60,8 @@ export function useProviderView(provider: Provider): ProviderView {
   const slobsRefresh = useMediaStore((s) => s.slobsRefresh);
   const loadFilters = useMediaStore((s) => s.loadFilters);
   const loadSlobsFilters = useMediaStore((s) => s.loadSlobsFilters);
+  const hotkeys = useMediaStore((s) => s.hotkeys);
+  const loadHotkeys = useMediaStore((s) => s.loadHotkeys);
 
   if (provider === "slobs") {
     return {
@@ -64,6 +77,8 @@ export function useProviderView(provider: Provider): ProviderView {
       load: loadSlobs,
       refresh: slobsRefresh,
       loadFilters: loadSlobsFilters,
+      hotkeys: NONE,
+      loadHotkeys: async () => NONE,
     };
   }
   return {
@@ -79,6 +94,8 @@ export function useProviderView(provider: Provider): ProviderView {
     load: loadObs,
     refresh: obsRefresh,
     loadFilters,
+    hotkeys: hotkeys ?? NONE,
+    loadHotkeys,
   };
 }
 
@@ -136,6 +153,11 @@ export function ObsEditor({ action, onChange, button }: { action: Action; onChan
   useEffect(() => {
     if (source && connected && !filters[source]) void loadFilters(source);
   }, [source, connected, filters, loadFilters]);
+  const wantsHotkeys = action.type === "obsTriggerHotkey";
+  useEffect(() => {
+    if (wantsHotkeys && connected && view.hotkeys.length === 0) void view.loadHotkeys();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantsHotkeys, connected]);
 
   let body: React.ReactNode = null;
   switch (action.type) {
@@ -297,6 +319,47 @@ export function ObsEditor({ action, onChange, button }: { action: Action; onChan
             />
           </div>
           <p className="text-xs text-stage-500">{t("obs.studio.hint")}</p>
+        </div>
+      );
+      break;
+    case "obsTriggerHotkey":
+      body = (
+        <div className="flex flex-col gap-3">
+          <Segmented<ObsHotkeyBy>
+            value={action.by}
+            options={[
+              { value: "name", label: t("obs.hotkey.byName") },
+              { value: "keys", label: t("obs.hotkey.byKeys") },
+            ]}
+            onChange={(by) => onChange({ ...action, by })}
+          />
+          {action.by === "name" ? (
+            <div className="grid grid-cols-2 gap-3">
+              <NamePicker view={view} label={t("obs.hotkey.name")} value={action.name} list={view.hotkeys} onChange={(name) => onChange({ ...action, name })} />
+              <label className="flex flex-col gap-1 text-xs text-stage-400">
+                {t("obs.hotkey.context")}
+                <PlaceholderField value={action.context} onChange={(context) => onChange({ ...action, context })} suggestions={suggestions} placeholder={t("obs.hotkey.contextPlaceholder")} ariaLabel={t("obs.hotkey.context")} />
+              </label>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1 text-xs text-stage-400">
+              {t("obs.hotkey.key")}
+              <div className="flex flex-wrap items-center gap-2">
+                <KeyCapture value={{ key: action.key, modifiers: hotkeyModifiers(action) }} onChange={(v) => onChange({ ...action, key: v.key, control: v.modifiers.includes("control"), alt: v.modifiers.includes("alt"), shift: v.modifiers.includes("shift"), command: v.modifiers.includes("command") })} />
+                <div className="flex gap-1">
+                  {MODIFIERS.map((m) => {
+                    const on = action[m];
+                    return (
+                      <button key={m} type="button" aria-pressed={on} onClick={() => onChange({ ...action, [m]: !on })} className={clsx("min-w-8 rounded-md px-1.5 py-1 font-mono text-xs", on ? "bg-accent-500 text-stage-950" : "bg-stage-800 text-stage-300 hover:bg-stage-700")}>
+                        {formatModifier(m)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+          <p className="text-xs text-stage-500">{t("obs.hotkey.hint")}</p>
         </div>
       );
       break;

@@ -173,7 +173,8 @@ fn inspect(page: &str, x: u8, y: u8, caption: &str, action: &Action, out: &mut V
         | ActionKind::ObsToggleFilter { .. }
         | ActionKind::ObsStream { .. }
         | ActionKind::ObsSaveReplay
-        | ActionKind::ObsStudioMode { .. } => add(Level::Info, Kind::Streaming, "OBS Studio".into()),
+        | ActionKind::ObsStudioMode { .. }
+        | ActionKind::ObsTriggerHotkey { .. } => add(Level::Info, Kind::Streaming, "OBS Studio".into()),
         ActionKind::SlobsSwitchScene { .. }
         | ActionKind::SlobsToggleSource { .. }
         | ActionKind::SlobsSetAudio { .. }

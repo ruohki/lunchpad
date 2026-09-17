@@ -698,6 +698,10 @@
       "getScreen": {
         "name": "Get screen",
         "desc": "Remember a screen's size, position, scale and DPI in a variable."
+      },
+      "obsTriggerHotkey": {
+        "name": "OBS: trigger hotkey",
+        "desc": "Fire one of OBS Studio's hotkeys over the websocket, without giving OBS the focus."
       }
     },
     "summary": {
@@ -918,7 +922,18 @@
       "unmute": "Unmute",
       "toggle": "Toggle"
     },
-    "setVolume": "Also set the volume"
+    "setVolume": "Also set the volume",
+    "hotkey": {
+      "by": "Pick the hotkey",
+      "byName": "By name",
+      "byKeys": "By key combination",
+      "name": "Hotkey",
+      "namePlaceholder": "OBSBasic.StartStreaming",
+      "context": "Source (for per-source hotkeys)",
+      "contextPlaceholder": "leave empty for app-wide hotkeys",
+      "key": "Keys bound in OBS",
+      "hint": "Names come from OBS while it is connected (Reload lists refreshes them); “libobs.mute” and other per-source hotkeys need the source's name. A key combination fires whatever OBS has bound to it, as if you had pressed it inside OBS, and never reaches other programs."
+    }
   },
   "slobs": {
     "status": {
