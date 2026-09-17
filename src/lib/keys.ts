@@ -111,6 +111,8 @@ export function formatKey(key: string): string {
     return `Mouse ${which[key.slice(6)] ?? key.slice(6)}`;
   }
   if (key.startsWith("numpad_")) return `Num ${key.slice(7)}`;
+  const media: Record<string, string> = { audio_mute: "Mute", audio_vol_down: "Volume down", audio_vol_up: "Volume up", audio_play: "Play/Pause", audio_next: "Next track", audio_prev: "Previous track" };
+  if (media[key]) return media[key];
   if (key.startsWith("audio_")) return key.slice(6).replace("_", " ");
   return key;
 }
@@ -120,3 +122,28 @@ export function formatCombo(key: string, modifiers: string[]): string {
   if (key) parts.push(formatKey(key));
   return parts.join(isMac ? "" : " + ");
 }
+
+export type KeyGroupId = "function" | "navigation" | "editing" | "numpad" | "media" | "mouse" | "letters" | "digits";
+
+export interface KeyGroup {
+  id: KeyGroupId;
+  keys: string[];
+}
+
+/** Windows presses F1 to F24; macOS's key codes stop at F20 (see function_key in keys.rs). */
+const FUNCTION_KEYS = isMac ? 20 : 24;
+
+/**
+ * Every key name the app can press, grouped for the picker: the way to set a key
+ * the keyboard cannot produce (F13 on a laptop, Escape, a missing number pad).
+ */
+export const KEY_GROUPS: KeyGroup[] = [
+  { id: "function", keys: Array.from({ length: FUNCTION_KEYS }, (_, i) => `f${i + 1}`) },
+  { id: "navigation", keys: ["up", "down", "left", "right", "home", "end", "pageup", "pagedown"] },
+  { id: "editing", keys: ["space", "enter", "tab", "escape", "backspace", "delete", "insert", "capslock"] },
+  { id: "numpad", keys: [...Array.from({ length: 10 }, (_, i) => `numpad_${i}`), "numpad_+", "numpad_-", "numpad_*", "numpad_/", "numpad_."] },
+  { id: "media", keys: ["audio_mute", "audio_vol_down", "audio_vol_up", "audio_play", "audio_next", "audio_prev"] },
+  { id: "mouse", keys: ["mouse_left", "mouse_middle", "mouse_right", "mouse_back", "mouse_forward"] },
+  { id: "letters", keys: "abcdefghijklmnopqrstuvwxyz".split("") },
+  { id: "digits", keys: "0123456789".split("") },
+];

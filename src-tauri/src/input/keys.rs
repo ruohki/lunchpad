@@ -1,5 +1,5 @@
 //! Key vocabulary. Names follow the legacy app (robotjs) so imported hotkeys
-//! keep working: letters and digits, `f1`..`f20`, `space`, `enter`, `tab`,
+//! keep working: letters and digits, `f1`..`f20` (`f24` on Windows), `space`, `enter`, `tab`,
 //! `escape`, `backspace`, `delete`, `up`/`down`/`left`/`right`, `home`, `end`,
 //! `pageup`, `pagedown`, `capslock`, `numpad_0`..`numpad_9`, `numpad_+` etc.,
 //! `audio_*`, and the modifiers `control`, `alt`, `shift`, `command`.
@@ -89,6 +89,7 @@ pub fn parse_modifier(name: &str) -> Option<Key> {
 }
 
 fn function_key(n: u8) -> Option<Key> {
+    // Windows has virtual keys up to F24; macOS's key codes stop at F20 (enigo has no F21+ there).
     Some(match n {
         1 => Key::F1,
         2 => Key::F2,
@@ -110,6 +111,14 @@ fn function_key(n: u8) -> Option<Key> {
         18 => Key::F18,
         19 => Key::F19,
         20 => Key::F20,
+        #[cfg(not(target_os = "macos"))]
+        21 => Key::F21,
+        #[cfg(not(target_os = "macos"))]
+        22 => Key::F22,
+        #[cfg(not(target_os = "macos"))]
+        23 => Key::F23,
+        #[cfg(not(target_os = "macos"))]
+        24 => Key::F24,
         _ => return None,
     })
 }
@@ -127,6 +136,18 @@ mod tests {
         assert_eq!(parse_key("numpad_+"), Some(Key::Add));
         assert_eq!(parse_modifier("command"), Some(Key::Meta));
         assert_eq!(parse_key("f99"), None);
+    }
+
+    /// Keys beyond F12 exist on few keyboards but are picked from the editor's list.
+    #[test]
+    fn parses_high_function_keys() {
+        assert_eq!(parse_key("f13"), Some(Key::F13));
+        assert_eq!(parse_key("F20"), Some(Key::F20));
+        #[cfg(target_os = "macos")]
+        assert_eq!(parse_key("f21"), None);
+        #[cfg(not(target_os = "macos"))]
+        assert_eq!(parse_key("f24"), Some(Key::F24));
+        assert_eq!(parse_key("f25"), None);
         assert_eq!(parse_key("nonsense"), None);
     }
 }
