@@ -716,7 +716,9 @@ mod tests {
         assert_eq!(Target::new(dir, "voice.mp3", "abc"), Target { dir: dir.into(), stem: "voice".into(), ext: Some("mp3".into()) });
         assert_eq!(Target::new(dir, "Dr. Who says hi", "abc"), Target { dir: dir.into(), stem: "Dr. Who says hi".into(), ext: None });
         assert_eq!(Target::new(dir, "a/b:c?.wav", "abc"), Target { dir: dir.into(), stem: "a_b_c_".into(), ext: Some("wav".into()) });
-        assert_eq!(Target::new(dir, "/tmp/out/clip.WAV", "abc"), Target { dir: "/tmp/out".into(), stem: "clip".into(), ext: Some("WAV".into()) });
+        // An absolute path keeps its folder and its extension's case; what counts as absolute differs per system.
+        let (absolute, folder) = if cfg!(windows) { (r"C:\tmp\out\clip.WAV", r"C:\tmp\out") } else { ("/tmp/out/clip.WAV", "/tmp/out") };
+        assert_eq!(Target::new(dir, absolute, "abc"), Target { dir: folder.into(), stem: "clip".into(), ext: Some("WAV".into()) });
         assert_eq!(Target::new(dir, " ... ", "abc").stem, "abc", "a name that sanitizes to nothing falls back to the key");
         assert_eq!(Target::new(dir, "x", "abc").path("mp3"), PathBuf::from("/cache/x.mp3"));
     }
