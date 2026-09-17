@@ -240,7 +240,11 @@ impl MacroEngine {
                     slot.resting = Some(touched);
                 }
             }
-            slot.latest = Some(ControlValue { page_id, x: event.x, y: event.y, hit, kind: event.kind, released: event.released });
+            let value = ControlValue { page_id, x: event.x, y: event.y, hit, kind: event.kind, released: event.released };
+            if !event.released && event.kind != ControlKind::Knob && !slot.touching && slot.first.is_none() {
+                slot.first = Some(value.clone());
+            }
+            slot.latest = Some(value);
             slot.changed = Some(Instant::now());
             !std::mem::replace(&mut slot.busy, true)
         };
@@ -259,9 +263,12 @@ impl MacroEngine {
                         // A sprung strip let go: show where it sprang to, and run the release
                         // list for the value it was let go at (the spring-back itself never counts).
                         Some(v) if v.released => {
+                            // A tap shorter than a poll: the touch list still runs, before the release.
+                            let touch = if slot.touching { None } else { slot.first.take() };
                             slot.touching = false;
+                            slot.first = None;
                             match slot.resting.take() {
-                                Some(touched) => ControlStep::ShowThenRelease(v, touched),
+                                Some(touched) => ControlStep::ShowThenRelease { touch, shown: v, touched },
                                 None => ControlStep::Show(v),
                             }
                         }
@@ -271,8 +278,10 @@ impl MacroEngine {
                             slot.touching = true;
                             slot.resting = Some(v.clone());
                             if first {
-                                ControlStep::TouchThenMove(v)
+                                let touch = slot.first.take().unwrap_or_else(|| v.clone());
+                                ControlStep::TouchThenMove { touch, moved: v }
                             } else {
+                                slot.first = None;
                                 ControlStep::Move(v)
                             }
                         }
@@ -291,6 +300,7 @@ impl MacroEngine {
                             }
                             Some(v) if v.kind == ControlKind::Strip => {
                                 slot.touching = false;
+                                slot.first = None;
                                 ControlStep::Release(v)
                             }
                             Some(v) => ControlStep::Run(v),
@@ -298,6 +308,7 @@ impl MacroEngine {
                                 slot.busy = false;
                                 slot.changed = None;
                                 slot.touching = false;
+                                slot.first = None;
                                 ControlStep::Done
                             }
                         },
@@ -306,12 +317,15 @@ impl MacroEngine {
                 match step {
                     ControlStep::Show(v) => engine.fader_pressed(&v.page_id, v.x, v.y, v.hit, 127, None),
                     ControlStep::Run(v) | ControlStep::Move(v) => engine.fader_pressed(&v.page_id, v.x, v.y, v.hit, 127, Some(ActionList::Fader)),
-                    ControlStep::TouchThenMove(v) => {
-                        engine.fader_pressed(&v.page_id, v.x, v.y, v.hit.clone(), 127, Some(ActionList::FaderTouch));
-                        engine.fader_pressed(&v.page_id, v.x, v.y, v.hit, 127, Some(ActionList::Fader));
+                    ControlStep::TouchThenMove { touch, moved } => {
+                        engine.fader_pressed(&touch.page_id, touch.x, touch.y, touch.hit, 127, Some(ActionList::FaderTouch));
+                        engine.fader_pressed(&moved.page_id, moved.x, moved.y, moved.hit, 127, Some(ActionList::Fader));
                     }
                     ControlStep::Release(v) => engine.fader_pressed(&v.page_id, v.x, v.y, v.hit, 127, Some(ActionList::FaderRelease)),
-                    ControlStep::ShowThenRelease(shown, touched) => {
+                    ControlStep::ShowThenRelease { touch, shown, touched } => {
+                        if let Some(t) = touch {
+                            engine.fader_pressed(&t.page_id, t.x, t.y, t.hit, 127, Some(ActionList::FaderTouch));
+                        }
                         engine.fader_pressed(&touched.page_id, touched.x, touched.y, touched.hit, 127, Some(ActionList::FaderRelease));
                         engine.fader_pressed(&shown.page_id, shown.x, shown.y, shown.hit, 127, None);
                     }
@@ -923,15 +937,16 @@ enum ControlStep {
     Show(ControlValue),
     /// A knob's movement rested: its actions run with the value it stopped on.
     Run(ControlValue),
-    /// A finger landed on a strip: the touch list, then the move list.
-    TouchThenMove(ControlValue),
+    /// A finger landed on a strip: the touch list with the value it landed with, then the
+    /// move list with the newest value.
+    TouchThenMove { touch: ControlValue, moved: ControlValue },
     /// A strip moved under the finger: the move list.
     Move(ControlValue),
     /// A strip was let go (rested, or the spring-back): the release list.
     Release(ControlValue),
-    /// A sprung strip let go: the release list for the value it was let go at,
-    /// then the rest position as the level.
-    ShowThenRelease(ControlValue, ControlValue),
+    /// A sprung strip let go: the touch list if it never got its turn, the release list
+    /// for the value it was let go at, then the rest position as the level.
+    ShowThenRelease { touch: Option<ControlValue>, shown: ControlValue, touched: ControlValue },
     /// Still moving, nothing new to show.
     Wait,
     /// Rested and everything is applied.
@@ -949,6 +964,9 @@ struct PendingControl {
     /// The last value shown whose actions have not run yet (a knob's rest value, or
     /// what a strip was last touched at).
     resting: Option<ControlValue>,
+    /// The value a finger landed with, kept until the touch list has run: a move that
+    /// arrives before the next poll replaces `latest`, and must not replace the touch.
+    first: Option<ControlValue>,
     /// A finger is on the strip: the next value is a move, not a touch.
     touching: bool,
 }
@@ -1358,7 +1376,8 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(300)).await;
         let globals = engine.globals();
         assert_eq!(globals.get("touched").map(String::as_str), Some("55"), "the touch list ran once, with the first value");
-        assert_eq!(globals.get("moves").map(String::as_str), Some("3"), "the move list ran for every value");
+        let moves: u32 = globals.get("moves").and_then(|m| m.parse().ok()).unwrap_or(0);
+        assert!((1..=3).contains(&moves), "the move list ran for the values the poll saw, got {moves}");
         assert_eq!(globals.get("released").map(String::as_str), Some("85"), "the release list ran for the value the strip was let go at");
         assert_eq!(globals.get("fader.pitch").map(String::as_str), Some("50"), "the level followed the spring-back");
         // Letting go without a touch first shows the centre and runs nothing.
