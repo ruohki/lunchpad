@@ -11,6 +11,117 @@ use serde::{Deserialize, Serialize};
 fn default_true() -> bool {
     true
 }
+fn one_u8() -> u8 {
+    1
+}
+
+/// Which window a window action means.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum WindowTarget {
+    /// The window with the focus right now
+    Foreground,
+    /// By title (and program)
+    #[default]
+    Title,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum WindowOp {
+    #[default]
+    Focus,
+    Minimize,
+    Maximize,
+    Restore,
+    SendToBack,
+    Close,
+    /// To `x`, `y`, on `screen` when given (a blank coordinate keeps the window's place)
+    Move,
+    /// To `width` × `height`
+    Resize,
+    /// Move and resize at once
+    Bounds,
+    /// On `screen`, or on the window's own screen
+    Center,
+    /// To `screen`, keeping the window's place on it
+    Screen,
+}
+
+/// Which screen a get-screen action means.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum ScreenPick {
+    /// The main display
+    #[default]
+    Primary,
+    /// By its number
+    Number,
+    /// The one the foreground window is on
+    Foreground,
+    /// The one under the pointer
+    Pointer,
+}
+
+/// One step of a mouse sequence. Coordinates and amounts are strings so they take placeholders.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub enum MouseStep {
+    /// Put the pointer at `x`, `y`, or with `relative` move it by that much
+    Move {
+        #[serde(default)]
+        x: String,
+        #[serde(default)]
+        y: String,
+        #[serde(default)]
+        relative: bool,
+    },
+    /// Click `clicks` times (1–5) where the pointer is
+    Click {
+        #[serde(default)]
+        button: crate::input::MouseButton,
+        #[serde(default = "one_u8")]
+        clicks: u8,
+    },
+    /// Hold a button down until a release step
+    Press {
+        #[serde(default)]
+        button: crate::input::MouseButton,
+    },
+    Release {
+        #[serde(default)]
+        button: crate::input::MouseButton,
+    },
+    /// Turn the wheel by `amount` notches: positive down (or right)
+    Scroll {
+        #[serde(default)]
+        amount: String,
+        #[serde(default)]
+        axis: ScrollAxis,
+    },
+    /// Press a button where the pointer is, move to `x`, `y`, let go
+    Drag {
+        #[serde(default)]
+        x: String,
+        #[serde(default)]
+        y: String,
+        #[serde(default)]
+        button: crate::input::MouseButton,
+    },
+    /// Wait `ms` milliseconds (at most 5000)
+    Delay {
+        ms: u64,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum ScrollAxis {
+    #[default]
+    Vertical,
+    Horizontal,
+}
+
 fn one() -> f32 {
     1.0
 }
@@ -82,6 +193,83 @@ pub enum ActionKind {
         keystrokes: Vec<Keystroke>,
         #[serde(default = "default_true")]
         restore_all_at_end: bool,
+    },
+    /// Find another program's window, the one in front or by title, and remember it:
+    /// `<name>` = its handle, plus `.title`, `.app`, `.x`, `.y`, `.width` and `.height`.
+    #[serde(rename_all = "camelCase")]
+    GetWindow {
+        #[serde(default)]
+        target: WindowTarget,
+        #[serde(default)]
+        title: String,
+        #[serde(default)]
+        matching: crate::desktop::TitleMatch,
+        #[serde(default)]
+        app: String,
+        save_to: String,
+        #[serde(default)]
+        save_scope: VarScope,
+    },
+    /// Find another program's window and raise, minimize, maximize, restore, lower, close,
+    /// move, size or center it.
+    #[serde(rename_all = "camelCase")]
+    SetWindow {
+        #[serde(default)]
+        target: WindowTarget,
+        #[serde(default)]
+        title: String,
+        #[serde(default)]
+        matching: crate::desktop::TitleMatch,
+        #[serde(default)]
+        app: String,
+        #[serde(default)]
+        op: WindowOp,
+        #[serde(default)]
+        x: String,
+        #[serde(default)]
+        y: String,
+        #[serde(default)]
+        width: String,
+        #[serde(default)]
+        height: String,
+        /// 1-based screen number, blank for the window's own; `move`, `bounds` and `center` take it as their frame of reference, `screen` moves there.
+        #[serde(default)]
+        screen: String,
+    },
+    /// Mouse steps run in order: move, click, press, release, scroll, drag, wait.
+    Mouse {
+        #[serde(default)]
+        steps: Vec<MouseStep>,
+    },
+    /// Remember a screen: `<name>` = JSON with number, x, y, width, height, scale, dpi, primary and count (of screens), each also as `<name>.<field>`.
+    #[serde(rename_all = "camelCase")]
+    GetScreen {
+        #[serde(default)]
+        pick: ScreenPick,
+        /// The 1-based number, for `pick: number` (placeholders)
+        #[serde(default)]
+        number: String,
+        save_to: String,
+        #[serde(default)]
+        save_scope: VarScope,
+    },
+    /// Show a window with `text`, placeholders filled in. Each action has its own window; running it again updates the text.
+    #[serde(rename_all = "camelCase")]
+    Debug {
+        #[serde(default)]
+        title: String,
+        #[serde(default)]
+        text: String,
+        /// Keep the window above the others
+        #[serde(default = "default_true")]
+        always_on_top: bool,
+    },
+    /// Remember where the pointer is: `<name>` = "x,y", plus `.x` and `.y`.
+    #[serde(rename_all = "camelCase")]
+    MousePosition {
+        save_to: String,
+        #[serde(default)]
+        save_scope: VarScope,
     },
     #[serde(rename_all = "camelCase")]
     Delay {
@@ -658,6 +846,35 @@ mod tests {
         assert_eq!(json, r#"{"id":"1","wait":false,"type":"delay","ms":250,"msFrom":null}"#);
         let back: Action = serde_json::from_str(&json).unwrap();
         assert_eq!(back, a);
+    }
+
+    #[test]
+    fn desktop_actions_take_defaults() {
+        let g: Action = serde_json::from_str(r#"{"id":"g","type":"getWindow","target":"foreground","saveTo":"front"}"#).unwrap();
+        assert_eq!(g.kind, ActionKind::GetWindow { target: WindowTarget::Foreground, title: String::new(), matching: crate::desktop::TitleMatch::Contains, app: String::new(), save_to: "front".into(), save_scope: VarScope::Local });
+        let w: Action = serde_json::from_str(r#"{"id":"w","type":"setWindow","title":"OBS"}"#).unwrap();
+        match w.kind {
+            ActionKind::SetWindow { target, title, matching, app, op, .. } => {
+                assert_eq!((target, op, matching), (WindowTarget::Title, WindowOp::Focus, crate::desktop::TitleMatch::Contains));
+                assert_eq!((title.as_str(), app.as_str()), ("OBS", ""));
+            }
+            _ => panic!(),
+        }
+        let m: Action = serde_json::from_str(r#"{"id":"m","type":"mouse","steps":[{"type":"click","button":"right"},{"type":"move","x":"1","y":"2"},{"type":"delay","ms":50}]}"#).unwrap();
+        assert_eq!(
+            m.kind,
+            ActionKind::Mouse {
+                steps: vec![
+                    MouseStep::Click { button: crate::input::MouseButton::Right, clicks: 1 },
+                    MouseStep::Move { x: "1".into(), y: "2".into(), relative: false },
+                    MouseStep::Delay { ms: 50 },
+                ]
+            }
+        );
+        let p = Action { id: "p".into(), wait: true, kind: ActionKind::MousePosition { save_to: "at".into(), save_scope: VarScope::Global } };
+        let json = serde_json::to_string(&p).unwrap();
+        assert_eq!(json, r#"{"id":"p","wait":true,"type":"mousePosition","saveTo":"at","saveScope":"global"}"#);
+        assert_eq!(serde_json::from_str::<Action>(&json).unwrap(), p);
     }
 
     #[test]

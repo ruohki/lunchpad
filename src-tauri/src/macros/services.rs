@@ -23,4 +23,6 @@ pub struct Services {
     pub downloads: Option<PathBuf>,
     /// Where the profile and settings live, for `{{configDir}}`.
     pub config_dir: Option<PathBuf>,
+    /// The app, for actions that open windows (the debug action).
+    pub app: Option<tauri::AppHandle>,
 }

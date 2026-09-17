@@ -4,7 +4,9 @@
 //! other people go through this first.
 
 use super::model::Page;
-use crate::macros::model::{Action, ActionKind, HttpAuth, HttpBodyMode, HttpResponse, Keystroke};
+use crate::macros::model::{
+    Action, ActionKind, HttpAuth, HttpBodyMode, HttpResponse, Keystroke, MouseStep, WindowTarget,
+};
 use serde::Serialize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -44,6 +46,10 @@ pub enum Kind {
     Speech,
     HomeAssistant,
     Streaming,
+    /// Moves or clicks the mouse
+    Mouse,
+    /// Raises, moves, sizes or closes another program's window
+    Window,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -152,6 +158,11 @@ fn inspect(page: &str, x: u8, y: u8, caption: &str, action: &Action, out: &mut V
                 add(Level::Warning, Kind::Keys, keys_summary(keystrokes));
             }
         }
+        ActionKind::Mouse { steps } => add(Level::Warning, Kind::Mouse, mouse_summary(steps)),
+        ActionKind::MousePosition { .. } => add(Level::Info, Kind::Mouse, "reads the pointer position".into()),
+        ActionKind::GetScreen { .. } => add(Level::Info, Kind::Window, "reads a screen's size".into()),
+        ActionKind::GetWindow { target, title, app, .. } => add(Level::Info, Kind::Window, format!("reads {}", window_summary(*target, title, app))),
+        ActionKind::SetWindow { target, title, app, op, .. } => add(Level::Warning, Kind::Window, format!("{op:?} {}", window_summary(*target, title, app)).to_lowercase()),
         ActionKind::PlaySound { file, .. } => add(Level::Info, Kind::Sound, file.clone()),
         ActionKind::TextToSpeech { text, .. } => add(Level::Info, Kind::Speech, first_line(text)),
         ActionKind::HomeAssistantTurn { entity, .. } | ActionKind::HomeAssistantSetValue { entity, .. } => add(Level::Warning, Kind::HomeAssistant, entity.clone()),
@@ -225,6 +236,30 @@ fn first_line(text: &str) -> String {
         short.push('…');
     }
     short
+}
+
+/// "the foreground window" or "“title” of app".
+fn window_summary(target: WindowTarget, title: &str, app: &str) -> String {
+    match target {
+        WindowTarget::Foreground => "the foreground window".to_string(),
+        WindowTarget::Title => format!("“{title}”{}", if app.is_empty() { String::new() } else { format!(" of {app}") }),
+    }
+}
+
+fn mouse_summary(steps: &[MouseStep]) -> String {
+    let parts: Vec<String> = steps
+        .iter()
+        .filter_map(|s| match s {
+            MouseStep::Move { x, y, relative } => Some(format!("{}{x}, {y}", if *relative { "by " } else { "to " })),
+            MouseStep::Click { button, clicks } => Some(format!("{clicks}× {button:?}").to_lowercase()),
+            MouseStep::Press { button } => Some(format!("hold {button:?}").to_lowercase()),
+            MouseStep::Release { button } => Some(format!("release {button:?}").to_lowercase()),
+            MouseStep::Scroll { amount, .. } => Some(format!("scroll {amount}")),
+            MouseStep::Drag { x, y, .. } => Some(format!("drag to {x}, {y}")),
+            MouseStep::Delay { .. } => None,
+        })
+        .collect();
+    first_line(&parts.join(", "))
 }
 
 fn keys_summary(keystrokes: &[Keystroke]) -> String {

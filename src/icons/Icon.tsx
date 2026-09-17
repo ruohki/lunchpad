@@ -1,8 +1,10 @@
 import { clsx } from "clsx";
 import {
+  AppWindow,
   ArrowDown,
   ArrowLeftRight,
   ArrowUp,
+  Bug,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -11,6 +13,7 @@ import {
   CircleStop,
   Code,
   Copy,
+  Crosshair,
   File,
   FileOutput,
   Globe,
@@ -21,6 +24,7 @@ import {
   Maximize2,
   Mic,
   MicOff,
+  Monitor,
   MousePointerClick,
   Palette,
   Pencil,
@@ -43,9 +47,11 @@ import {
 
 /** Every icon the app draws, by its Lucide name; add one here to use it by name. */
 const ICONS = {
+  AppWindow,
   ArrowDown,
   ArrowLeftRight,
   ArrowUp,
+  Bug,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -54,6 +60,7 @@ const ICONS = {
   CircleStop,
   Code,
   Copy,
+  Crosshair,
   File,
   FileOutput,
   Globe,
@@ -64,6 +71,7 @@ const ICONS = {
   Maximize2,
   Mic,
   MicOff,
+  Monitor,
   MousePointerClick,
   Palette,
   Pencil,

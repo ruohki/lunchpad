@@ -11,6 +11,8 @@ pub mod audio;
 pub mod audio_devices;
 mod commands;
 pub mod config;
+pub mod debug;
+pub mod desktop;
 pub mod http;
 pub mod input;
 pub mod live;
@@ -188,6 +190,7 @@ pub fn run() {
             // Keep one client alive for the whole process, created on the main
             // thread, so every later enumeration sees the real device list.
             app.manage(MidiAnchor::new());
+            app.manage(debug::DebugTexts::default());
 
             let config_dir = app.path().app_config_dir().expect("app config dir");
             let settings: SharedSettings = Arc::new(Mutex::new(SettingsStore::load(&config_dir)));
@@ -236,6 +239,7 @@ pub fn run() {
                 settings: Some(settings.clone()),
                 downloads: Some(http::download_dir(app.handle())),
                 config_dir: Some(config_dir.clone()),
+                app: Some(app.handle().clone()),
             };
             let engine = MacroEngine::new(profile.clone(), running_pads, sink, services, runtime);
             // Shared variables survive restarts.
@@ -289,6 +293,10 @@ pub fn run() {
             get_layout,
             list_models,
             list_midi_ports,
+            list_windows,
+            foreground_window,
+            list_screens,
+            debug_text,
             press_pad,
             control_pad,
             reset_leds,

@@ -1164,6 +1164,12 @@ pub(super) async fn execute(ctx: &RunContext, action: &Action) {
         | ActionKind::IfElse { .. }
         | ActionKind::IfEnd { .. } => {}
         ActionKind::PlaySound { .. }
+        | ActionKind::GetWindow { .. }
+        | ActionKind::SetWindow { .. }
+        | ActionKind::Mouse { .. }
+        | ActionKind::MousePosition { .. }
+        | ActionKind::Debug { .. }
+        | ActionKind::GetScreen { .. }
         | ActionKind::TextToSpeech { .. }
         | ActionKind::LaunchApplication { .. }
         | ActionKind::Hotkey { .. }

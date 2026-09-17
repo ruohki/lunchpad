@@ -1,5 +1,7 @@
 //! Tauri command layer: thin wrappers between the frontend and the core.
 
+pub mod debug;
+pub mod desktop;
 pub mod device;
 pub mod diagnostics;
 pub mod hub;
@@ -44,6 +46,8 @@ pub fn err(e: impl std::fmt::Display) -> String {
     e.to_string()
 }
 
+pub use debug::*;
+pub use desktop::*;
 pub use device::*;
 pub use diagnostics::*;
 pub use hub::*;
