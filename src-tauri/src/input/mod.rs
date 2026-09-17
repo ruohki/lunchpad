@@ -1,4 +1,4 @@
-//! Keyboard synthesis. A dedicated thread owns the `enigo` connection (it is
+//! Keyboard and mouse synthesis. A dedicated thread owns the `enigo` connection (it is
 //! created lazily on first use, which on macOS triggers the Accessibility
 //! permission prompt) and executes key commands sent over a channel.
 
@@ -28,6 +28,41 @@ enum Cmd {
     Text(String),
     /// Create the connection now (used by "check permission" in settings).
     Probe,
+    MouseMove {
+        x: i32,
+        y: i32,
+        relative: bool,
+    },
+    MouseButton {
+        button: enigo::Button,
+        direction: Direction,
+    },
+    MouseScroll {
+        amount: i32,
+        horizontal: bool,
+    },
+    /// Where the pointer is, answered on the channel.
+    MouseLocation(Sender<Option<(i32, i32)>>),
+}
+
+/// A mouse button as the actions name it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum MouseButton {
+    #[default]
+    Left,
+    Right,
+    Middle,
+}
+
+impl From<MouseButton> for enigo::Button {
+    fn from(b: MouseButton) -> Self {
+        match b {
+            MouseButton::Left => enigo::Button::Left,
+            MouseButton::Right => enigo::Button::Right,
+            MouseButton::Middle => enigo::Button::Middle,
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -50,6 +85,28 @@ impl KeyboardHandle {
     }
     pub fn probe(&self) {
         let _ = self.tx.send(Cmd::Probe);
+    }
+    /// Move the pointer to a screen position, or by an offset.
+    pub fn mouse_move(&self, x: i32, y: i32, relative: bool) {
+        let _ = self.tx.send(Cmd::MouseMove { x, y, relative });
+    }
+    pub fn mouse_button(&self, button: MouseButton, direction: Direction) {
+        let _ = self.tx.send(Cmd::MouseButton {
+            button: button.into(),
+            direction,
+        });
+    }
+    /// Scroll by `amount` notches: positive is down, or right for the horizontal axis.
+    pub fn mouse_scroll(&self, amount: i32, horizontal: bool) {
+        let _ = self.tx.send(Cmd::MouseScroll { amount, horizontal });
+    }
+    /// The pointer's screen position, `None` when the input connection is unavailable.
+    pub fn mouse_location(&self) -> Option<(i32, i32)> {
+        let (tx, rx) = crossbeam_channel::bounded(1);
+        self.tx.send(Cmd::MouseLocation(tx)).ok()?;
+        rx.recv_timeout(std::time::Duration::from_secs(2))
+            .ok()
+            .flatten()
     }
 }
 
@@ -156,6 +213,44 @@ pub fn spawn_keyboard(app: Option<AppHandle>) -> KeyboardHandle {
                     Cmd::Probe => {
                         worker.reported = false;
                         let _ = worker.connection();
+                    }
+                    Cmd::MouseMove { x, y, relative } => {
+                        if let Some(enigo) = worker.connection() {
+                            let coordinate = if relative {
+                                enigo::Coordinate::Rel
+                            } else {
+                                enigo::Coordinate::Abs
+                            };
+                            if let Err(e) = enigo.move_mouse(x, y, coordinate) {
+                                tracing::warn!(error = %e, "moving the mouse failed");
+                                worker.enigo = None;
+                            }
+                        }
+                    }
+                    Cmd::MouseButton { button, direction } => {
+                        if let Some(enigo) = worker.connection() {
+                            if let Err(e) = enigo.button(button, direction) {
+                                tracing::warn!(error = %e, "mouse button failed");
+                                worker.enigo = None;
+                            }
+                        }
+                    }
+                    Cmd::MouseScroll { amount, horizontal } => {
+                        if let Some(enigo) = worker.connection() {
+                            let axis = if horizontal {
+                                enigo::Axis::Horizontal
+                            } else {
+                                enigo::Axis::Vertical
+                            };
+                            if let Err(e) = enigo.scroll(amount, axis) {
+                                tracing::warn!(error = %e, "scrolling failed");
+                                worker.enigo = None;
+                            }
+                        }
+                    }
+                    Cmd::MouseLocation(reply) => {
+                        let at = worker.connection().and_then(|enigo| enigo.location().ok());
+                        let _ = reply.send(at);
                     }
                 }
             }

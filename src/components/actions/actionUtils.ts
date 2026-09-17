@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import { BUILTIN_VARIABLES, newActionId, type Action, type ActionKind, type ActionType, type Layout, type Page } from "../../lib/api";
+import { BUILTIN_VARIABLES, newActionId, type Action, type ActionKind, type ActionType, type Layout, type MouseStep, type Page } from "../../lib/api";
 import type { IconName } from "../../icons/Icon";
 
 /** Icon per action type; the legacy app's choices where it had the action. */
@@ -27,6 +27,12 @@ export const ACTION_ICONS: Record<ActionType, IconName> = {
   setAudioDevice: "Volume2",
   addToVariable: "Variable",
   launchApplication: "SquareTerminal",
+  getWindow: "AppWindow",
+  setWindow: "Maximize2",
+  mouse: "MousePointerClick",
+  mousePosition: "Crosshair",
+  getScreen: "Monitor",
+  debug: "Bug",
   hotkey: "Keyboard",
   httpRequest: "Globe",
   setVariable: "Variable",
@@ -52,7 +58,9 @@ export const ACTION_ICONS: Record<ActionType, IconName> = {
 
 export const GROUP_ICONS: Record<string, IconName> = {
   media: "Volume2",
-  system: "Keyboard",
+  system: "SquareTerminal",
+  input: "Keyboard",
+  window: "AppWindow",
   general: "LayoutGrid",
   flow: "Workflow",
   stop: "CircleStop",
@@ -252,6 +260,18 @@ export function createActions(type: ActionType): Action[] {
       ];
     case "setVariable":
       return [make({ type: "setVariable", name: "", value: "", scope: "local" })];
+    case "getWindow":
+      return [make({ type: "getWindow", target: "foreground", title: "", matching: "contains", app: "", saveTo: "window", saveScope: "local" })];
+    case "setWindow":
+      return [make({ type: "setWindow", target: "title", title: "", matching: "contains", app: "", op: "focus", x: "", y: "", width: "", height: "", screen: "" })];
+    case "mouse":
+      return [make({ type: "mouse", steps: [{ type: "click", button: "left", clicks: 1 }] })];
+    case "mousePosition":
+      return [make({ type: "mousePosition", saveTo: "mouse", saveScope: "local" })];
+    case "getScreen":
+      return [make({ type: "getScreen", pick: "primary", number: "", saveTo: "screen", saveScope: "local" })];
+    case "debug":
+      return [make({ type: "debug", title: "Debug", text: "", alwaysOnTop: true })];
     case "ifStart":
     case "ifElse":
     case "ifEnd": {
@@ -307,7 +327,7 @@ export function createActions(type: ActionType): Action[] {
 
 /** Actions whose `wait` flag is meaningful (they take time). */
 export function hasWait(type: ActionType): boolean {
-  return ["runButton", "playSound", "textToSpeech", "launchApplication", "hotkey", "httpRequest", "runScript"].includes(type);
+  return ["runButton", "playSound", "textToSpeech", "launchApplication", "hotkey", "mouse", "httpRequest", "runScript"].includes(type);
 }
 
 /** Variable names visible to completion: built-ins, live globals, and names this button writes. */
@@ -324,6 +344,9 @@ export function knownVariables(button: { down: Action[]; up: Action[]; hold?: Ac
       names.add(`${a.saveTo}.cached`);
     }
     if (a.type === "runScript" && a.saveTo) names.add(a.saveTo);
+    if (a.type === "getWindow" && a.saveTo) for (const field of ["", ".handle", ".title", ".app", ".x", ".y", ".width", ".height", ".screen", ".minimized"]) names.add(a.saveTo + field);
+    if (a.type === "mousePosition" && a.saveTo) for (const field of ["", ".x", ".y"]) names.add(a.saveTo + field);
+    if (a.type === "getScreen" && a.saveTo) for (const field of ["", ".number", ".x", ".y", ".width", ".height", ".scale", ".dpi", ".primary", ".count"]) names.add(a.saveTo + field);
     if (a.type === "launchApplication" && a.saveOutputTo) names.add(a.saveOutputTo);
   }
   return [...names].sort();
@@ -339,6 +362,26 @@ export function describeTarget(
   if (!target.pageId) return button;
   const page = pages.find((p) => p.id === target.pageId);
   return t("actions.summary.onPage", { button, page: page?.name ?? t("actions.summary.unknownPage") });
+}
+
+/** One mouse step in a few words, for the collapsed row. */
+function summarizeMouseStep(step: MouseStep, t: TFunction): string {
+  switch (step.type) {
+    case "move":
+      return t(step.relative ? "mouse.summary.moveBy" : "mouse.summary.moveTo", { x: step.x, y: step.y });
+    case "click":
+      return t("mouse.summary.click", { count: step.clicks, button: t(`mouse.buttons.${step.button}`) });
+    case "press":
+      return t("mouse.summary.press", { button: t(`mouse.buttons.${step.button}`) });
+    case "release":
+      return t("mouse.summary.release", { button: t(`mouse.buttons.${step.button}`) });
+    case "scroll":
+      return t("mouse.summary.scroll", { amount: step.amount, axis: t(`mouse.axes.${step.axis}`) });
+    case "drag":
+      return t("mouse.summary.drag", { x: step.x, y: step.y });
+    case "delay":
+      return t("mouse.summary.delay", { ms: step.ms });
+  }
 }
 
 export function summarize(t: TFunction, action: Action, pages: Page[]): string {
@@ -409,6 +452,18 @@ export function summarize(t: TFunction, action: Action, pages: Page[]): string {
       return `${action.method.toUpperCase()} ${action.url}${action.saveTo ? ` → ${action.saveTo}` : ""}`;
     case "setVariable":
       return `${action.name} = ${action.value}`;
+    case "getWindow":
+      return t("actions.summary.getWindow", { what: action.target === "foreground" ? t("window.foregroundShort") : `“${action.title}”`, name: action.saveTo });
+    case "setWindow":
+      return t("actions.summary.setWindow", { op: t(`window.ops.${action.op}`), what: action.target === "foreground" ? t("window.foregroundShort") : `“${action.title}”` });
+    case "mouse":
+      return action.steps.map((step) => summarizeMouseStep(step, t)).join(", ");
+    case "mousePosition":
+      return t("actions.summary.mousePosition", { name: action.saveTo });
+    case "getScreen":
+      return t("actions.summary.getScreen", { what: action.pick === "number" ? t("screen.numbered", { number: action.number || "?" }) : t(`screen.picks.${action.pick}`), name: action.saveTo });
+    case "debug":
+      return action.text.split("\n")[0];
     case "ifStart":
       return action.variable ? `${action.variable} ${t(`branch.opsShort.${action.op}`)} ${["isEmpty", "isNotEmpty"].includes(action.op) ? "" : action.value}`.trim() : "";
     case "runScript":

@@ -478,7 +478,9 @@
       "system": "System",
       "obs": "OBS Studio",
       "slobs": "Streamlabs",
-      "homeAssistant": "Home Assistant"
+      "homeAssistant": "Home Assistant",
+      "input": "Keyboard & mouse",
+      "window": "Window"
     },
     "fields": {
       "ms": "Milliseconds",
@@ -672,6 +674,30 @@
       "homeAssistantCallService": {
         "name": "Home Assistant: call a service",
         "desc": "Any service of any domain, with JSON data and placeholders."
+      },
+      "mousePosition": {
+        "name": "Get mouse position",
+        "desc": "Remember where the pointer is."
+      },
+      "getWindow": {
+        "name": "Get window",
+        "desc": "Find a program's window, in front or by title, and remember its handle, title, program, position, size and screen in a variable."
+      },
+      "setWindow": {
+        "name": "Set window",
+        "desc": "Bring a program's window to the front, minimize, maximize, move or resize it, put it on a screen, or close it."
+      },
+      "mouse": {
+        "name": "Mouse sequence",
+        "desc": "Move, click, scroll and drag the mouse, step by step."
+      },
+      "debug": {
+        "name": "Debug window",
+        "desc": "Show a window with a text, placeholders filled in; running the action again updates it."
+      },
+      "getScreen": {
+        "name": "Get screen",
+        "desc": "Remember a screen's size, position, scale and DPI in a variable."
       }
     },
     "summary": {
@@ -681,7 +707,11 @@
       "thisButton": "this button",
       "button": "column {{column}}, row {{row}}",
       "onPage": "{{button}} on {{page}}",
-      "delayFrom": "{{name}} ms"
+      "delayFrom": "{{name}} ms",
+      "mousePosition": "→ {{name}}",
+      "getWindow": "{{what}} → {{name}}",
+      "setWindow": "{{op}} · {{what}}",
+      "getScreen": "{{what}} → {{name}}"
     },
     "flipFlop": "Flip flop",
     "pushToTalk": "Push-to-talk",
@@ -1194,7 +1224,9 @@
       "homeAssistant": "Controls Home Assistant: {{detail}}",
       "streaming": "Controls {{detail}}",
       "launcher": "Opens a launcher or a terminal with {{detail}}. Whatever is typed next runs on this computer, with your rights.",
-      "command": "Types what looks like a command or an address: {{detail}}"
+      "command": "Types what looks like a command or an address: {{detail}}",
+      "mouse": "Moves or clicks the mouse: {{detail}}",
+      "window": "Controls another program's window: {{detail}}"
     },
     "confirm": "I have checked these and want to import them.",
     "import": "Import",
@@ -1341,5 +1373,115 @@
       }
     },
     "connecting": "Connecting…"
+  },
+  "window": {
+    "byTitle": "By title",
+    "foreground": "Foreground window",
+    "foregroundShort": "the foreground window",
+    "title": "Title",
+    "titlePlaceholder": "Part of the title, or {{window}}",
+    "pick": "Current windows",
+    "pickPlaceholder": "Pick one…",
+    "none": "No windows found",
+    "refresh": "Refresh the list",
+    "matching": "Match",
+    "match": {
+      "contains": "contains",
+      "startsWith": "starts with",
+      "exact": "is exactly",
+      "regex": "matches a pattern"
+    },
+    "app": "Program",
+    "appPlaceholder": "any",
+    "op": "Do",
+    "ops": {
+      "focus": "Bring to front",
+      "minimize": "Minimize",
+      "maximize": "Maximize",
+      "restore": "Restore",
+      "sendToBack": "Send to back",
+      "close": "Close",
+      "move": "Move to",
+      "resize": "Resize to",
+      "bounds": "Move and resize",
+      "center": "Center on screen",
+      "screen": "Move to screen"
+    },
+    "width": "Width",
+    "height": "Height",
+    "saveTo": "Remember as",
+    "getHint": "{{name}} holds the window as JSON, with {{name}}.handle, {{name}}.title, {{name}}.app, {{name}}.x, {{name}}.y, {{name}}.width, {{name}}.height, {{name}}.screen and {{name}}.minimized beside it. Type {{ref}} as the title of a Set window later to mean that window again.",
+    "setHint": "Picking a window from the list fills in its exact title and program; a remembered window's {{name}} as the title means that window. Screens count from 1; with a screen, X and Y count from its top-left corner, and a blank one keeps the window's place. On macOS this needs the Accessibility permission, Maximize fills the screen, and Send to back hides the program.",
+    "screen": "Screen",
+    "screenOwn": "own",
+    "pickHint": "{{app}} · screen {{screen}}"
+  },
+  "mouse": {
+    "x": "X",
+    "y": "Y",
+    "relative": "relative",
+    "button": "Button",
+    "buttons": {
+      "left": "Left",
+      "right": "Right",
+      "middle": "Middle"
+    },
+    "clicks": "Clicks",
+    "clickCounts": {
+      "1": "Single",
+      "2": "Double",
+      "3": "Triple"
+    },
+    "amount": "Notches",
+    "axis": "Axis",
+    "axes": {
+      "vertical": "Vertical",
+      "horizontal": "Horizontal"
+    },
+    "steps": {
+      "move": "Move to",
+      "click": "Click",
+      "press": "Press and hold",
+      "release": "Release",
+      "scroll": "Scroll",
+      "drag": "Drag to",
+      "delay": "Wait"
+    },
+    "summary": {
+      "moveTo": "to {{x}}, {{y}}",
+      "moveBy": "by {{x}}, {{y}}",
+      "click": "{{count}}× {{button}}",
+      "press": "hold {{button}}",
+      "release": "release {{button}}",
+      "scroll": "scroll {{amount}} {{axis}}",
+      "drag": "drag to {{x}}, {{y}}",
+      "delay": "{{ms}} ms"
+    },
+    "hint": "Steps run top to bottom, where the pointer is. Coordinates count from the top-left corner of the main display, or with “relative” from the pointer; a positive scroll goes down or right; a held button stays down until a release step. Placeholders work in every number.",
+    "saveTo": "Remember as",
+    "positionHint": "{{name}} holds “x,y”; {{name}}.x and {{name}}.y hold the numbers on their own."
+  },
+  "debug": {
+    "title": "Window title",
+    "text": "Text",
+    "textPlaceholder": "velocity = {{velocity}}",
+    "hint": "Each Debug window action has a window of its own. It opens on the first run and every later run replaces its text, so a macro can watch its variables change.",
+    "onTop": "Keep on top",
+    "onTopHint": "The window stays above the other windows, so it is visible while you use the program the macro controls."
+  },
+  "screen": {
+    "pick": "Which screen",
+    "picks": {
+      "primary": "The main screen",
+      "number": "A screen by number",
+      "foreground": "The foreground window's screen",
+      "pointer": "The screen under the pointer"
+    },
+    "numbered": "screen {{number}}",
+    "number": "Number",
+    "now": "Right now:",
+    "summary": "{{number}}: {{width}} × {{height}} at {{scale}}×{{main}}",
+    "main": " (main)",
+    "hint": "{{name}} holds the screen as JSON, with {{name}}.number, {{name}}.x, {{name}}.y, {{name}}.width, {{name}}.height, {{name}}.scale (pixels per point), {{name}}.dpi, {{name}}.primary and {{name}}.count (how many screens there are) beside it."
   }
 }

@@ -60,8 +60,13 @@ tauri-plugin-window-state = "2"
 
 [target.'cfg(windows)'.dependencies]
 windows-core = "0.61"
-windows = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_System_Variant", "Win32_Media_Audio", "Win32_Media_Audio_Endpoints", "Win32_Devices_FunctionDiscovery", "Win32_UI_Shell_PropertiesSystem"] }
+windows = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_System_Variant", "Win32_Media_Audio", "Win32_Media_Audio_Endpoints", "Win32_Devices_FunctionDiscovery", "Win32_UI_Shell_PropertiesSystem", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Gdi", "Win32_Graphics_Dwm", "Win32_System_Threading", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_HiDpi"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2-core-audio = "0.3"
 objc2-core-foundation = "0.3"
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", features = ["NSWorkspace", "NSRunningApplication"] }
+objc2-foundation = { version = "0.3", features = ["NSString", "NSArray"] }
+core-foundation = "0.10"
+core-graphics = "0.25"

@@ -46,6 +46,169 @@ pub async fn execute_external(ctx: &RunContext, action: &Action) {
             }
         }
 
+        ActionKind::GetWindow { target, title, matching, app, save_to, save_scope } => match find_window(ctx, *target, title, *matching, app).await {
+            Ok(window) => remember_window(ctx, save_to, window.as_ref(), *save_scope),
+            Err(e) => tracing::warn!(action = %action.id, error = %e, "window lookup failed"),
+        },
+
+        ActionKind::SetWindow { target, title, matching, app, op, x, y, width, height, screen } => {
+            let window = match find_window(ctx, *target, title, *matching, app).await {
+                Ok(Some(window)) => window,
+                Ok(None) => {
+                    tracing::warn!(action = %action.id, "no window matches");
+                    return;
+                }
+                Err(e) => {
+                    tracing::warn!(action = %action.id, error = %e, "window lookup failed");
+                    return;
+                }
+            };
+            let number = |text: &str| -> Option<i32> { ctx.expand(text).trim().parse::<f64>().ok().map(|v| v.round() as i32) };
+            let screen = number(screen).filter(|n| *n > 0).map(|n| n as u32);
+            use crate::desktop::Change;
+            let change = match op {
+                WindowOp::Focus => Change::Focus,
+                WindowOp::Minimize => Change::Minimize,
+                WindowOp::Maximize => Change::Maximize,
+                WindowOp::Restore => Change::Restore,
+                WindowOp::SendToBack => Change::SendToBack,
+                WindowOp::Close => Change::Close,
+                WindowOp::Move => Change::Move { x: number(x), y: number(y), screen },
+                WindowOp::Resize => Change::Resize { width: number(width), height: number(height) },
+                WindowOp::Bounds => Change::Bounds { x: number(x), y: number(y), width: number(width), height: number(height), screen },
+                WindowOp::Center => Change::Center { screen },
+                WindowOp::Screen => match screen {
+                    Some(n) => Change::Move { x: None, y: None, screen: Some(n) },
+                    None => {
+                        tracing::warn!(action = %action.id, "no screen number to move to");
+                        return;
+                    }
+                },
+            };
+            let target = window.clone();
+            let done = tokio::task::spawn_blocking(move || {
+                let screens = crate::desktop::screens().unwrap_or_default();
+                let op = crate::desktop::resolve(&target, change, &screens)?;
+                crate::desktop::perform(&target, op)
+            })
+            .await
+            .map_err(|e| e.to_string())
+            .and_then(|r| r);
+            if let Err(e) = done {
+                tracing::warn!(action = %action.id, window = %window.title, error = %e, "window change failed");
+            }
+        }
+
+        ActionKind::Mouse { steps } => {
+            let Some(keyboard) = &services.keyboard else { return unavailable(action) };
+            let number = |text: &str| -> Option<i32> { ctx.expand(text).trim().parse::<f64>().ok().map(|v| v.round() as i32) };
+            for step in steps {
+                if ctx.token.is_cancelled() {
+                    break;
+                }
+                match step {
+                    MouseStep::Move { x, y, relative } => match (number(x), number(y)) {
+                        (Some(x), Some(y)) => keyboard.mouse_move(x, y, *relative),
+                        _ => tracing::warn!(action = %action.id, "mouse target is not a pair of numbers"),
+                    },
+                    MouseStep::Click { button, clicks } => {
+                        for i in 0..(*clicks).clamp(1, 5) {
+                            if i > 0 {
+                                sleep_cancellable(ctx, 60).await;
+                            }
+                            keyboard.mouse_button(*button, enigo::Direction::Click);
+                        }
+                    }
+                    MouseStep::Press { button } => keyboard.mouse_button(*button, enigo::Direction::Press),
+                    MouseStep::Release { button } => keyboard.mouse_button(*button, enigo::Direction::Release),
+                    MouseStep::Scroll { amount, axis } => match number(amount) {
+                        Some(n) => keyboard.mouse_scroll(n, *axis == ScrollAxis::Horizontal),
+                        None => tracing::warn!(action = %action.id, "scroll amount is not a number"),
+                    },
+                    MouseStep::Drag { x, y, button } => {
+                        let (Some(x), Some(y)) = (number(x), number(y)) else {
+                            tracing::warn!(action = %action.id, "drag target is not a pair of numbers");
+                            continue;
+                        };
+                        keyboard.mouse_button(*button, enigo::Direction::Press);
+                        sleep_cancellable(ctx, 80).await;
+                        keyboard.mouse_move(x, y, false);
+                        sleep_cancellable(ctx, 80).await;
+                        keyboard.mouse_button(*button, enigo::Direction::Release);
+                    }
+                    MouseStep::Delay { ms } => sleep_cancellable(ctx, (*ms).min(MAX_KEYSTROKE_DELAY)).await,
+                }
+            }
+        }
+
+        ActionKind::GetScreen { pick, number, save_to, save_scope } => {
+            let wanted = ctx.expand(number).trim().parse::<f64>().ok().map(|v| v.round() as u32);
+            let pointer = match (pick, &services.keyboard) {
+                (ScreenPick::Pointer, Some(keyboard)) => {
+                    let keyboard = keyboard.clone();
+                    tokio::task::spawn_blocking(move || keyboard.mouse_location()).await.ok().flatten()
+                }
+                _ => None,
+            };
+            let pick = *pick;
+            let found = tokio::task::spawn_blocking(move || -> Result<(Vec<crate::desktop::ScreenInfo>, Option<usize>), String> {
+                let screens = crate::desktop::screens()?;
+                let index = match pick {
+                    ScreenPick::Primary => screens.iter().position(|s| s.primary).or(if screens.is_empty() { None } else { Some(0) }),
+                    ScreenPick::Number => wanted.and_then(|n| screens.iter().position(|s| s.number == n)),
+                    ScreenPick::Foreground => crate::desktop::foreground()?.and_then(|w| crate::desktop::screen_of(&screens, w.x, w.y, w.width, w.height).map(|s| s.number)).and_then(|n| screens.iter().position(|s| s.number == n)),
+                    ScreenPick::Pointer => pointer.and_then(|(x, y)| crate::desktop::screen_of(&screens, x, y, 1, 1).map(|s| s.number)).and_then(|n| screens.iter().position(|s| s.number == n)),
+                };
+                Ok((screens, index))
+            })
+            .await
+            .map_err(|e| e.to_string())
+            .and_then(|r| r);
+            match found {
+                Ok((screens, index)) => {
+                    if index.is_none() {
+                        tracing::warn!(action = %action.id, "no such screen");
+                    }
+                    remember_screen(ctx, save_to, index.map(|i| &screens[i]), screens.len(), *save_scope);
+                }
+                Err(e) => tracing::warn!(action = %action.id, error = %e, "screen lookup failed"),
+            }
+        }
+
+        ActionKind::Debug { title, text, always_on_top } => {
+            let Some(app) = &services.app else { return unavailable(action) };
+            let title = ctx.expand(title);
+            // The pad the macro runs for, so several debug windows can be told apart.
+            let title = format!("{} · column {}, row {}", if title.trim().is_empty() { "Debug" } else { title.trim() }, ctx.x + 1, ctx.y + 1);
+            if let Err(e) = crate::debug::show(app, &action.id, title, ctx.expand(text), *always_on_top) {
+                tracing::warn!(action = %action.id, error = %e, "debug window failed");
+            }
+        }
+
+        ActionKind::MousePosition {
+            save_to,
+            save_scope,
+        } => {
+            let Some(keyboard) = &services.keyboard else {
+                return unavailable(action);
+            };
+            let keyboard = keyboard.clone();
+            let at = tokio::task::spawn_blocking(move || keyboard.mouse_location())
+                .await
+                .ok()
+                .flatten();
+            match at {
+                Some((x, y)) => {
+                    ctx.set_var(save_to, format!("{x},{y}"), *save_scope);
+                    ctx.set_var(&format!("{save_to}.x"), x.to_string(), *save_scope);
+                    ctx.set_var(&format!("{save_to}.y"), y.to_string(), *save_scope);
+                }
+                None => {
+                    tracing::warn!(action = %action.id, "the pointer position could not be read")
+                }
+            }
+        }
+
         ActionKind::LaunchApplication { executable, arguments, hidden, kill_on_stop, save_output_to, save_scope } => {
             let output = launch(ctx, &ctx.expand(executable), &ctx.expand(arguments), *hidden, *kill_on_stop, save_output_to.is_some()).await;
             if let (Some(name), Some(text)) = (save_output_to, output) {
@@ -328,6 +491,67 @@ async fn run_queued(ctx: &RunContext, script: &Action, queued: Vec<serde_json::V
         let action = Action { id: uuid::Uuid::new_v4().to_string(), wait: true, kind };
         Box::pin(super::engine::execute(ctx, &action)).await;
     }
+}
+
+/// A found window into variables: the handle under `name`, its details under `name.<field>`;
+/// everything empty when nothing matched, so a following check can tell.
+/// The window an action means: the one in front, a remembered handle, or a title search.
+async fn find_window(ctx: &RunContext, target: WindowTarget, title: &str, matching: crate::desktop::TitleMatch, app: &str) -> Result<Option<crate::desktop::WindowInfo>, String> {
+    let title = ctx.expand(title);
+    let app = ctx.expand(app);
+    tokio::task::spawn_blocking(move || match target {
+        WindowTarget::Foreground => crate::desktop::foreground(),
+        WindowTarget::Title if title.trim().starts_with(crate::desktop::HANDLE_PREFIX) => crate::desktop::by_handle(title.trim()),
+        // What a "get window" variable holds: the window as JSON; its handle names the window.
+        WindowTarget::Title if title.trim().starts_with('{') => match serde_json::from_str::<serde_json::Value>(title.trim()).ok().and_then(|v| v.get("handle").and_then(|h| h.as_str()).map(str::to_string)) {
+            Some(handle) => crate::desktop::by_handle(&handle),
+            None => Err("the title is neither a window nor a text".into()),
+        },
+        WindowTarget::Title => {
+            let windows = crate::desktop::list()?;
+            Ok(crate::desktop::find(&windows, &title, matching, &app)?.cloned())
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())
+    .and_then(|r| r)
+}
+
+/// `<name>` = the screen as JSON plus `count` (empty when there is none), and every field beside it as `<name>.<field>`.
+fn remember_screen(ctx: &RunContext, name: &str, screen: Option<&crate::desktop::ScreenInfo>, count: usize, scope: VarScope) {
+    let json = screen.and_then(|s| serde_json::to_value(s).ok()).map(|mut v| {
+        v["count"] = serde_json::Value::from(count);
+        v.to_string()
+    });
+    ctx.set_var(name, json.unwrap_or_default(), scope);
+    let text = |s: Option<String>| s.unwrap_or_default();
+    for (field, value) in [
+        ("number", screen.map(|s| s.number.to_string())),
+        ("x", screen.map(|s| s.x.to_string())),
+        ("y", screen.map(|s| s.y.to_string())),
+        ("width", screen.map(|s| s.width.to_string())),
+        ("height", screen.map(|s| s.height.to_string())),
+        ("scale", screen.map(|s| s.scale.to_string())),
+        ("dpi", screen.map(|s| s.dpi.to_string())),
+        ("primary", screen.map(|s| s.primary.to_string())),
+        ("count", screen.map(|_| count.to_string())),
+    ] {
+        ctx.set_var(&format!("{name}.{field}"), text(value), scope);
+    }
+}
+
+/// `<name>` = the window as JSON (empty when there is none), and every field beside it as `<name>.<field>`.
+fn remember_window(ctx: &RunContext, name: &str, window: Option<&crate::desktop::WindowInfo>, scope: VarScope) {
+    ctx.set_var(name, window.and_then(|w| serde_json::to_string(w).ok()).unwrap_or_default(), scope);
+    let text = |s: Option<String>| s.unwrap_or_default();
+    ctx.set_var(&format!("{name}.handle"), text(window.map(|w| w.handle.clone())), scope);
+    ctx.set_var(&format!("{name}.title"), text(window.map(|w| w.title.clone())), scope);
+    ctx.set_var(&format!("{name}.app"), text(window.map(|w| w.app.clone())), scope);
+    for (field, value) in [("x", window.map(|w| w.x)), ("y", window.map(|w| w.y)), ("width", window.map(|w| w.width)), ("height", window.map(|w| w.height))] {
+        ctx.set_var(&format!("{name}.{field}"), text(value.map(|v| v.to_string())), scope);
+    }
+    ctx.set_var(&format!("{name}.screen"), text(window.map(|w| w.screen.to_string())), scope);
+    ctx.set_var(&format!("{name}.minimized"), text(window.map(|w| w.minimized.to_string())), scope);
 }
 
 /// `Some(true/false)` to show or hide, `None` to flip the current state.

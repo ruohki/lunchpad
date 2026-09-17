@@ -483,6 +483,12 @@ export type Keystroke =
 /** Mirrors `ActionKind` in src-tauri/src/macros/model.rs (serde tag "type"). */
 export type ActionKind =
   | { type: "delay"; ms: number; msFrom: string | null }
+  | { type: "getWindow"; target: WindowTarget; title: string; matching: TitleMatch; app: string; saveTo: string; saveScope: VarScope }
+  | { type: "setWindow"; target: WindowTarget; title: string; matching: TitleMatch; app: string; op: WindowOp; x: string; y: string; width: string; height: string; screen: string }
+  | { type: "mouse"; steps: MouseStep[] }
+  | { type: "mousePosition"; saveTo: string; saveScope: VarScope }
+  | { type: "getScreen"; pick: ScreenPick; number: string; saveTo: string; saveScope: VarScope }
+  | { type: "debug"; title: string; text: string; alwaysOnTop: boolean }
   | { type: "switchPage"; pageId: string }
   | { type: "setColor"; color: PadColor; target: ButtonRef | null }
   | { type: "runButton"; target: ButtonRef; trigger: ButtonTrigger }
@@ -547,6 +553,62 @@ export type ActionKind =
   | { type: "runScript"; code: string; saveTo: string | null; saveScope: VarScope };
 
 export type VarScope = "local" | "global";
+export type WindowTarget = "foreground" | "title";
+export type TitleMatch = "contains" | "startsWith" | "exact" | "regex";
+export const TITLE_MATCHES: TitleMatch[] = ["contains", "startsWith", "exact", "regex"];
+export type WindowOp = "focus" | "minimize" | "maximize" | "restore" | "sendToBack" | "close" | "move" | "resize" | "bounds" | "center" | "screen";
+export const WINDOW_OPS: WindowOp[] = ["focus", "minimize", "maximize", "restore", "sendToBack", "close", "move", "resize", "bounds", "center", "screen"];
+export type MouseButton = "left" | "right" | "middle";
+export type ScrollAxis = "vertical" | "horizontal";
+
+/** One step of a mouse sequence; mirrors `MouseStep` in src-tauri/src/macros/model.rs. */
+export type MouseStep =
+  | { type: "move"; x: string; y: string; relative: boolean }
+  | { type: "click"; button: MouseButton; clicks: number }
+  | { type: "press"; button: MouseButton }
+  | { type: "release"; button: MouseButton }
+  | { type: "scroll"; amount: string; axis: ScrollAxis }
+  | { type: "drag"; x: string; y: string; button: MouseButton }
+  | { type: "delay"; ms: number };
+
+/** A display, in the coordinates the window actions use. */
+export interface ScreenInfo {
+  /** 1-based */
+  number: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** pixels per point: 2 on a Retina display, 1.5 at 150 % on Windows */
+  scale: number;
+  /** physical pixels per inch, 0 when unknown */
+  dpi: number;
+  primary: boolean;
+}
+export type ScreenPick = "primary" | "number" | "foreground" | "pointer";
+export const SCREEN_PICKS: ScreenPick[] = ["primary", "number", "foreground", "pointer"];
+
+/** The text a debug action's window shows. */
+export interface DebugContent {
+  id: string;
+  title: string;
+  text: string;
+}
+
+/** Another program's window, as the window action sees it. */
+export interface WindowInfo {
+  /** `window:<id>`, what a variable remembers */
+  handle: string;
+  title: string;
+  app: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** 1-based number of the display the window is on, 0 when unknown */
+  screen: number;
+  minimized: boolean;
+}
 export type CompareOp = "equals" | "notEquals" | "contains" | "startsWith" | "endsWith" | "greaterThan" | "lessThan" | "isEmpty" | "isNotEmpty" | "matches";
 export const COMPARE_OPS: CompareOp[] = ["equals", "notEquals", "contains", "startsWith", "endsWith", "greaterThan", "lessThan", "isEmpty", "isNotEmpty", "matches"];
 /** Names Lunchpad provides to every macro (the press, the page, the clock); mirrors `macros/builtins.rs`. Actions cannot write them. */
@@ -625,7 +687,7 @@ export interface HttpOutcome {
 /** One thing to check before running an import. */
 export interface ImportFinding {
   level: "danger" | "warning" | "info";
-  kind: "secret" | "upload" | "request" | "insecure" | "login" | "fileWrite" | "program" | "script" | "keys" | "launcher" | "command" | "sound" | "speech" | "homeAssistant" | "streaming";
+  kind: "secret" | "upload" | "request" | "insecure" | "login" | "fileWrite" | "program" | "script" | "keys" | "launcher" | "command" | "sound" | "speech" | "homeAssistant" | "streaming" | "mouse" | "window";
   page: string;
   x: number;
   y: number;
@@ -671,6 +733,12 @@ export type Action = { id: string; wait: boolean } & ActionKind;
 
 /** Every action the engine can run. Kept as a set so a future action can ship its data model before its runtime. */
 export const AVAILABLE_ACTIONS: ReadonlySet<ActionType> = new Set<ActionType>([
+  "getWindow",
+  "setWindow",
+  "mouse",
+  "mousePosition",
+  "getScreen",
+  "debug",
   "delay",
   "switchPage",
   "setColor",
@@ -861,6 +929,13 @@ export const api = {
   getLayout: (model: LaunchpadModel) => invoke<Layout>("get_layout", { model }),
   listModels: () => invoke<ModelInfo[]>("list_models"),
   listMidiPorts: () => invoke<MidiPorts>("list_midi_ports"),
+  /** Other programs' windows, for the window action's picker. */
+  listWindows: () => invoke<WindowInfo[]>("list_windows"),
+  foregroundWindow: () => invoke<WindowInfo | null>("foreground_window"),
+  listScreens: () => invoke<ScreenInfo[]>("list_screens"),
+  /** What a debug window shows; the window asks when it opens. */
+  debugText: (id: string) => invoke<DebugContent | null>("debug_text", { id }),
+  onDebugText: (cb: (content: DebugContent) => void): Promise<UnlistenFn> => listen<DebugContent>("debug:text", (e) => cb(e.payload)),
   pressPad: (x: number, y: number, pressed: boolean) => invoke<void>("press_pad", { x, y, pressed }),
   /** A drag on a knob or strip in the UI: `value` runs 0..1 over the control's travel, like a hardware turn. */
   /** Work a knob or strip from the interface; `released` = a sprung strip let go (it springs to `value`). */

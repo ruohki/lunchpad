@@ -9,6 +9,8 @@ import { HotkeyEditor } from "./HotkeyEditor";
 import { HttpEditor } from "./HttpEditor";
 import { AddToVariableEditor, BranchEditor, ScriptEditor, SetVariableEditor } from "./VariableEditors";
 import { LaunchEditor } from "./LaunchEditor";
+import { DebugEditor } from "./DebugEditor";
+import { GetScreenEditor, GetWindowEditor, MouseEditor, MousePositionEditor, SetWindowEditor } from "./DesktopEditors";
 import { HomeAssistantServiceEditor, HomeAssistantTurnEditor, HomeAssistantValueEditor } from "./HomeAssistantEditors";
 import { ObsEditor } from "./ObsEditors";
 import { SoundEditor } from "./SoundEditor";
@@ -52,6 +54,18 @@ export function ActionEditor({ action, onChange, pages, layout, button }: Props)
   switch (action.type) {
     case "delay":
       return <DelayEditor action={action} onChange={onChange} button={button} />;
+    case "getWindow":
+      return <GetWindowEditor action={action} onChange={onChange} button={button} />;
+    case "setWindow":
+      return <SetWindowEditor action={action} onChange={onChange} button={button} />;
+    case "mouse":
+      return <MouseEditor action={action} onChange={onChange} button={button} />;
+    case "mousePosition":
+      return <MousePositionEditor action={action} onChange={onChange} button={button} />;
+    case "getScreen":
+      return <GetScreenEditor action={action} onChange={onChange} button={button} />;
+    case "debug":
+      return <DebugEditor action={action} onChange={onChange} button={button} />;
 
     case "switchPage":
       return (
