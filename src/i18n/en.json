@@ -739,7 +739,20 @@
   },
   "keys": {
     "capturing": "Press a key or a mouse button…",
-    "none": "Not set"
+    "none": "Not set",
+    "pick": "Pick a key from the list",
+    "search": "Search keys…",
+    "noMatch": "No key matches.",
+    "groups": {
+      "function": "Function keys",
+      "navigation": "Navigation",
+      "editing": "Editing",
+      "numpad": "Number pad",
+      "media": "Media",
+      "mouse": "Mouse",
+      "letters": "Letters",
+      "digits": "Digits"
+    }
   },
   "sound": {
     "files": "Audio files",
