@@ -327,7 +327,11 @@
     "testHint": "Runs the button as it is saved. Save first to test your changes.",
     "sizeLabel": "Size",
     "noLedHint": "This button has no LED, so colours do not apply. The look is only shown on screen.",
-    "whiteLedHint": "This button has a single white LED: a colour becomes a brightness."
+    "whiteLedHint": "This button has a single white LED: a colour becomes a brightness.",
+    "discardTitle": "Discard your changes?",
+    "discardBody": "This button has changes that are not saved yet.",
+    "keepEditing": "Keep editing",
+    "discard": "Discard"
   },
   "faces": {
     "sans": "Sans",
@@ -864,7 +868,8 @@
     "variableHint": "Macros read the level as {{key}}",
     "titleKnob": "Knob",
     "titleStrip": "Touch strip",
-    "controlHint": "The hardware supplies the value: turning the knob or touching the strip moves this fader over its range and runs its actions, paced to a few times a second while it moves."
+    "controlHint": "The hardware supplies the value: turning the knob or touching the strip moves this fader over its range and runs its actions, paced to a few times a second while it moves.",
+    "discardBody": "This fader has changes that are not saved yet."
   },
   "obs": {
     "collection": "Scene collection",
