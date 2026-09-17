@@ -49,13 +49,13 @@ export function Toggle({ checked, onChange, label, hint, disabled }: ToggleProps
           checked ? "bg-accent-500" : "bg-stage-600",
         )}
       >
+        {/* Driven by the checked state alone, not a layout animation: when the switch's container
+            moves (a dialog opening, a list reflowing) the knob moves with it instead of trailing. */}
         <motion.span
-          layout
+          initial={false}
+          animate={{ x: checked ? 16 : 0 }}
           transition={{ type: "spring", stiffness: 500, damping: 30 }}
-          className={clsx(
-            "absolute top-0.5 h-4 w-4 rounded-full bg-stage-100",
-            checked ? "left-[18px]" : "left-0.5",
-          )}
+          className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-stage-100"
         />
       </button>
       <span className="flex flex-col">
