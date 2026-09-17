@@ -1383,7 +1383,7 @@ mod tests {
         // Letting go without a touch first shows the centre and runs nothing.
         engine.on_control(&ControlEvent { x: 0, y: 7, value: 0.5, kind: ControlKind::SprungStrip, released: true });
         tokio::time::sleep(Duration::from_millis(200)).await;
-        assert_eq!(engine.globals().get("moves").map(String::as_str), Some("3"));
+        assert_eq!(engine.globals().get("moves").map(String::as_str), Some(moves.to_string().as_str()), "no move for a release without a touch");
     }
 
     /// A strip without a spring stays where the finger left it: after resting a moment
