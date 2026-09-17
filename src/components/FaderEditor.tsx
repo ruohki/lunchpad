@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { emptyButton, FADER_VARIABLES, type Button, type Fader, type FaderDirection, type Layout, type Page } from "../lib/api";
 import { faderVariable, faderPadRgb, faderPads, formatFaderValue, hexToRgb, isControlCell, maxFaderLength, rgbToHex } from "../lib/fader";
@@ -10,6 +10,7 @@ import { ActionsTab } from "./actions/ActionsTab";
 import { RgbField } from "./RgbField";
 import { Select } from "./Select";
 import { Slider } from "./Slider";
+import { ConfirmPrompt } from "./ConfirmPrompt";
 import { Button as UiButton, IconClose, Segmented, Toggle } from "./ui";
 
 const NO_PAGES: Page[] = [];
@@ -28,11 +29,31 @@ export function FaderEditor() {
   const remove = useProfileStore((s) => s.removeFader);
   const pages = useProfileStore((s) => s.profile?.pages) ?? NO_PAGES;
   const layout = useDeviceStore((s) => s.layout);
+  // Clicking beside the dialog or pressing Escape closes it at once, unless the fader has unsaved changes: then it asks.
+  const [dirty, setDirty] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  useEffect(() => {
+    setDirty(false);
+    setConfirming(false);
+  }, [target]);
+  const requestClose = useCallback(() => {
+    if (confirming) return;
+    if (dirty) setConfirming(true);
+    else close();
+  }, [confirming, dirty, close]);
+  useEffect(() => {
+    if (!target) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") requestClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [target, requestClose]);
 
   return (
     <AnimatePresence>
       {target && (
-        <motion.div key="fader-editor" className="absolute inset-0 z-30 flex items-center justify-center bg-stage-950/70 p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={close}>
+        <motion.div key="fader-editor" className="absolute inset-0 z-30 flex items-center justify-center bg-stage-950/70 p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={requestClose}>
           <motion.div
             role="dialog"
             aria-label={target.isNew ? t("fader.titleNew") : t("fader.titleEdit")}
@@ -41,7 +62,7 @@ export function FaderEditor() {
             exit={{ opacity: 0, scale: 0.97, y: 8 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
             onClick={(e) => e.stopPropagation()}
-            className="flex h-full max-h-[720px] w-full max-w-4xl flex-col rounded-2xl border border-stage-700 bg-stage-900 shadow-2xl"
+            className="relative flex h-full max-h-[720px] w-full max-w-4xl flex-col rounded-2xl border border-stage-700 bg-stage-900 shadow-2xl"
           >
             <FaderForm
               key={target.fader.id || "new"}
@@ -52,7 +73,19 @@ export function FaderEditor() {
               layout={layout}
               onSave={(f) => void save(f)}
               onRemove={() => void remove(target.fader.id)}
-              onCancel={close}
+              onCancel={requestClose}
+              onDirtyChange={setDirty}
+            />
+            <ConfirmPrompt
+              open={confirming}
+              title={t("editor.discardTitle")}
+              body={t("fader.discardBody")}
+              confirmLabel={t("editor.discard")}
+              onConfirm={() => {
+                setConfirming(false);
+                close();
+              }}
+              onCancel={() => setConfirming(false)}
             />
           </motion.div>
         </motion.div>
@@ -94,6 +127,7 @@ function FaderForm({
   onSave,
   onRemove,
   onCancel,
+  onDirtyChange,
 }: {
   initial: Fader;
   isNew: boolean;
@@ -103,9 +137,13 @@ function FaderForm({
   onSave: (f: Fader) => void;
   onRemove: () => void;
   onCancel: () => void;
+  /** Told whenever the form starts or stops differing from what is saved. */
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const { t } = useTranslation();
   const [fader, setFader] = useState<Fader>(initial);
+  const dirty = JSON.stringify(fader) !== JSON.stringify(initial);
+  useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
   const [tab, setTab] = useState<"fader" | "actions">("fader");
   const setHints = useVariablesStore((s) => s.setHints);
 

@@ -1,6 +1,6 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useTranslation } from "react-i18next";
 import { api, emptyButton, type Button, type Layout, type Look, type Page } from "../lib/api";
@@ -17,6 +17,7 @@ import { CodeField } from "./CodeField";
 import { RgbField } from "./RgbField";
 import { Select } from "./Select";
 import { Slider } from "./Slider";
+import { ConfirmPrompt } from "./ConfirmPrompt";
 import { Button as UiButton, IconClose, Segmented, Toggle } from "./ui";
 import { Tooltip } from "./Tooltip";
 import { StateLinkField } from "./StateLinkField";
@@ -35,6 +36,18 @@ export function ButtonEditor() {
   const limited = layout?.limitedColor ?? false;
   const pages = useProfileStore((s) => s.profile?.pages) ?? NO_PAGES;
   const existing = target ? buttonAt(target.x, target.y) : null;
+  // Clicking beside the dialog or pressing Escape closes it at once, unless the button has unsaved changes: then it asks.
+  const [dirty, setDirty] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  useEffect(() => {
+    setDirty(false);
+    setConfirming(false);
+  }, [target]);
+  const requestClose = useCallback(() => {
+    if (confirming) return;
+    if (dirty) setConfirming(true);
+    else closeEditor();
+  }, [confirming, dirty, closeEditor]);
 
   return (
     <AnimatePresence>
@@ -45,7 +58,7 @@ export function ButtonEditor() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          onClick={closeEditor}
+          onClick={requestClose}
         >
           <motion.div
             role="dialog"
@@ -55,7 +68,7 @@ export function ButtonEditor() {
             exit={{ opacity: 0, scale: 0.97, y: 8 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
             onClick={(e) => e.stopPropagation()}
-            className="flex h-full max-h-[720px] w-full max-w-4xl flex-col rounded-2xl border border-stage-700 bg-stage-900 shadow-2xl"
+            className="relative flex h-full max-h-[720px] w-full max-w-4xl flex-col rounded-2xl border border-stage-700 bg-stage-900 shadow-2xl"
           >
             <EditorForm
               key={`${target.pageId}:${target.x}:${target.y}`}
@@ -66,9 +79,21 @@ export function ButtonEditor() {
               limited={limited}
               pages={pages}
               layout={layout}
-              onCancel={closeEditor}
+              onCancel={requestClose}
+              onDirtyChange={setDirty}
               onSave={(b) => void saveButton(target.x, target.y, b).then(closeEditor)}
               onRemove={existing ? () => void clearButton(target.x, target.y).then(closeEditor) : undefined}
+            />
+            <ConfirmPrompt
+              open={confirming}
+              title={t("editor.discardTitle")}
+              body={t("editor.discardBody")}
+              confirmLabel={t("editor.discard")}
+              onConfirm={() => {
+                setConfirming(false);
+                closeEditor();
+              }}
+              onCancel={() => setConfirming(false)}
             />
           </motion.div>
         </motion.div>
@@ -91,13 +116,15 @@ interface FormProps {
   pages: Page[];
   layout: Layout | null;
   onCancel: () => void;
+  /** Told whenever the form starts or stops differing from what is saved. */
+  onDirtyChange?: (dirty: boolean) => void;
   onSave: (b: Button) => void;
   onRemove?: () => void;
 }
 
 type Tab = "appearance" | "actions";
 
-function EditorForm({ pageId, x, y, initial, limited, pages, layout, onCancel, onSave, onRemove }: FormProps) {
+function EditorForm({ pageId, x, y, initial, limited, pages, layout, onCancel, onDirtyChange, onSave, onRemove }: FormProps) {
   const { t } = useTranslation();
   // What a description may show: the shared variables and the provided values that exist outside a run.
   const descriptionNames = useVariablesStore(useShallow((s) => [...DESCRIPTION_VARIABLES, ...Object.keys(s.globals)].sort()));
@@ -110,6 +137,7 @@ function EditorForm({ pageId, x, y, initial, limited, pages, layout, onCancel, o
   const momentary = pad?.momentary ?? false;
   const [imageError, setImageError] = useState<string | null>(null);
   const dirty = JSON.stringify(button) !== JSON.stringify(initial);
+  useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
