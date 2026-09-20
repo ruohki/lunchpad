@@ -22,6 +22,12 @@ interface Props {
 export function Popover({ open, anchor, at, onClose, children, width: fixedWidth, className }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0, width: fixedWidth ?? 320 });
+  // The position last handed to React. `place` runs after every render, and a state update that
+  // changes nothing must not be queued at all: React keeps such no-op updates around and, once a
+  // real move sits in front of them, re-runs the whole queue from the old position on every
+  // render. A panel that grew and flipped above its anchor re-rendered that way until React gave
+  // up with "maximum update depth exceeded".
+  const placed = useRef(pos);
 
   // Callers pass fresh closures on every render; the listeners below read the latest through refs.
   const atRef = useRef(at);
@@ -37,7 +43,11 @@ export function Popover({ open, anchor, at, onClose, children, width: fixedWidth
     const below = r.bottom + 6;
     const height = ref.current?.offsetHeight ?? 300;
     const top = below + height > window.innerHeight - 8 ? Math.max(8, r.top - height - 6) : below;
-    setPos((p) => (p.top === top && p.left === left && p.width === width ? p : { top, left, width }));
+    const current = placed.current;
+    if (current.top === top && current.left === left && current.width === width) return;
+    const next = { top, left, width };
+    placed.current = next;
+    setPos(next);
   };
   const placeRef = useRef(place);
   placeRef.current = place;
