@@ -162,6 +162,10 @@ pub fn run() {
     tracing::info!(version = env!("CARGO_PKG_VERSION"), log_dir = ?log_state.dir, "starting Lunchpad");
 
     tauri::Builder::default()
+        // One copy at a time: a second launch (the Start menu, a Dock click while the app sits in
+        // the tray) hands over to the running copy, which brings its window forward, and quits.
+        // Registered first so nothing else of the duplicate starts up.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| tray::show_main(app)))
         .manage(log_state)
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
