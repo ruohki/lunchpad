@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Icon } from "../../icons/Icon";
 import { api, type Action, type Button as ButtonModel, type HttpAuth, type HttpMethod, type HttpOutcome, type HttpResponse } from "../../lib/api";
 import { PlaceholderField } from "./PlaceholderField";
+import { NumberInput } from "../NumberInput";
 import { Select } from "../Select";
 import { Button, Toggle } from "../ui";
 import { inputCls, monoCls, PlaceholderHint, SaveToFields, useVariableSuggestions } from "./VariableFields";
@@ -232,13 +233,7 @@ export function HttpEditor({ action, onChange, button }: { action: HttpAction; o
         <SaveToFields name={action.saveTo} scope={action.saveScope} onChange={(saveTo, saveScope) => onChange({ ...action, saveTo, saveScope })} label={t("http.saveTo")} />
         <label className="flex flex-col gap-1 text-xs text-stage-400">
           {t("http.timeout")}
-          <input
-            type="text"
-            inputMode="numeric"
-            value={action.timeoutMs}
-            onChange={(e) => onChange({ ...action, timeoutMs: Math.max(500, Math.min(120000, parseInt(e.target.value.replace(/[^0-9]/g, ""), 10) || 10000)) })}
-            className={monoCls + " w-24"}
-          />
+          <NumberInput value={action.timeoutMs} min={500} max={120000} onChange={(timeoutMs) => onChange({ ...action, timeoutMs })} className={monoCls + " w-24"} />
         </label>
         <Toggle checked={action.ignoreTlsErrors} onChange={(ignoreTlsErrors) => onChange({ ...action, ignoreTlsErrors })} label={t("http.ignoreTls")} />
       </div>

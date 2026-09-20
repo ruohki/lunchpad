@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Icon } from "../../icons/Icon";
 import { api, SCREEN_PICKS, TITLE_MATCHES, WINDOW_OPS, type Action, type Button as ButtonModel, type MouseButton, type MouseStep, type ScreenInfo, type TitleMatch, type WindowInfo, type WindowTarget } from "../../lib/api";
 import { Select } from "../Select";
+import { NumberInput } from "../NumberInput";
 import { Tooltip } from "../Tooltip";
 import { Button, Segmented, Toggle } from "../ui";
 import { PlaceholderField } from "./PlaceholderField";
@@ -340,7 +341,7 @@ function StepRow({ row, suggestions, onChange, onRemove }: { row: Row; suggestio
       )}
       {step.type === "delay" && (
         <label className="flex items-center gap-2 text-xs text-stage-400">
-          <input type="text" inputMode="numeric" value={step.ms} onChange={(e) => onChange({ ...step, ms: Math.max(0, Math.min(5000, parseInt(e.target.value.replace(/\D/g, ""), 10) || 0)) })} className={inputCls + " w-20"} />
+          <NumberInput value={step.ms} min={0} max={5000} onChange={(ms) => onChange({ ...step, ms })} className={inputCls + " w-20"} />
           ms
         </label>
       )}

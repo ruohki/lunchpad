@@ -7,6 +7,7 @@ import { PlaceholderField } from "./PlaceholderField";
 import { useVariableSuggestions } from "./VariableFields";
 import { formatModifier, MODIFIERS } from "../../lib/keys";
 import { KeyCapture } from "../KeyCapture";
+import { NumberInput } from "../NumberInput";
 import { Select } from "../Select";
 import { Toggle } from "../ui";
 
@@ -124,13 +125,7 @@ function StepRow({ row, suggestions, onChange, onRemove }: { row: Row; suggestio
       )}
       {stroke.type === "delay" && (
         <label className="flex items-center gap-2 text-xs text-stage-400">
-          <input
-            type="text"
-            inputMode="numeric"
-            value={stroke.ms}
-            onChange={(e) => onChange({ ...stroke, ms: Math.max(0, Math.min(5000, parseInt(e.target.value.replace(/\D/g, ""), 10) || 0)) })}
-            className={inputCls + " w-20"}
-          />
+          <NumberInput value={stroke.ms} min={0} max={5000} onChange={(ms) => onChange({ ...stroke, ms })} className={inputCls + " w-20"} />
           ms
         </label>
       )}
@@ -139,13 +134,7 @@ function StepRow({ row, suggestions, onChange, onRemove }: { row: Row; suggestio
           <PlaceholderField value={stroke.text} onChange={(text) => onChange({ ...stroke, text })} suggestions={suggestions} placeholder={t("hotkey.textPlaceholder")} className="min-w-40" spellCheck ariaLabel={t("hotkey.textPlaceholder")} />
           <label className="flex items-center gap-2 text-xs text-stage-400">
             {t("hotkey.perChar")}
-            <input
-              type="text"
-              inputMode="numeric"
-              value={stroke.delayMs}
-              onChange={(e) => onChange({ ...stroke, delayMs: Math.max(0, Math.min(5000, parseInt(e.target.value.replace(/\D/g, ""), 10) || 0)) })}
-              className={inputCls + " w-16"}
-            />
+            <NumberInput value={stroke.delayMs} min={0} max={5000} onChange={(delayMs) => onChange({ ...stroke, delayMs })} className={inputCls + " w-16"} />
             ms
           </label>
         </>

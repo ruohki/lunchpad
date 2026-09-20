@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useMediaStore } from "../../store/media";
 import { useSettingsStore } from "../../store/settings";
+import { NumberInput } from "../NumberInput";
 import { Button, Toggle } from "../ui";
 import { fieldCls, Section } from "./SettingsDialog";
 
@@ -32,12 +33,7 @@ export function SlobsTab() {
               </label>
               <label className="flex flex-col gap-1">
                 {t("settings.obsPort")}
-                <input
-                  value={slobs.port}
-                  inputMode="numeric"
-                  onChange={(e) => void setSlobs({ ...slobs, port: Math.max(1, Math.min(65535, parseInt(e.target.value.replace(/[^0-9]/g, ""), 10) || DEFAULTS.port)) })}
-                  className={fieldCls}
-                />
+                <NumberInput value={slobs.port} min={1} max={65535} onChange={(port) => void setSlobs({ ...slobs, port })} className={fieldCls} />
               </label>
               <label className="col-span-2 flex flex-col gap-1">
                 {t("settings.slobsToken")}

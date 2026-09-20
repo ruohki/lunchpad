@@ -3,6 +3,7 @@ import { useVariableSuggestions } from "./VariableFields";
 import { useTranslation } from "react-i18next";
 import type { Action, Button, ButtonRef, ButtonTrigger, Layout, Page } from "../../lib/api";
 import { ColorField } from "../ColorField";
+import { NumberInput } from "../NumberInput";
 import { Select } from "../Select";
 import { clampTarget } from "./actionUtils";
 import { HotkeyEditor } from "./HotkeyEditor";
@@ -29,23 +30,6 @@ interface Props {
 
 const inputCls =
   "rounded-md bg-stage-800 px-2.5 py-1.5 text-sm text-stage-100 outline-none focus:ring-1 focus:ring-accent-400";
-
-/** Text field that only accepts whole numbers (no native spinner). */
-function NumberInput({ value, min, max, onChange, className }: { value: number; min: number; max?: number; onChange: (n: number) => void; className?: string }) {
-  return (
-    <input
-      type="text"
-      inputMode="numeric"
-      value={value}
-      onChange={(e) => {
-        const n = parseInt(e.target.value.replace(/[^\d-]/g, ""), 10);
-        if (Number.isNaN(n)) return onChange(min);
-        onChange(Math.max(min, max === undefined ? n : Math.min(max, n)));
-      }}
-      className={inputCls + " " + (className ?? "")}
-    />
-  );
-}
 
 /** Body of an action pill: the fields of one action type. */
 export function ActionEditor({ action, onChange, pages, layout, button }: Props) {
@@ -223,7 +207,7 @@ function TargetPicker({
               min={1}
               max={layout?.width ?? 9}
               onChange={(n) => onChange({ ...current, ...clampTarget(n - 1, current.y, layout) })}
-              className="w-16"
+              className={inputCls + " w-16"}
             />
           </label>
           <label className="flex items-center gap-1">
@@ -233,7 +217,7 @@ function TargetPicker({
               min={1}
               max={layout?.height ?? 9}
               onChange={(n) => onChange({ ...current, ...clampTarget(current.x, n - 1, layout) })}
-              className="w-16"
+              className={inputCls + " w-16"}
             />
           </label>
         </>

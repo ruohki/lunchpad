@@ -5,6 +5,7 @@ import { HA_POWER_MODES, HA_VALUE_KINDS, type Action, type Button, type HaEntity
 import { useMediaStore } from "../../store/media";
 import { Popover } from "../Popover";
 import { Select } from "../Select";
+import { NumberInput } from "../NumberInput";
 import { Slider } from "../Slider";
 import { Button as UiButton } from "../ui";
 import { PlaceholderField } from "./PlaceholderField";
@@ -174,12 +175,12 @@ export function HomeAssistantValueEditor({ action, onChange, button }: { action:
         <div className={"flex flex-col gap-1 text-xs text-stage-400 " + (action.valueFrom ? "opacity-50" : "")}>
           {t("ha.value")}
           {action.kind === "number" ? (
-            <input
-              value={Number.isFinite(action.value) ? String(action.value) : ""}
-              inputMode="decimal"
-              onChange={(e) => onChange({ ...action, value: parseFloat(e.target.value.replace(",", ".")) || 0 })}
+            <NumberInput
+              value={action.value}
+              decimal
+              onChange={(value) => onChange({ ...action, value })}
               className="w-40 rounded-md bg-stage-800 px-2.5 py-1.5 font-mono text-sm text-stage-100 outline-none focus:ring-1 focus:ring-accent-400"
-              aria-label={t("ha.value")}
+              ariaLabel={t("ha.value")}
             />
           ) : (
             <Slider value={action.value} min={range.min} max={range.max} step={range.step} onChange={(value) => onChange({ ...action, value })} format={format} ariaLabel={t("ha.value")} />

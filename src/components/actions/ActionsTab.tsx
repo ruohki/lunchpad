@@ -11,6 +11,7 @@ import { ACTION_ICONS, blockOf, cloneActions, createActions, GROUP_ICONS, hasWai
 import { Tooltip } from "../Tooltip";
 import { useSettingsStore } from "../../store/settings";
 import { useUiStore } from "../../store/ui";
+import { NumberInput } from "../NumberInput";
 
 interface Props {
   button: Button;
@@ -200,16 +201,7 @@ export function ActionsTab({ button, onChange, pages, layout, lists = ["down", "
               {key === "hold" && !plain && (
                 <label className="flex items-center gap-1.5 text-xs text-stage-400">
                   {t("actions.holdTime")}
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={button.holdMs}
-                    onChange={(e) => {
-                      const n = parseInt(e.target.value.replace(/[^\d]/g, ""), 10);
-                      onChange({ ...button, holdMs: Number.isNaN(n) ? 100 : Math.max(100, Math.min(5000, n)) });
-                    }}
-                    className={holdInputCls}
-                  />
+                  <NumberInput value={button.holdMs} min={100} max={5000} onChange={(holdMs) => onChange({ ...button, holdMs })} className={holdInputCls} />
                   ms
                 </label>
               )}
