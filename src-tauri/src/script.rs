@@ -21,6 +21,8 @@ pub struct ScriptOutcome {
     /// Result as text (objects are JSON)
     pub result: String,
     pub locals: HashMap<String, String>,
+    /// Globals the snippet added or changed; the rest never flow back, so an
+    /// untouched `fader.*` value does not move its fader.
     pub globals: HashMap<String, String>,
     pub elapsed_ms: u64,
     /// Actions queued through `Lunchpad.*`, as the JSON the engine deserialises.
@@ -116,7 +118,7 @@ pub fn run(input: ScriptInput<'_>) -> Result<ScriptOutcome, String> {
             _ => HashMap::new(),
         }
     };
-    let new_globals = read_back(&mut ctx, "globals");
+    let new_globals: HashMap<String, String> = read_back(&mut ctx, "globals").into_iter().filter(|(k, v)| input.globals.get(k) != Some(v)).collect();
     let new_vars = read_back(&mut ctx, "vars");
     // Anything in `vars` that differs from what came in becomes a local.
     let locals: HashMap<String, String> = new_vars.into_iter().filter(|(k, v)| merged.get(k) != Some(v) || input.locals.contains_key(k)).collect();

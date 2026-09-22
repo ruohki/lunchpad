@@ -708,8 +708,12 @@ impl RunContext {
 
     /// What the `Lunchpad` object describes to a script.
     pub fn script_info(&self) -> serde_json::Value {
+        // The press and the surroundings first: `press()` takes the profile lock
+        // itself, and taking it here as well would block this runner for good.
+        let press = self.press();
+        let env = self.env();
         let store = self.inner.profile.lock();
-        builtins::script_info(&store.profile, &self.press(), &self.env())
+        builtins::script_info(&store.profile, &press, &env)
     }
 
     /// A page id as given, or the id of the page with that name; unknown names stay as they are.
@@ -1753,5 +1757,55 @@ mod tests {
         let rx = engine.start(DEFAULT_PAGE_ID, 0, 2, ActionList::Down, 127, 0, None).unwrap();
         engine.stop_all();
         tokio::time::timeout(Duration::from_millis(100), wait_done(rx)).await.expect("stopped");
+    }
+
+    /// A script's runner must not hold the profile lock while it gathers what
+    /// `Lunchpad` describes: `script_info` locked the profile and then asked
+    /// `press()` to lock it again, so the runner froze forever and everything
+    /// that needed the profile afterwards (UI, MIDI, other macros) froze with it.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn a_script_finishes_and_runs_what_it_queued() {
+        let (engine, profile) = engine();
+        set_button(&profile, 5, 5, vec![a(ActionKind::SetColor { color: PadColor::Palette { index: 7 }, target: None })], vec![], false);
+        let code = "Lunchpad.runButton(5, 5, { trigger: 'press' }); globals.seen = Lunchpad.button.x + ':' + Lunchpad.button.y; 1";
+        set_button(&profile, 6, 6, vec![a(ActionKind::RunScript { code: code.into(), save_to: Some("result".into()), save_scope: VarScope::Global })], vec![], false);
+        let rx = engine.start(DEFAULT_PAGE_ID, 6, 6, ActionList::Down, 127, 0, None).unwrap();
+        tokio::time::timeout(Duration::from_secs(5), wait_done(rx)).await.expect("the script's runner finished");
+        assert_eq!(engine.globals().get("result").map(String::as_str), Some("1"));
+        assert_eq!(engine.globals().get("seen").map(String::as_str), Some("6:6"));
+        assert_eq!(profile.lock().profile.page(DEFAULT_PAGE_ID).unwrap().get(5, 5).unwrap().color, PadColor::Palette { index: 7 });
+    }
+
+    /// A script hands back every global it saw; only the ones it changed count.
+    /// An untouched `fader.*` value must not move that fader (and run its actions
+    /// again) just because the level reads differently as rounded text.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn a_script_leaves_untouched_fader_variables_alone() {
+        let (engine, profile) = engine();
+        profile.lock().profile.page_mut(DEFAULT_PAGE_ID).unwrap().set_fader(Fader {
+            id: "knob1".into(),
+            name: "aux".into(),
+            x: 3,
+            y: 3,
+            length: 1,
+            min: 1.0,
+            max: 20.0,
+            decimals: 0,
+            on_change: vec![a(ActionKind::RunScript {
+                code: "globals.runs = String(Number(globals.runs || 0) + 1); globals.mark = 'x'".into(),
+                save_to: None,
+                save_scope: VarScope::Global,
+            })],
+            ..Fader::default()
+        });
+        // 1 + 19 * 0.3 = 6.7 reads "7": written back, it would move the fader to 7 and run it again.
+        engine.on_control(&ControlEvent { x: 3, y: 3, value: 0.3, kind: ControlKind::Knob, released: false });
+        assert_eq!(global_once(&engine, "runs", "1").await.as_deref(), Some("1"));
+        tokio::time::sleep(Duration::from_millis(400)).await;
+        assert_eq!(engine.globals().get("runs").map(String::as_str), Some("1"), "the fader's actions ran once");
+        assert_eq!(engine.globals().get("mark").map(String::as_str), Some("x"));
+        assert_eq!(engine.globals().get("fader.aux").map(String::as_str), Some("7"));
+        let value = profile.lock().profile.page(DEFAULT_PAGE_ID).unwrap().faders[0].value;
+        assert!((value - 6.7).abs() < 1e-3, "the fader kept its level, got {value}");
     }
 }
