@@ -361,6 +361,13 @@ pub async fn delete_variables(names: Vec<String>, state: State<'_, AppState>) ->
     Ok(state.engine.globals())
 }
 
+/// Create or change one shared variable by hand (the settings' variables list).
+#[tauri::command]
+pub async fn set_variable(name: String, value: String, state: State<'_, AppState>) -> CmdResult<HashMap<String, String>> {
+    state.engine.set_global(&name, value)?;
+    Ok(state.engine.globals())
+}
+
 #[tauri::command]
 pub async fn clear_variables(state: State<'_, AppState>) -> CmdResult<HashMap<String, String>> {
     state.engine.clear_globals();

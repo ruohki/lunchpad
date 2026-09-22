@@ -1032,6 +1032,8 @@ export const api = {
   builtinInfo: () => invoke<Record<string, string>>("builtin_info"),
   getVariables: () => invoke<Record<string, string>>("get_variables"),
   deleteVariables: (names: string[]) => invoke<Record<string, string>>("delete_variables", { names }),
+  /** Create or change one shared variable by hand; rejects provided names and names that cannot be a placeholder. */
+  setVariable: (name: string, value: string) => invoke<Record<string, string>>("set_variable", { name, value }),
   clearVariables: () => invoke<Record<string, string>>("clear_variables"),
   /** Drop fader values no fader publishes any more; returns how many went. */
   pruneFaderVariables: () => invoke<number>("prune_fader_variables"),

@@ -625,6 +625,35 @@ impl MacroEngine {
         removed
     }
 
+    /// Create or change one shared variable by hand (the settings' variables
+    /// list). Provided names are refused, and a name has to work inside
+    /// `{{...}}`. A `fader.<name>` value moves that fader to it without running
+    /// its actions: the level follows its variable, but nothing was triggered.
+    pub fn set_global(&self, name: &str, value: String) -> Result<(), String> {
+        let name = name.trim();
+        if name.is_empty() {
+            return Err("the name is empty".into());
+        }
+        if name.chars().any(|c| c.is_whitespace() || c == '{' || c == '}') {
+            return Err("a name cannot contain spaces or braces".into());
+        }
+        if builtins::is_builtin(name) {
+            return Err(format!("{name} is provided by Lunchpad and cannot be set"));
+        }
+        let snapshot = {
+            let mut globals = self.inner.globals.lock();
+            globals.insert(name.to_string(), value.clone());
+            globals.clone()
+        };
+        self.inner.sink.variables_changed(&snapshot);
+        if let Some(fader) = name.strip_prefix("fader.") {
+            if let Ok(number) = value.trim().parse::<f64>() {
+                self.set_fader_level(fader, number, false);
+            }
+        }
+        Ok(())
+    }
+
     /// Drop every shared variable.
     pub fn clear_globals(&self) {
         let snapshot = {
@@ -1774,6 +1803,38 @@ mod tests {
         assert_eq!(engine.globals().get("result").map(String::as_str), Some("1"));
         assert_eq!(engine.globals().get("seen").map(String::as_str), Some("6:6"));
         assert_eq!(profile.lock().profile.page(DEFAULT_PAGE_ID).unwrap().get(5, 5).unwrap().color, PadColor::Palette { index: 7 });
+    }
+
+    /// The settings' variables list: a value set by hand is published, provided
+    /// and unusable names are refused, and a fader follows its variable quietly.
+    #[tokio::test]
+    async fn a_variable_set_by_hand_is_published_and_moves_its_fader_quietly() {
+        let (engine, profile) = engine();
+        profile.lock().profile.page_mut(DEFAULT_PAGE_ID).unwrap().set_fader(Fader {
+            id: "f3".into(),
+            name: "mic".into(),
+            x: 3,
+            y: 0,
+            direction: FaderDirection::Up,
+            length: 5,
+            min: -60.0,
+            max: 0.0,
+            on_change: vec![a(ActionKind::SetVariable { name: "applied".into(), value: "{{value}}".into(), scope: VarScope::Global })],
+            ..Fader::default()
+        });
+        engine.set_global(" greeting ", "hi".into()).unwrap();
+        assert_eq!(engine.globals().get("greeting").map(String::as_str), Some("hi"));
+        engine.set_global("greeting", "bye".into()).unwrap();
+        assert_eq!(engine.globals().get("greeting").map(String::as_str), Some("bye"));
+        assert!(engine.set_global("velocity", "1".into()).is_err(), "provided names are refused");
+        assert!(engine.set_global("  ", "1".into()).is_err(), "an empty name is refused");
+        assert!(engine.set_global("my var", "1".into()).is_err(), "a name with a space cannot be a placeholder");
+        assert!(engine.globals().get("velocity").is_none());
+        engine.set_global("fader.mic", "-20".into()).unwrap();
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        assert_eq!(profile.lock().profile.page(DEFAULT_PAGE_ID).unwrap().faders[0].value, -20.0);
+        assert_eq!(engine.globals().get("fader.mic").map(String::as_str), Some("-20"));
+        assert!(engine.globals().get("applied").is_none(), "the fader's actions did not run");
     }
 
     /// A script hands back every global it saw; only the ones it changed count.

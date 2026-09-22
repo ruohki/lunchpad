@@ -387,6 +387,7 @@ pub fn run() {
             get_variables,
             builtin_info,
             delete_variables,
+            set_variable,
             clear_variables,
             prune_fader_variables,
             // hub
