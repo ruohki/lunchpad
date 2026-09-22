@@ -71,10 +71,13 @@ export function VariablesTab() {
       <Section title={t("settings.builtinsTitle")} description={t("settings.builtinsHint")}>
         <ul className="flex flex-col gap-1">
           {BUILTIN_VARIABLES.map((name) => (
-            <li key={name} className="grid grid-cols-[minmax(0,140px)_minmax(0,1fr)_auto] items-baseline gap-3">
+            <li key={name} className="grid grid-cols-[minmax(0,140px)_minmax(0,1fr)_minmax(0,220px)] items-baseline gap-3">
               <code className="truncate font-mono text-sm text-builtin">{name}</code>
               <span className="text-xs text-stage-400">{t(`vars.builtins.${name}`)}</span>
-              <span className="font-mono text-xs text-stage-300">{provided[name] ?? ""}</span>
+              {/* A folder path is longer than the column: cut it short, the tip has all of it. */}
+              <Tooltip content={provided[name] ?? ""} size="wide">
+                <span className="min-w-0 truncate text-right font-mono text-xs text-stage-300">{provided[name] ?? ""}</span>
+              </Tooltip>
             </li>
           ))}
         </ul>
@@ -202,7 +205,7 @@ function VariableRow({ name, value, onChange, onRemove }: { name: string; value:
           spellCheck={false}
         />
       ) : (
-        <Tooltip content={value}>
+        <Tooltip content={value} size="wide">
           <button type="button" onClick={start} className="min-w-0 flex-1 truncate rounded px-1 text-left text-stage-400 hover:bg-stage-800 hover:text-stage-100" aria-label={t("settings.variablesEdit", { name })}>
             {value === "" ? <span className="italic text-stage-600">{t("settings.variablesEmptyValue")}</span> : value}
           </button>
