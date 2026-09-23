@@ -3,7 +3,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { api, padKey, type Button, type ControlKind, type Fader, type Layout, type PadSpec } from "../lib/api";
+import { api, padKey, type Button, type ControlKind, type Fader, type ImportReview, type Layout, type PadSpec } from "../lib/api";
 import { faderAt, faderFitsAt, faderFraction, faderLevelStep, faderPadRgb, faderPads, formatFaderValue, isControlCell } from "../lib/fader";
 import { useShallow } from "zustand/react/shallow";
 import { useElementSize } from "../lib/useElementSize";
@@ -14,8 +14,9 @@ import { useMediaStore } from "../store/media";
 import { useHubStore } from "../store/hub";
 import { useProfileStore, type PadRef } from "../store/profile";
 import { useUiStore } from "../store/ui";
-import { save } from "@tauri-apps/plugin-dialog";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import { ContextMenu, type MenuEntry, type MenuState } from "./ContextMenu";
+import { ImportReviewDialog } from "./settings/ImportReviewDialog";
 import { PadFace } from "./PadFace";
 import { IconGear } from "./ui";
 import { limitedRgb } from "../lib/colors";
@@ -115,6 +116,23 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
       const caption = placed.look.type === "text" ? placed.look.caption.trim() : "";
       const path = await save({ defaultPath: `${caption || "button"}.lunchpad-button.json`, filters: [{ name: t("settings.fileButton"), extensions: ["json"] }] });
       if (path) await api.exportButtonFile(activePage.id, x, y, path).catch((e) => useProfileStore.setState({ error: String(e) }));
+    },
+    [t],
+  );
+  // A button file is looked over first, like a page import; anything worth checking is shown before it lands.
+  const [pendingImport, setPendingImport] = useState<{ review: ImportReview; run: () => Promise<unknown> } | null>(null);
+  const importButton = useCallback(
+    async (x: number, y: number) => {
+      const path = await open({ multiple: false, directory: false, filters: [{ name: t("settings.fileButton"), extensions: ["json"] }] });
+      if (typeof path !== "string") return;
+      const run = () => useProfileStore.getState().importButtonFile(x, y, path);
+      const review = await api.reviewButtonFile(path, x, y).catch((e) => {
+        useProfileStore.setState({ error: String(e) });
+        return null;
+      });
+      if (!review) return;
+      if (review.findings.length === 0) await run();
+      else setPendingImport({ review, run });
     },
     [t],
   );
@@ -282,6 +300,7 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
           { label: t("grid.cut"), disabled: !hasButton, onSelect: () => void cutButton(pad.x, pad.y) },
           { label: t("grid.paste"), disabled: !clipboard, onSelect: () => void pasteButton(pad.x, pad.y) },
           { label: t("grid.exportButton"), disabled: !hasButton, onSelect: () => void exportButton(pad.x, pad.y) },
+          { label: t("grid.importButton"), onSelect: () => void importButton(pad.x, pad.y) },
           { label: t("grid.share"), disabled: !hasButton, onSelect: () => shareButton(pad.x, pad.y) },
           ...(hasButton && sharedAt(pad.x, pad.y) ? [{ label: t("grid.update"), onSelect: () => updateButton(pad.x, pad.y) }] : []),
           "divider",
@@ -383,6 +402,15 @@ export function LaunchpadGrid({ layout, preview = false }: Props) {
       {drag && dragButton && <DragGhost button={dragButton} cell={cell} copy={drag.copy} corners={dragCorners} limited={layout.limitedColor} />}
       {drag?.fader && <FaderGhost fader={drag.fader.fader} cell={cell} />}
       <ContextMenu menu={menu} onClose={() => setMenu(null)} />
+      <ImportReviewDialog
+        review={pendingImport?.review ?? null}
+        onCancel={() => setPendingImport(null)}
+        onConfirm={() => {
+          const run = pendingImport?.run;
+          setPendingImport(null);
+          if (run) void run();
+        }}
+      />
     </div>
   );
 }

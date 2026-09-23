@@ -54,7 +54,8 @@ on the hub delivers things to the app's inbox, where they go through the same re
 imported file before they are placed on a pad or added as a page. Only a token for the app is
 stored (in the credential store); secrets never leave the computer. Pages, single buttons
 (right-click → Export button…) and the whole configuration (Settings → Pages & backup → Export
-everything…) can be exported as files for uploading.
+everything…) can be exported as files for uploading; a button file goes back onto a pad with
+right-click → Import button…, a page file through Settings → Pages & backup → Import page….
 
 ### Tray and updates
 

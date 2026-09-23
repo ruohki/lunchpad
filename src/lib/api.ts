@@ -981,6 +981,10 @@ export const api = {
   reviewImportJson: (json: string) => invoke<ImportReview>("review_import_json", { json }),
   importPageJson: (json: string) => invoke<ImportReport>("import_page_json", { json }),
   importPageFile: (path: string) => invoke<ImportReport>("import_page_file", { path }),
+  /** Look over a button export before it lands on the pad at (x, y); nothing is applied. */
+  reviewButtonFile: (path: string, x: number, y: number) => invoke<ImportReview>("review_button_file", { path, x, y }),
+  /** Put a button export on a pad, replacing what is there. */
+  importButtonFile: (pageId: string, x: number, y: number, path: string) => invoke<ImportReport>("import_button_file", { pageId, x, y, path }),
   restoreProfileBackup: () => invoke<Profile>("restore_profile_backup"),
   readImageDataUri: (path: string) => invoke<string>("read_image_data_uri", { path }),
 

@@ -291,6 +291,7 @@
     "noInput": "{{name}} (keyboard function, not usable here)",
     "assignFader": "Assign a fader…",
     "exportButton": "Export button…",
+    "importButton": "Import button…",
     "share": "Share on the hub…",
     "update": "Update on the hub…"
   },

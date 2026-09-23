@@ -58,6 +58,7 @@ interface ProfileStore {
 
   importLegacyFile: (path: string, mode: ImportMode) => Promise<ImportReport | null>;
   importPageFile: (path: string) => Promise<ImportReport | null>;
+  importButtonFile: (x: number, y: number, path: string) => Promise<ImportReport | null>;
   exportPageFile: (pageId: string, path: string) => Promise<void>;
   restoreBackup: () => Promise<void>;
   clearError: () => void;
@@ -226,6 +227,13 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
   },
   importPageFile: async (path) => {
     const report = await guard(set, () => api.importPageFile(path));
+    if (report) set({ lastImport: report });
+    return report;
+  },
+  importButtonFile: async (x, y, path) => {
+    const page = get().activePage();
+    if (!page) return null;
+    const report = await guard(set, () => api.importButtonFile(page.id, x, y, path));
     if (report) set({ lastImport: report });
     return report;
   },

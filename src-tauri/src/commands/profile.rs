@@ -50,6 +50,45 @@ pub(crate) fn check_export_format(value: &serde_json::Value) -> Result<(), Strin
 }
 
 #[cfg(test)]
+mod button_import_tests {
+    use super::{button_in, looks_like_button, parse_checked};
+
+    /// The shape of a file written by Export button… (1.0.3).
+    const EXPORT: &str = r##"{
+      "activeColor": null,
+      "color": { "index": 76, "mode": "palette" },
+      "description": "",
+      "down": [
+        {"app":"Spotify","id":"a","matching":"contains","saveScope":"local","saveTo":"spotify_window","target":"title","title":"","type":"getWindow","wait":true},
+        {"elseId":"e","endId":"f","id":"b","op":"isEmpty","type":"ifStart","value":"","variable":"spotify_window","wait":true},
+        {"arguments":"","executable":"C:\\Users\\me\\AppData\\Roaming\\Spotify\\Spotify.exe","hidden":false,"id":"c","killOnStop":false,"saveOutputTo":null,"saveScope":"local","type":"launchApplication","wait":true},
+        {"endId":"f","id":"e","startId":"b","type":"ifElse","wait":true},
+        {"elseId":"e","id":"f","startId":"b","type":"ifEnd","wait":true},
+        {"app":"Spotify","height":"","id":"g","matching":"contains","op":"center","screen":"3","target":"title","title":"","type":"setWindow","wait":true,"width":"","x":"100","y":"100"}
+      ],
+      "hold": [],
+      "holdMs": 500,
+      "holdWait": false,
+      "look": { "caption": "Spotify", "color": "#ffffff", "face": "mono", "size": 16, "type": "text" },
+      "loop": false,
+      "lunchpad": { "app": "1.0.3", "format": 1 },
+      "stateLink": null,
+      "up": []
+    }"##;
+
+    #[test]
+    fn a_button_export_is_read_and_told_apart_from_a_page() {
+        let button = button_in(EXPORT).expect("a button export reads");
+        assert_eq!(button.down.len(), 6);
+        assert!(looks_like_button(&parse_checked(EXPORT).unwrap()));
+        let page = r#"{ "id": "p", "name": "Stream", "buttons": [], "faders": [], "lunchpad": { "app": "1.0.3", "format": 1 } }"#;
+        assert!(!looks_like_button(&parse_checked(page).unwrap()));
+        let err = button_in(page).unwrap_err();
+        assert!(err.contains("Pages & backup"), "{err}");
+    }
+}
+
+#[cfg(test)]
 mod version_tests {
     use super::check_export_format;
 
@@ -452,10 +491,59 @@ pub async fn review_import_file(path: String) -> CmdResult<ImportReview> {
     review_import_json(json).await
 }
 
+/// A single button's export (right-click → Export button…): its lists and look at the
+/// top level, no `buttons` or `pages` around them.
+fn looks_like_button(value: &serde_json::Value) -> bool {
+    value.is_object() && value.get("down").is_some() && value.get("look").is_some() && value.get("buttons").is_none() && value.get("pages").is_none()
+}
+
+/// The button in a button export, or why the file is not one.
+fn button_in(json: &str) -> Result<Button, String> {
+    let value = parse_checked(json)?;
+    if value.get("pages").is_some() || value.get("buttons").is_some() {
+        return Err("This file holds a page or a whole configuration, not a single button. Import it under Settings → Pages & backup.".into());
+    }
+    serde_json::from_value::<Button>(value).map_err(|e| format!("the button could not be read: {e}"))
+}
+
+/// Look over a button export before it lands on the pad at (x, y).
+#[tauri::command]
+pub async fn review_button_file(path: String, x: u8, y: u8) -> CmdResult<ImportReview> {
+    let json = std::fs::read_to_string(&path).map_err(|e| format!("could not read {path}: {e}"))?;
+    let button = button_in(&json)?;
+    let name = match &button.look {
+        Look::Text { caption, .. } => caption.clone(),
+        _ => String::new(),
+    };
+    let pages = vec![Page { id: "file".into(), name, buttons: vec![PlacedButton { x, y, button }], faders: Vec::new() }];
+    let actions = pages[0].buttons[0].button.down.len() + pages[0].buttons[0].button.up.len() + pages[0].buttons[0].button.hold.len();
+    let findings = crate::profile::review::review(&pages);
+    Ok(ImportReview { pages: 0, buttons: 1, actions, findings, content: pages })
+}
+
+/// Put a button export on the pad at (x, y), replacing what is there.
+#[tauri::command]
+pub async fn import_button_file(page_id: String, x: u8, y: u8, path: String, app: AppHandle, state: State<'_, AppState>) -> CmdResult<ImportReport> {
+    let json = std::fs::read_to_string(&path).map_err(|e| format!("could not read {path}: {e}"))?;
+    let button = button_in(&json)?;
+    let actions = button.down.len() + button.up.len() + button.hold.len();
+    mutate(&app, &state, true, move |p| {
+        let page = p.page_mut(&page_id).ok_or_else(|| ProfileError::PageNotFound(page_id.clone()))?;
+        if page.fader_at(x, y).is_some() {
+            return Err(ProfileError::Invalid("that pad belongs to a fader".into()));
+        }
+        page.set(x, y, button);
+        Ok(ImportReport { pages: 0, buttons: 1, actions, warnings: vec![] })
+    })
+}
+
 /// Import a page exported by this app (new format), a whole configuration, or a legacy file.
 #[tauri::command]
 pub async fn import_page_json(json: String, app: AppHandle, state: State<'_, AppState>) -> CmdResult<ImportReport> {
     let value = parse_checked(&json)?;
+    if looks_like_button(&value) {
+        return Err("This file holds a single button. Right-click the pad it should go on and choose Import button…".into());
+    }
     if let Ok(profile) = serde_json::from_value::<Profile>(value.clone()) {
         let pages = profile.pages;
         let buttons = pages.iter().map(|p| p.buttons.len()).sum();

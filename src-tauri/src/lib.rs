@@ -333,6 +333,8 @@ pub fn run() {
             review_import_json,
             review_import_file,
             import_page_file,
+            review_button_file,
+            import_button_file,
             restore_profile_backup,
             read_image_data_uri,
             // macros
