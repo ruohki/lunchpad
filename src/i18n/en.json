@@ -793,12 +793,12 @@
   },
   "launch": {
     "executable": "Program or script",
-    "executablePlaceholder": "/path/to/program or an app name on the PATH",
+    "executablePlaceholder": "/path/to/program, an app name on the PATH, or an .app on macOS",
     "choose": "Choose…",
     "arguments": "Arguments",
     "argumentsPlaceholder": "--flag \"value with spaces\"",
     "killOnStop": "Stop the program when the macro stops",
-    "killOnStopHint": "Otherwise it keeps running on its own.",
+    "killOnStopHint": "Otherwise it keeps running on its own. An app on macOS is asked to quit.",
     "hidden": "Start without a window",
     "saveOutput": "Save output to variable"
   },

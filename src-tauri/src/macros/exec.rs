@@ -653,14 +653,82 @@ async fn sleep_cancellable(ctx: &RunContext, ms: u64) {
     }
 }
 
-async fn launch(ctx: &RunContext, executable: &str, arguments: &str, hidden: bool, kill_on_stop: bool, capture: bool) -> Option<String> {
-    if executable.trim().is_empty() {
-        tracing::warn!("launch application: no executable set");
-        return None;
+/// An `.app` bundle on macOS is a folder: it starts through Launch Services, not as a process.
+fn is_app_bundle(executable: &str) -> bool {
+    let name = executable.trim().trim_end_matches('/');
+    name.len() > 4 && name.to_ascii_lowercase().ends_with(".app")
+}
+
+/// `open -W -a <app> [--args …]`: waits while the app runs, so the action lasts as long
+/// as a started program would; an app that is already running comes forward instead
+/// of starting twice. "Start without a window" keeps it hidden and in the background.
+fn app_open_args(app: &str, args: &[String], hidden: bool) -> Vec<String> {
+    let mut out = vec!["-W".to_string()];
+    if hidden {
+        out.push("-j".into());
+        out.push("-g".into());
     }
-    let args = shlex::split(arguments).unwrap_or_else(|| arguments.split_whitespace().map(str::to_string).collect());
-    let mut cmd = tokio::process::Command::new(executable);
-    cmd.args(&args).stdin(std::process::Stdio::null()).kill_on_drop(kill_on_stop);
+    out.push("-a".into());
+    out.push(app.trim().trim_end_matches('/').to_string());
+    if !args.is_empty() {
+        out.push("--args".into());
+        out.extend(args.iter().cloned());
+    }
+    out
+}
+
+/// On macOS, what `open` should start instead of the executable itself: an `.app` bundle.
+#[cfg(target_os = "macos")]
+fn app_for(executable: &str) -> Option<String> {
+    is_app_bundle(executable).then(|| executable.trim().to_string())
+}
+#[cfg(not(target_os = "macos"))]
+fn app_for(_executable: &str) -> Option<String> {
+    None
+}
+
+/// On macOS, a bare name that is not a command on the PATH may still be an app's name
+/// ("Spotify"), which Launch Services knows.
+#[cfg(target_os = "macos")]
+fn app_fallback(executable: &str, error: &std::io::Error) -> Option<String> {
+    (error.kind() == std::io::ErrorKind::NotFound && !executable.contains('/')).then(|| executable.trim().to_string())
+}
+#[cfg(not(target_os = "macos"))]
+fn app_fallback(_executable: &str, _error: &std::io::Error) -> Option<String> {
+    None
+}
+
+/// Ask an app to quit the way the Dock would (macOS); the `open -W` child ends with it.
+#[cfg(target_os = "macos")]
+async fn quit_app(app: &str) {
+    let name = app.replace('\\', "\\\\").replace('"', "\\\"");
+    let script = format!("tell application \"{name}\" to quit");
+    let quit = tokio::process::Command::new("osascript").args(["-e", &script]).stdin(std::process::Stdio::null()).status();
+    match tokio::time::timeout(Duration::from_secs(5), quit).await {
+        Ok(Ok(status)) if status.success() => tracing::info!(app, "application asked to quit"),
+        Ok(Ok(status)) => tracing::warn!(app, ?status, "application did not take the quit request"),
+        Ok(Err(e)) => tracing::warn!(app, error = %e, "could not ask the application to quit"),
+        Err(_) => tracing::warn!(app, "the application is taking its time to quit"),
+    }
+}
+#[cfg(not(target_os = "macos"))]
+async fn quit_app(_app: &str) {}
+
+/// The command for a launch: the executable itself, or `open` for an app on macOS.
+fn launch_command(executable: &str, app: Option<&str>, args: &[String], hidden: bool, kill_on_stop: bool, capture: bool) -> tokio::process::Command {
+    let mut cmd = match app {
+        Some(app) => {
+            let mut cmd = tokio::process::Command::new("open");
+            cmd.args(app_open_args(app, args, hidden));
+            cmd
+        }
+        None => {
+            let mut cmd = tokio::process::Command::new(executable);
+            cmd.args(args);
+            cmd
+        }
+    };
+    cmd.stdin(std::process::Stdio::null()).kill_on_drop(kill_on_stop);
     if capture {
         cmd.stdout(std::process::Stdio::piped());
     }
@@ -676,18 +744,40 @@ async fn launch(ctx: &RunContext, executable: &str, arguments: &str, hidden: boo
             cmd.creation_flags(CREATE_NO_WINDOW);
         }
     }
-    #[cfg(not(windows))]
-    let _ = hidden;
+    cmd
+}
 
+async fn launch(ctx: &RunContext, executable: &str, arguments: &str, hidden: bool, kill_on_stop: bool, capture: bool) -> Option<String> {
+    let executable = executable.trim();
+    if executable.is_empty() {
+        tracing::warn!("launch application: no executable set");
+        return None;
+    }
+    let args = shlex::split(arguments).unwrap_or_else(|| arguments.split_whitespace().map(str::to_string).collect());
+    let mut app = app_for(executable);
+    let mut cmd = launch_command(executable, app.as_deref(), &args, hidden, kill_on_stop, capture);
     let mut child = match cmd.spawn() {
         Ok(c) => c,
-        Err(e) => {
-            tracing::warn!(executable, error = %e, "could not start application");
-            return None;
-        }
+        Err(e) => match app_fallback(executable, &e) {
+            Some(name) => {
+                let mut cmd = launch_command(executable, Some(&name), &args, hidden, kill_on_stop, capture);
+                app = Some(name);
+                match cmd.spawn() {
+                    Ok(c) => c,
+                    Err(e) => {
+                        tracing::warn!(executable, error = %e, "could not start application");
+                        return None;
+                    }
+                }
+            }
+            None => {
+                tracing::warn!(executable, error = %e, "could not start application");
+                return None;
+            }
+        },
     };
     let pid = child.id();
-    tracing::info!(executable, ?args, pid, "application started");
+    tracing::info!(executable, ?args, pid, app = app.is_some(), "application started");
 
     if capture {
         tokio::select! {
@@ -713,6 +803,9 @@ async fn launch(ctx: &RunContext, executable: &str, arguments: &str, hidden: boo
         }
         _ = ctx.token.cancelled() => {
             if kill_on_stop {
+                if let Some(app) = &app {
+                    quit_app(app).await;
+                }
                 #[cfg(unix)]
                 if let Some(pid) = pid {
                     let _ = std::process::Command::new("kill").args(["-TERM", &format!("-{pid}")]).status();
@@ -728,4 +821,26 @@ async fn launch(ctx: &RunContext, executable: &str, arguments: &str, hidden: boo
         }
     }
     None
+}
+
+#[cfg(test)]
+mod launch_tests {
+    use super::{app_open_args, is_app_bundle};
+
+    #[test]
+    fn an_app_bundle_is_told_apart_from_a_program() {
+        assert!(is_app_bundle("/Applications/Spotify.app"));
+        assert!(is_app_bundle("/Applications/Spotify.app/"));
+        assert!(is_app_bundle("~/Applications/OBS.APP"));
+        assert!(!is_app_bundle("/usr/bin/say"));
+        assert!(!is_app_bundle("Spotify"));
+        assert!(!is_app_bundle(".app"));
+    }
+
+    #[test]
+    fn open_waits_and_passes_the_arguments_on() {
+        assert_eq!(app_open_args("/Applications/Spotify.app/", &[], false), ["-W", "-a", "/Applications/Spotify.app"]);
+        let args = vec!["--minimized".to_string(), "a b".to_string()];
+        assert_eq!(app_open_args("Spotify", &args, true), ["-W", "-j", "-g", "-a", "Spotify", "--args", "--minimized", "a b"]);
+    }
 }
