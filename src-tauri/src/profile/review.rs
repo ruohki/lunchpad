@@ -4,8 +4,9 @@
 //! other people go through this first.
 
 use super::model::Page;
+use crate::desktop::TitleMatch;
 use crate::macros::model::{
-    Action, ActionKind, HttpAuth, HttpBodyMode, HttpResponse, Keystroke, MouseStep, WindowTarget,
+    Action, ActionKind, HttpAuth, HttpBodyMode, HttpResponse, Keystroke, MouseStep, WindowOp, WindowTarget,
 };
 use serde::Serialize;
 
@@ -161,8 +162,8 @@ fn inspect(page: &str, x: u8, y: u8, caption: &str, action: &Action, out: &mut V
         ActionKind::Mouse { steps } => add(Level::Warning, Kind::Mouse, mouse_summary(steps)),
         ActionKind::MousePosition { .. } => add(Level::Info, Kind::Mouse, "reads the pointer position".into()),
         ActionKind::GetScreen { .. } => add(Level::Info, Kind::Window, "reads a screen's size".into()),
-        ActionKind::GetWindow { target, title, app, .. } => add(Level::Info, Kind::Window, format!("reads {}", window_summary(*target, title, app))),
-        ActionKind::SetWindow { target, title, app, op, .. } => add(Level::Warning, Kind::Window, format!("{op:?} {}", window_summary(*target, title, app)).to_lowercase()),
+        ActionKind::GetWindow { target, title, matching, app, .. } => add(Level::Info, Kind::Window, format!("reads {}", window_summary(*target, title, *matching, app))),
+        ActionKind::SetWindow { target, title, matching, app, op, .. } => add(Level::Warning, Kind::Window, format!("{} {}", window_verb(*op), window_summary(*target, title, *matching, app))),
         ActionKind::PlaySound { file, .. } => add(Level::Info, Kind::Sound, file.clone()),
         ActionKind::TextToSpeech { text, .. } => add(Level::Info, Kind::Speech, first_line(text)),
         ActionKind::HomeAssistantTurn { entity, .. } | ActionKind::HomeAssistantSetValue { entity, .. } => add(Level::Warning, Kind::HomeAssistant, entity.clone()),
@@ -239,11 +240,49 @@ fn first_line(text: &str) -> String {
     short
 }
 
-/// "the foreground window" or "“title” of app".
-fn window_summary(target: WindowTarget, title: &str, app: &str) -> String {
-    match target {
-        WindowTarget::Foreground => "the foreground window".to_string(),
-        WindowTarget::Title => format!("“{title}”{}", if app.is_empty() { String::new() } else { format!(" of {app}") }),
+/// What a window action looks for, as the app's rows word it: the title with its
+/// match rule, the program when the title is empty (a program is matched by
+/// "contains" on its own), both when both are set, or any window. A handle or a
+/// placeholder in the title stands as it is.
+fn window_summary(target: WindowTarget, title: &str, matching: TitleMatch, app: &str) -> String {
+    if target == WindowTarget::Foreground {
+        return "the foreground window".to_string();
+    }
+    let (title, app) = (title.trim(), app.trim());
+    let titled = if title.is_empty() {
+        String::new()
+    } else if title.starts_with("window:") || title.starts_with("{{") {
+        format!("“{title}”")
+    } else {
+        match matching {
+            TitleMatch::Contains => format!("contains “{title}”"),
+            TitleMatch::StartsWith => format!("starts with “{title}”"),
+            TitleMatch::Exact => format!("is exactly “{title}”"),
+            TitleMatch::Regex => format!("matches /{title}/"),
+        }
+    };
+    match (titled.is_empty(), app.is_empty()) {
+        (false, false) => format!("{titled} of {app}"),
+        (false, true) => titled,
+        (true, false) => format!("a window of {app}"),
+        (true, true) => "any window".to_string(),
+    }
+}
+
+/// What a window action does to the window, as a verb.
+fn window_verb(op: WindowOp) -> &'static str {
+    match op {
+        WindowOp::Focus => "brings to front",
+        WindowOp::Minimize => "minimizes",
+        WindowOp::Maximize => "maximizes",
+        WindowOp::Restore => "restores",
+        WindowOp::SendToBack => "sends to back",
+        WindowOp::Close => "closes",
+        WindowOp::Move => "moves",
+        WindowOp::Resize => "resizes",
+        WindowOp::Bounds => "moves and resizes",
+        WindowOp::Center => "centres",
+        _ => "moves to a screen",
     }
 }
 
@@ -320,6 +359,32 @@ mod tests {
         let upload = findings.iter().find(|f| f.kind == Kind::Upload).unwrap();
         assert!(upload.detail.starts_with("/Users/me/.ssh/id_rsa → https://example.com"), "{}", upload.detail);
         assert!(findings.iter().all(|f| f.action != "switchPage"));
+    }
+
+    /// Window findings follow the app's rows: the title with its match rule, the program
+    /// when the title is empty, both, or any window; a placeholder stands as it is.
+    #[test]
+    fn window_findings_name_the_program_when_the_title_is_empty() {
+        let button = Button {
+            down: vec![
+                action(r#"{"id":"a","type":"setWindow","target":"title","title":"","matching":"contains","app":"Discord","op":"close"}"#),
+                action(r#"{"id":"b","type":"getWindow","target":"title","title":"Now Playing","matching":"startsWith","app":"Spotify","saveTo":"w","saveScope":"local"}"#),
+                action(r#"{"id":"c","type":"setWindow","target":"title","title":"^Spo","matching":"regex","app":"","op":"focus"}"#),
+                action(r#"{"id":"d","type":"setWindow","target":"title","title":"{{spotify_window}}","matching":"contains","app":"","op":"minimize"}"#),
+                action(r#"{"id":"e","type":"setWindow","target":"title","title":"","matching":"contains","app":"","op":"sendToBack"}"#),
+                action(r#"{"id":"f","type":"getWindow","target":"foreground","saveTo":"w","saveScope":"local"}"#),
+            ],
+            ..Default::default()
+        };
+        let page = Page { id: "p".into(), name: "Imported".into(), buttons: vec![PlacedButton { x: 0, y: 0, button }], faders: vec![] };
+        let findings = review(&[page]);
+        let detail = |id: &str| findings.iter().find(|f| f.action_id == id).map(|f| f.detail.clone()).unwrap_or_default();
+        assert_eq!(detail("a"), "closes a window of Discord");
+        assert_eq!(detail("b"), "reads starts with “Now Playing” of Spotify");
+        assert_eq!(detail("c"), "brings to front matches /^Spo/");
+        assert_eq!(detail("d"), "minimizes “{{spotify_window}}”");
+        assert_eq!(detail("e"), "sends to back any window");
+        assert_eq!(detail("f"), "reads the foreground window");
     }
 
     #[test]
