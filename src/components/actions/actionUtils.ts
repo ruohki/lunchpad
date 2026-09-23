@@ -20,6 +20,9 @@ export const ACTION_ICONS: Record<ActionType, IconName> = {
   ifStart: "Split",
   ifElse: "Split",
   ifEnd: "Split",
+  loopStart: "RefreshCw",
+  loopTimeout: "Timer",
+  loopEnd: "RefreshCw",
   playSound: "Volume2",
   textToSpeech: "Speech",
   setSystemVolume: "Volume2",
@@ -89,6 +92,12 @@ export function siblingIds(action: Action): string[] {
       return [action.startId, action.endId];
     case "ifEnd":
       return [action.startId, action.elseId];
+    case "loopStart":
+      return [action.timeoutId, action.endId];
+    case "loopTimeout":
+      return [action.startId, action.endId];
+    case "loopEnd":
+      return [action.startId, action.timeoutId];
     default:
       return [];
   }
@@ -127,6 +136,8 @@ export function markersOrdered(list: Action[]): boolean {
         return at(a.id) < at(a.endId);
       case "ifStart":
         return at(a.id) < at(a.elseId) && at(a.elseId) < at(a.endId);
+      case "loopStart":
+        return at(a.id) < at(a.timeoutId) && at(a.timeoutId) < at(a.endId);
       default:
         return true;
     }
@@ -171,9 +182,9 @@ export function cloneActions(actions: Action[]): Action[] {
   const ids = new Map(actions.map((a) => [a.id, newActionId()]));
   const remap = (id: string) => ids.get(id) ?? id;
   return actions.map((a) => {
-    const copy = structuredClone(a) as Action & Partial<Record<"startId" | "middleId" | "endId" | "elseId", string>>;
+    const copy = structuredClone(a) as Action & Partial<Record<"startId" | "middleId" | "endId" | "elseId" | "timeoutId", string>>;
     copy.id = remap(a.id);
-    for (const key of ["startId", "middleId", "endId", "elseId"] as const) {
+    for (const key of ["startId", "middleId", "endId", "elseId", "timeoutId"] as const) {
       if (typeof copy[key] === "string") copy[key] = remap(copy[key]);
     }
     return copy as Action;
@@ -281,6 +292,16 @@ export function createActions(type: ActionType): Action[] {
         make({ type: "ifStart", variable: "", op: "equals", value: "", elseId: e, endId: n }, s),
         make({ type: "ifElse", startId: s, endId: n }, e),
         make({ type: "ifEnd", startId: s, elseId: e }, n),
+      ];
+    }
+    case "loopStart":
+    case "loopTimeout":
+    case "loopEnd": {
+      const [s, o, n] = [newActionId(), newActionId(), newActionId()];
+      return [
+        make({ type: "loopStart", mode: "until", variable: "", op: "equals", value: "", check: "head", from: "1", to: "10", step: "1", intervalMs: 100, timeoutMs: 10000, timeoutId: o, endId: n }, s),
+        make({ type: "loopTimeout", startId: s, endId: n }, o),
+        make({ type: "loopEnd", startId: s, timeoutId: o }, n),
       ];
     }
     case "runScript":
@@ -488,6 +509,18 @@ export function summarize(t: TFunction, action: Action, pages: Page[]): string {
       return action.text.split("\n")[0];
     case "ifStart":
       return action.variable ? `${action.variable} ${t(`branch.opsShort.${action.op}`)} ${["isEmpty", "isNotEmpty"].includes(action.op) ? "" : action.value}`.trim() : "";
+    case "loopStart": {
+      const what =
+        action.mode === "count"
+          ? t("actions.summary.loopCount", { from: action.from, to: action.to }) + (action.step.trim() === "1" ? "" : ` ${t("actions.summary.loopStep", { step: action.step })}`)
+          : action.mode === "forever"
+            ? t("actions.summary.loopForever")
+            : action.variable
+              ? t("actions.summary.loopUntil", { check: `${action.variable} ${t(`branch.opsShort.${action.op}`)} ${["isEmpty", "isNotEmpty"].includes(action.op) ? "" : action.value}`.trim() }) +
+                (action.check === "tail" ? ` ${t("actions.summary.loopTail")}` : "")
+              : "";
+      return [what, t("actions.summary.loopEvery", { ms: action.intervalMs }), action.timeoutMs > 0 && t("actions.summary.loopLimit", { ms: action.timeoutMs })].filter(Boolean).join(" · ");
+    }
     case "runScript":
       return action.saveTo ? `→ ${action.saveTo}` : action.code.split("\n")[0].slice(0, 40);
     default:

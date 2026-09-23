@@ -663,6 +663,18 @@
         "name": "End condition",
         "desc": "Everything after this runs either way."
       },
+      "loopStart": {
+        "name": "Loop",
+        "desc": "Actions up to “If it takes too long” repeat: a set number of times, until a check holds, or until stopped, with a pause between rounds."
+      },
+      "loopTimeout": {
+        "name": "If it takes too long",
+        "desc": "Actions up to “End loop” run when the loop reaches its time limit."
+      },
+      "loopEnd": {
+        "name": "End loop",
+        "desc": "Everything after this runs either way."
+      },
       "stopAllSounds": {
         "name": "Stop all sounds",
         "desc": "Silences every sound Lunchpad is playing."
@@ -731,7 +743,14 @@
       "mousePosition": "→ {{name}}",
       "getWindow": "{{what}} → {{name}}",
       "setWindow": "{{op}} · {{what}}",
-      "getScreen": "{{what}} → {{name}}"
+      "getScreen": "{{what}} → {{name}}",
+      "loopUntil": "until {{check}}",
+      "loopTail": "(checked after each round)",
+      "loopCount": "{{from}} → {{to}}",
+      "loopStep": "step {{step}}",
+      "loopForever": "until stopped",
+      "loopEvery": "every {{ms}} ms",
+      "loopLimit": "up to {{ms}} ms"
     },
     "flipFlop": "Flip flop",
     "pushToTalk": "Push-to-talk",
@@ -1162,6 +1181,28 @@
         }
       }
     }
+  },
+  "loop": {
+    "modes": {
+      "count": "Count",
+      "until": "Until a check holds",
+      "forever": "Until stopped"
+    },
+    "checks": {
+      "head": "Check before each round",
+      "tail": "Check after each round"
+    },
+    "from": "From",
+    "to": "To",
+    "step": "Step",
+    "countHint": "loop.value holds the current number; a negative step counts down. Placeholders work in all three.",
+    "until": "Repeat until",
+    "foreverHint": "Runs until the macro is stopped or the time limit hits.",
+    "interval": "Pause between rounds (ms)",
+    "timeout": "Give up after (ms)",
+    "noTimeout": "No limit: the loop runs until it is done or the macro is stopped.",
+    "timeoutHint": "Then the actions under “If it takes too long” run instead, once.",
+    "hint": "Nothing here holds up other macros. Inside the loop, loop.iteration counts the rounds and loop.elapsedMs the milliseconds since the first round. The pause never goes below 10 ms, so a loop cannot eat the CPU."
   },
   "branch": {
     "variable": "Variable",

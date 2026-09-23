@@ -29,7 +29,7 @@ Lunchpad asks every MIDI device to identify itself, so the right Launchpad is fo
 - Hotkey sequences: press, hold and release keys, type text
 - Launch applications and scripts, optionally capturing their output
 - HTTP requests with any method, headers, body, file uploads and login; the response can become a file (from the body, a base64 field or a linked URL) that is reused while the request is unchanged, so speech from a text-to-speech service is fetched once and then played by the sound action; API keys stay in the system's credential store and are inserted as secrets, never written to a profile
-- Variables, conditions and small JavaScript snippets to glue actions together
+- Variables, conditions, loops and small JavaScript snippets to glue actions together
 - Delay, switch page, set the colour of any button, run another button's actions
 - Flip flop (alternate between two sets of actions), push-to-talk sections, loop while held
 - Stop this macro, restart it, or stop everything

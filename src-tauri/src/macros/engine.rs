@@ -1020,14 +1020,47 @@ struct FaderHit {
     display: String,
 }
 
+/// A loop's progress while its body repeats, kept per start marker so loops can nest.
+struct LoopState {
+    started: Instant,
+    iteration: u32,
+    /// The counter of a counted loop.
+    value: f64,
+}
+
+/// A counter as macro text: whole numbers without ".0".
+fn counter_text(value: f64) -> String {
+    if value.fract() == 0.0 && value.abs() < 1e15 {
+        format!("{}", value as i64)
+    } else {
+        format!("{value}")
+    }
+}
+
+/// Whether an `Until` loop's check holds right now.
+fn loop_check_holds(ctx: &RunContext, variable: &str, op: CompareOp, value: &str) -> bool {
+    let vars = ctx.variables();
+    let left = vars.get(variable.trim()).cloned().unwrap_or_default();
+    let right = ctx.expand(value);
+    let holds = op.test(&left, &right);
+    tracing::debug!(variable, ?op, left = %left, right = %right, holds, "loop check");
+    holds
+}
+
 async fn run_pass(ctx: &RunContext, actions: &[Action]) {
     let mut flip_a = true;
     let mut active = true;
     // While set, everything is skipped until the marker with this id is reached.
     let mut skip_until: Option<String> = None;
     let mut children = Vec::new();
+    let mut loops: HashMap<String, LoopState> = HashMap::new();
+    let index_of = |id: &str| actions.iter().position(|a| a.id == id);
 
-    for action in actions {
+    // By index, because a loop's end jumps back to its start.
+    let mut i = 0;
+    while i < actions.len() {
+        let action = &actions[i];
+        i += 1;
         if ctx.token.is_cancelled() {
             break;
         }
@@ -1072,6 +1105,87 @@ async fn run_pass(ctx: &RunContext, actions: &[Action]) {
                 continue;
             }
             ActionKind::IfEnd { .. } => continue,
+            ActionKind::LoopStart { mode, variable, op, value, check, from, to, step, timeout_ms, timeout_id, end_id, .. } => {
+                let number = |text: &str, fallback: f64| ctx.expand(text).trim().parse::<f64>().ok().filter(|n| n.is_finite()).unwrap_or(fallback);
+                let first = loops.get(&action.id).is_none();
+                let state = loops.entry(action.id.clone()).or_insert_with(|| LoopState { started: Instant::now(), iteration: 0, value: 0.0 });
+                let elapsed = state.started.elapsed().as_millis() as u64;
+                // Whether the loop is over before this round.
+                let done = match mode {
+                    LoopMode::Until => *check == LoopCheck::Head && loop_check_holds(ctx, variable, *op, value),
+                    LoopMode::Count => {
+                        // A step of 0 would never end; it counts as 1.
+                        let step = match number(step, 1.0) {
+                            s if s == 0.0 => 1.0,
+                            s => s,
+                        };
+                        if first {
+                            state.value = number(from, 1.0);
+                        } else {
+                            state.value += step;
+                        }
+                        let last = number(to, 10.0);
+                        if step > 0.0 {
+                            state.value > last
+                        } else {
+                            state.value < last
+                        }
+                    }
+                    LoopMode::Forever => false,
+                };
+                if done {
+                    tracing::debug!(id = %action.id, rounds = state.iteration, "loop done");
+                    loops.remove(&action.id);
+                    skip_until = Some(end_id.clone());
+                } else if *timeout_ms > 0 && elapsed >= *timeout_ms {
+                    tracing::info!(id = %action.id, elapsed, rounds = state.iteration, "loop timed out");
+                    loops.remove(&action.id);
+                    skip_until = Some(timeout_id.clone());
+                } else {
+                    state.iteration += 1;
+                    let mut locals = ctx.locals.lock();
+                    locals.insert("loop.iteration".into(), state.iteration.to_string());
+                    locals.insert("loop.elapsedMs".into(), elapsed.to_string());
+                    if *mode == LoopMode::Count {
+                        locals.insert("loop.value".into(), counter_text(state.value));
+                    }
+                }
+                continue;
+            }
+            ActionKind::LoopTimeout { start_id, end_id } => {
+                // Reached from the body: the round is over.
+                let Some(start) = index_of(start_id) else {
+                    // A timeout marker without its start (a broken block): skip its branch.
+                    skip_until = Some(end_id.clone());
+                    continue;
+                };
+                let ActionKind::LoopStart { mode, variable, op, value, check, interval_ms, timeout_ms, .. } = &actions[start].kind else {
+                    skip_until = Some(end_id.clone());
+                    continue;
+                };
+                if *mode == LoopMode::Until && *check == LoopCheck::Tail {
+                    if loop_check_holds(ctx, variable, *op, value) {
+                        loops.remove(start_id);
+                        skip_until = Some(end_id.clone());
+                        continue;
+                    }
+                    let elapsed = loops.get(start_id).map(|s| s.started.elapsed().as_millis() as u64).unwrap_or(0);
+                    if *timeout_ms > 0 && elapsed >= *timeout_ms {
+                        tracing::info!(id = %actions[start].id, elapsed, "loop timed out");
+                        loops.remove(start_id);
+                        // Straight on into the timeout branch.
+                        continue;
+                    }
+                }
+                let pause = (*interval_ms).max(LOOP_MIN_INTERVAL_MS);
+                tokio::select! {
+                    _ = tokio::time::sleep(Duration::from_millis(pause)) => {}
+                    _ = ctx.token.cancelled() => {}
+                }
+                i = start;
+                continue;
+            }
+            ActionKind::LoopEnd { .. } => continue,
             _ => {}
         }
         if !active {
@@ -1213,7 +1327,10 @@ pub(super) async fn execute(ctx: &RunContext, action: &Action) {
         | ActionKind::FlipFlopEnd { .. }
         | ActionKind::IfStart { .. }
         | ActionKind::IfElse { .. }
-        | ActionKind::IfEnd { .. } => {}
+        | ActionKind::IfEnd { .. }
+        | ActionKind::LoopStart { .. }
+        | ActionKind::LoopTimeout { .. }
+        | ActionKind::LoopEnd { .. } => {}
         ActionKind::PlaySound { .. }
         | ActionKind::GetWindow { .. }
         | ActionKind::SetWindow { .. }
@@ -1876,6 +1993,175 @@ mod tests {
         assert!(!engine.running().is_empty(), "the runner lasts as long as the program");
         wait_done(rx).await;
         assert!(started.elapsed() >= Duration::from_millis(250), "and ends with it");
+    }
+
+    /// An `Until` loop start with the given check, pause and limit; the marker ids are filled in by `loop_block`.
+    fn until_loop(variable: &str, value: &str, check: LoopCheck, interval_ms: u64, timeout_ms: u64) -> ActionKind {
+        ActionKind::LoopStart {
+            mode: LoopMode::Until,
+            variable: variable.into(),
+            op: CompareOp::Equals,
+            value: value.into(),
+            check,
+            from: "1".into(),
+            to: "10".into(),
+            step: "1".into(),
+            interval_ms,
+            timeout_ms,
+            timeout_id: String::new(),
+            end_id: String::new(),
+        }
+    }
+
+    /// A loop block: `loop_start` … body … `loop_timeout` … timeout branch … `loop_end`.
+    fn loop_block(mut start: ActionKind, body: Vec<Action>, on_timeout: Vec<Action>) -> Vec<Action> {
+        let (s, t, e) = ("loop1".to_string(), "timeout1".to_string(), "end1".to_string());
+        if let ActionKind::LoopStart { timeout_id, end_id, .. } = &mut start {
+            *timeout_id = t.clone();
+            *end_id = e.clone();
+        }
+        let mut list = vec![Action { id: s.clone(), wait: true, kind: start }];
+        list.extend(body);
+        list.push(Action { id: t.clone(), wait: true, kind: ActionKind::LoopTimeout { start_id: s.clone(), end_id: e.clone() } });
+        list.extend(on_timeout);
+        list.push(Action { id: e, wait: true, kind: ActionKind::LoopEnd { start_id: s, timeout_id: t } });
+        list
+    }
+
+    /// The body repeats, with the pause between rounds, until the check holds; the
+    /// timeout branch is skipped and the actions after the loop run.
+    #[tokio::test]
+    async fn a_loop_repeats_until_the_check_holds() {
+        let (engine, profile) = engine();
+        let mut list = vec![a(ActionKind::SetVariable { name: "count".into(), value: "0".into(), scope: VarScope::Local })];
+        list.extend(loop_block(
+            until_loop("count", "3", LoopCheck::Head, 10, 0),
+            vec![
+                a(ActionKind::AddToVariable { name: "count".into(), amount: "1".into(), scope: VarScope::Local }),
+                a(ActionKind::SetVariable { name: "seen".into(), value: "{{loop.iteration}}".into(), scope: VarScope::Global }),
+            ],
+            vec![a(ActionKind::SetVariable { name: "timed_out".into(), value: "yes".into(), scope: VarScope::Global })],
+        ));
+        list.push(a(ActionKind::SetVariable { name: "rounds".into(), value: "{{count}}".into(), scope: VarScope::Global }));
+        set_button(&profile, 3, 3, list, vec![], false);
+        let started = Instant::now();
+        wait_done(engine.start(DEFAULT_PAGE_ID, 3, 3, ActionList::Down, 127, 0, None).unwrap()).await;
+        let globals = engine.globals();
+        assert_eq!(globals.get("rounds").map(String::as_str), Some("3"), "the body ran until count reached 3");
+        assert_eq!(globals.get("seen").map(String::as_str), Some("3"), "loop.iteration counted the rounds");
+        assert!(globals.get("timed_out").is_none(), "the timeout branch was skipped");
+        assert!(started.elapsed() >= Duration::from_millis(30), "three rounds with a pause between them");
+    }
+
+    /// A check that never holds: after the time limit the timeout branch runs, once,
+    /// and the list goes on after the loop.
+    #[tokio::test]
+    async fn a_loop_runs_its_timeout_branch_when_the_check_never_holds() {
+        let (engine, profile) = engine();
+        let mut list = loop_block(
+            until_loop("never", "x", LoopCheck::Head, 10, 80),
+            vec![a(ActionKind::AddToVariable { name: "rounds".into(), amount: "1".into(), scope: VarScope::Global })],
+            vec![a(ActionKind::AddToVariable { name: "timed_out".into(), amount: "1".into(), scope: VarScope::Global })],
+        );
+        list.push(a(ActionKind::SetVariable { name: "after".into(), value: "yes".into(), scope: VarScope::Global }));
+        set_button(&profile, 4, 4, list, vec![], false);
+        let started = Instant::now();
+        wait_done(engine.start(DEFAULT_PAGE_ID, 4, 4, ActionList::Down, 127, 0, None).unwrap()).await;
+        let globals = engine.globals();
+        assert!(started.elapsed() >= Duration::from_millis(80), "the loop kept going until the limit");
+        assert_eq!(globals.get("timed_out").map(String::as_str), Some("1"), "the timeout branch ran once");
+        assert_eq!(globals.get("after").map(String::as_str), Some("yes"), "the list went on after the loop");
+        let rounds: u32 = globals.get("rounds").and_then(|r| r.parse().ok()).unwrap_or(0);
+        assert!(rounds >= 3, "the body ran several rounds, got {rounds}");
+    }
+
+    /// A check that holds from the start: checked before the round the body never runs,
+    /// checked after the round it runs once. The timeout branch runs on a tail check too.
+    #[tokio::test]
+    async fn a_loop_checks_before_or_after_the_round_as_asked() {
+        let (engine, profile) = engine();
+        let body = || vec![a(ActionKind::AddToVariable { name: "rounds".into(), amount: "1".into(), scope: VarScope::Global })];
+        let mut head = vec![a(ActionKind::SetVariable { name: "ready".into(), value: "yes".into(), scope: VarScope::Local })];
+        head.extend(loop_block(until_loop("ready", "yes", LoopCheck::Head, 10, 0), body(), vec![]));
+        set_button(&profile, 6, 6, head, vec![], false);
+        wait_done(engine.start(DEFAULT_PAGE_ID, 6, 6, ActionList::Down, 127, 0, None).unwrap()).await;
+        assert!(engine.globals().get("rounds").is_none(), "checked before the round: the body never ran");
+
+        let mut tail = vec![a(ActionKind::SetVariable { name: "ready".into(), value: "yes".into(), scope: VarScope::Local })];
+        tail.extend(loop_block(until_loop("ready", "yes", LoopCheck::Tail, 10, 0), body(), vec![]));
+        set_button(&profile, 6, 6, tail, vec![], false);
+        wait_done(engine.start(DEFAULT_PAGE_ID, 6, 6, ActionList::Down, 127, 0, None).unwrap()).await;
+        assert_eq!(engine.globals().get("rounds").map(String::as_str), Some("1"), "checked after the round: the body ran once");
+
+        let timed = loop_block(until_loop("never", "x", LoopCheck::Tail, 10, 50), body(), vec![a(ActionKind::SetVariable { name: "timed_out".into(), value: "yes".into(), scope: VarScope::Global })]);
+        set_button(&profile, 6, 6, timed, vec![], false);
+        wait_done(engine.start(DEFAULT_PAGE_ID, 6, 6, ActionList::Down, 127, 0, None).unwrap()).await;
+        assert_eq!(engine.globals().get("timed_out").map(String::as_str), Some("yes"), "the tail check ran the timeout branch");
+    }
+
+    /// A counted loop runs the body once per value and hands the value in; the step
+    /// may go down, and the bounds take placeholders.
+    #[tokio::test]
+    async fn a_counted_loop_supplies_its_value() {
+        let (engine, profile) = engine();
+        let count = |from: &str, to: &str, step: &str| ActionKind::LoopStart {
+            mode: LoopMode::Count,
+            variable: String::new(),
+            op: CompareOp::Equals,
+            value: String::new(),
+            check: LoopCheck::Head,
+            from: from.into(),
+            to: to.into(),
+            step: step.into(),
+            interval_ms: 10,
+            timeout_ms: 0,
+            timeout_id: String::new(),
+            end_id: String::new(),
+        };
+        let body = || {
+            vec![
+                a(ActionKind::AddToVariable { name: "sum".into(), amount: "{{loop.value}}".into(), scope: VarScope::Global }),
+                a(ActionKind::SetVariable { name: "last".into(), value: "{{loop.value}} of {{loop.iteration}}".into(), scope: VarScope::Global }),
+            ]
+        };
+        let mut up = vec![a(ActionKind::SetVariable { name: "n".into(), value: "3".into(), scope: VarScope::Local })];
+        up.extend(loop_block(count("1", "{{n}}", "1"), body(), vec![]));
+        set_button(&profile, 7, 7, up, vec![], false);
+        wait_done(engine.start(DEFAULT_PAGE_ID, 7, 7, ActionList::Down, 127, 0, None).unwrap()).await;
+        assert_eq!(engine.globals().get("sum").map(String::as_str), Some("6"), "1 + 2 + 3");
+        assert_eq!(engine.globals().get("last").map(String::as_str), Some("3 of 3"));
+
+        engine.globals_mut_for_test(|g| {
+            g.remove("sum");
+        });
+        set_button(&profile, 7, 7, loop_block(count("10", "4", "-3"), body(), vec![]), vec![], false);
+        wait_done(engine.start(DEFAULT_PAGE_ID, 7, 7, ActionList::Down, 127, 0, None).unwrap()).await;
+        assert_eq!(engine.globals().get("sum").map(String::as_str), Some("21"), "10 + 7 + 4, counting down");
+
+        engine.globals_mut_for_test(|g| {
+            g.remove("sum");
+        });
+        set_button(&profile, 7, 7, loop_block(count("5", "1", "1"), body(), vec![]), vec![], false);
+        wait_done(engine.start(DEFAULT_PAGE_ID, 7, 7, ActionList::Down, 127, 0, None).unwrap()).await;
+        assert!(engine.globals().get("sum").is_none(), "nothing to count: the body never ran");
+    }
+
+    /// Without a time limit a loop runs until its check holds or the macro is stopped;
+    /// the pause between rounds never blocks the stop.
+    #[tokio::test]
+    async fn stopping_the_macro_ends_a_loop() {
+        let (engine, profile) = engine();
+        let mut forever = until_loop("", "", LoopCheck::Head, 10, 0);
+        if let ActionKind::LoopStart { mode, .. } = &mut forever {
+            *mode = LoopMode::Forever;
+        }
+        let list = loop_block(forever, vec![a(ActionKind::Delay { ms: 5, ms_from: None })], vec![]);
+        set_button(&profile, 5, 5, list, vec![], false);
+        let rx = engine.start(DEFAULT_PAGE_ID, 5, 5, ActionList::Down, 127, 0, None).unwrap();
+        tokio::time::sleep(Duration::from_millis(60)).await;
+        assert!(!engine.running().is_empty(), "the loop is still going");
+        engine.stop_all();
+        tokio::time::timeout(Duration::from_millis(200), wait_done(rx)).await.expect("the loop stopped with the macro");
     }
 
     /// A script hands back every global it saw; only the ones it changed count.

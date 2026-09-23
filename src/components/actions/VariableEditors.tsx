@@ -1,11 +1,12 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { api, COMPARE_OPS, type Action, type Button as ButtonModel, type CompareOp, type ScriptOutcome } from "../../lib/api";
+import { api, COMPARE_OPS, LOOP_CHECKS, LOOP_MODES, type Action, type Button as ButtonModel, type CompareOp, type LoopCheck, type LoopMode, type ScriptOutcome } from "../../lib/api";
 import { Select } from "../Select";
-import { Button } from "../ui";
+import { Button, Segmented } from "../ui";
 import { CodeField } from "../CodeField";
-import { PlaceholderHint, SaveToFields, ScopeSelect, useVariableSuggestions } from "./VariableFields";
+import { inputCls, PlaceholderHint, SaveToFields, ScopeSelect, useVariableSuggestions } from "./VariableFields";
+import { NumberInput } from "../NumberInput";
 import { VariableNameField } from "./VariableNameField";
 import { PlaceholderField } from "./PlaceholderField";
 import { useVariablesStore } from "../../store/variables";
@@ -15,6 +16,7 @@ type SetVarAction = Extract<Action, { type: "setVariable" }>;
 type AddAction = Extract<Action, { type: "addToVariable" }>;
 type ScriptAction = Extract<Action, { type: "runScript" }>;
 type IfAction = Extract<Action, { type: "ifStart" }>;
+type LoopAction = Extract<Action, { type: "loopStart" }>;
 
 export function SetVariableEditor({ action, onChange, button }: { action: SetVarAction; onChange: (next: Action) => void; button: ButtonModel }) {
   const { t } = useTranslation();
@@ -82,6 +84,66 @@ export function BranchEditor({ action, onChange, button }: { action: IfAction; o
         )}
       </div>
       <p className="text-xs text-stage-500">{t("branch.hint")}</p>
+    </div>
+  );
+}
+
+/** What makes the loop go round (a counter, a check, or only a stop), the pause between rounds and the time limit. */
+export function LoopEditor({ action, onChange, button }: { action: LoopAction; onChange: (next: Action) => void; button: ButtonModel }) {
+  const { t } = useTranslation();
+  const suggestions = useVariableSuggestions(button);
+  const needsValue = !["isEmpty", "isNotEmpty"].includes(action.op);
+  const bound = (key: "from" | "to" | "step", placeholder: string) => (
+    <label className="flex w-32 flex-col gap-1 text-xs text-stage-400">
+      {t(`loop.${key}`)}
+      <PlaceholderField mono value={action[key]} onChange={(text) => onChange({ ...action, [key]: text })} suggestions={suggestions} placeholder={placeholder} ariaLabel={t(`loop.${key}`)} />
+    </label>
+  );
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <Segmented<LoopMode> value={action.mode} options={LOOP_MODES.map((mode) => ({ value: mode, label: t(`loop.modes.${mode}`) }))} onChange={(mode) => onChange({ ...action, mode })} />
+        {action.mode === "until" && <Segmented<LoopCheck> value={action.check} options={LOOP_CHECKS.map((check) => ({ value: check, label: t(`loop.checks.${check}`) }))} onChange={(check) => onChange({ ...action, check })} />}
+      </div>
+      {action.mode === "count" && (
+        <div className="flex flex-wrap items-end gap-3">
+          {bound("from", "1")}
+          {bound("to", "10")}
+          {bound("step", "1")}
+          <span className="pb-1.5 text-xs text-stage-500">{t("loop.countHint")}</span>
+        </div>
+      )}
+      {action.mode === "until" && (
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-col gap-1 text-xs text-stage-400">
+            {t("loop.until")}
+            <VariableNameField value={action.variable} onChange={(variable) => onChange({ ...action, variable })} suggestions={suggestions} className="w-44" ariaLabel={t("loop.until")} />
+          </div>
+          <div className="flex flex-col gap-1 text-xs text-stage-400">
+            {t("branch.op")}
+            <Select<CompareOp> value={action.op} options={COMPARE_OPS.map((op) => ({ value: op, label: t(`branch.ops.${op}`) }))} onChange={(op) => onChange({ ...action, op })} className="w-44" />
+          </div>
+          {needsValue && (
+            <label className="flex min-w-48 flex-1 flex-col gap-1 text-xs text-stage-400">
+              {t("branch.value")}
+              <PlaceholderField mono value={action.value} onChange={(value) => onChange({ ...action, value })} suggestions={suggestions} placeholder={action.op === "matches" ? "^scene-\\d+$" : "{{velocity}}"} ariaLabel={t("branch.value")} />
+            </label>
+          )}
+        </div>
+      )}
+      {action.mode === "forever" && <p className="text-xs text-stage-500">{t("loop.foreverHint")}</p>}
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="flex flex-col gap-1 text-xs text-stage-400">
+          {t("loop.interval")}
+          <NumberInput value={action.intervalMs} min={10} onChange={(intervalMs) => onChange({ ...action, intervalMs })} className={inputCls + " w-28 font-mono"} ariaLabel={t("loop.interval")} />
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-stage-400">
+          {t("loop.timeout")}
+          <NumberInput value={action.timeoutMs} min={0} onChange={(timeoutMs) => onChange({ ...action, timeoutMs })} className={inputCls + " w-28 font-mono"} ariaLabel={t("loop.timeout")} />
+        </label>
+        <span className="pb-1.5 text-xs text-stage-500">{action.timeoutMs === 0 ? t("loop.noTimeout") : t("loop.timeoutHint")}</span>
+      </div>
+      <p className="text-xs text-stage-500">{t("loop.hint")}</p>
     </div>
   );
 }

@@ -37,13 +37,13 @@ const holdInputCls = "w-16 rounded-md bg-stage-800 px-2 py-1 text-right text-xs 
 /** Actions without settings of their own. */
 const NO_BODY: ReadonlySet<ActionType> = new Set<ActionType>(["stopAllMacros", "stopThisMacro", "restartThisMacro", "obsSaveReplay", "slobsSaveReplay", "stopAllSounds"]);
 /** Markers that carry settings of their own (shown expanded like normal actions). */
-const MARKERS_WITH_BODY: ReadonlySet<ActionType> = new Set<ActionType>(["ifStart"]);
+const MARKERS_WITH_BODY: ReadonlySet<ActionType> = new Set<ActionType>(["ifStart", "loopStart"]);
 
 /** `submenu` groups fold into a nested menu; the others stay inline under a heading. */
 const MENU_GROUPS: { group: string; types: ActionType[]; submenu?: boolean }[] = [
   { group: "media", types: ["playSound", "textToSpeech", "setSystemVolume", "setAudioDevice", "stopAllSounds"], submenu: true },
   { group: "general", types: ["delay", "switchPage", "runButton", "setColor", "setFader"], submenu: true },
-  { group: "flow", types: ["ifStart", "flipFlopStart", "pushToTalkStart"], submenu: true },
+  { group: "flow", types: ["ifStart", "loopStart", "flipFlopStart", "pushToTalkStart"], submenu: true },
   { group: "system", types: ["launchApplication", "httpRequest", "runScript", "setVariable", "addToVariable", "debug"], submenu: true },
   { group: "input", types: ["hotkey", "mouse", "mousePosition"], submenu: true },
   { group: "window", types: ["getWindow", "setWindow", "getScreen"], submenu: true },
@@ -276,6 +276,7 @@ function depths(list: Action[]): number[] {
   return list.map((a) => {
     switch (a.type) {
       case "ifStart":
+      case "loopStart":
       case "flipFlopStart":
       case "pushToTalkStart": {
         const at = depth;
@@ -283,9 +284,11 @@ function depths(list: Action[]): number[] {
         return at;
       }
       case "ifElse":
+      case "loopTimeout":
       case "flipFlopMiddle":
         return Math.max(0, depth - 1);
       case "ifEnd":
+      case "loopEnd":
       case "flipFlopEnd":
       case "pushToTalkEnd":
         depth = Math.max(0, depth - 1);

@@ -488,6 +488,9 @@ async fn run_queued(ctx: &RunContext, script: &Action, queued: Vec<serde_json::V
             ActionKind::IfStart { .. }
             | ActionKind::IfElse { .. }
             | ActionKind::IfEnd { .. }
+            | ActionKind::LoopStart { .. }
+            | ActionKind::LoopTimeout { .. }
+            | ActionKind::LoopEnd { .. }
             | ActionKind::FlipFlopStart { .. }
             | ActionKind::FlipFlopMiddle { .. }
             | ActionKind::FlipFlopEnd { .. }

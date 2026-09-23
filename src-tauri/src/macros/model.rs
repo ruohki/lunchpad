@@ -597,6 +597,50 @@ pub enum ActionKind {
         start_id: String,
         else_id: String,
     },
+    /// Loop: the actions up to `LoopTimeout` repeat, with a pause between rounds. `Count`
+    /// runs the body once per value from `from` to `to` in steps of `step` (`loop.value`);
+    /// `Until` repeats until the check holds, checked before or after each round; `Forever`
+    /// repeats until the macro is stopped. When `timeout_ms` has passed, the actions between
+    /// `LoopTimeout` and `LoopEnd` run instead. Everything after the end runs either way.
+    #[serde(rename_all = "camelCase")]
+    LoopStart {
+        #[serde(default)]
+        mode: LoopMode,
+        #[serde(default)]
+        variable: String,
+        #[serde(default)]
+        op: CompareOp,
+        #[serde(default)]
+        value: String,
+        /// `Until` only: where the check runs.
+        #[serde(default)]
+        check: LoopCheck,
+        /// `Count` only: first value, last value and step; placeholders allowed.
+        #[serde(default = "default_loop_from")]
+        from: String,
+        #[serde(default = "default_loop_to")]
+        to: String,
+        #[serde(default = "default_loop_from")]
+        step: String,
+        /// Pause between two rounds, in milliseconds (never below `LOOP_MIN_INTERVAL_MS`).
+        #[serde(default = "default_loop_interval")]
+        interval_ms: u64,
+        /// Time limit counted from the first round; 0 = none.
+        #[serde(default)]
+        timeout_ms: u64,
+        timeout_id: String,
+        end_id: String,
+    },
+    #[serde(rename_all = "camelCase")]
+    LoopTimeout {
+        start_id: String,
+        end_id: String,
+    },
+    #[serde(rename_all = "camelCase")]
+    LoopEnd {
+        start_id: String,
+        timeout_id: String,
+    },
     /// Set a variable to a value (placeholders allowed).
     #[serde(rename_all = "camelCase")]
     SetVariable {
@@ -617,9 +661,47 @@ pub enum ActionKind {
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+fn default_loop_interval() -> u64 {
+    100
+}
+fn default_loop_from() -> String {
+    "1".into()
+}
+fn default_loop_to() -> String {
+    "10".into()
+}
+
+/// What makes a loop go round.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum LoopMode {
+    /// From a first to a last value, in steps: a counted loop.
+    Count,
+    /// Until the check holds.
+    #[default]
+    Until,
+    /// Until the macro is stopped (or the time limit hits).
+    Forever,
+}
+
+/// Where an `Until` loop checks: before a round (the body may never run) or after it
+/// (the body runs at least once).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum LoopCheck {
+    #[default]
+    Head,
+    Tail,
+}
+
+/// The shortest pause between two rounds of a loop: a body without a wait of its own
+/// cannot spin the CPU.
+pub const LOOP_MIN_INTERVAL_MS: u64 = 10;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub enum CompareOp {
+    #[default]
     Equals,
     NotEquals,
     Contains,
@@ -918,6 +1000,46 @@ mod tests {
         }
         let r: Action = serde_json::from_str(r#"{"id":"y","type":"runButton","target":{"pageId":"p2","x":0,"y":0}}"#).unwrap();
         assert_eq!(r.kind, ActionKind::RunButton { target: ButtonRef { page_id: Some("p2".into()), x: 0, y: 0 }, trigger: ButtonTrigger::Press });
+    }
+
+    #[test]
+    fn loop_markers_take_their_defaults() {
+        let a: Action = serde_json::from_str(r#"{"id":"l","type":"loopStart","variable":"count","op":"equals","value":"3","timeoutId":"t","endId":"e"}"#).unwrap();
+        assert_eq!(
+            a.kind,
+            ActionKind::LoopStart {
+                mode: LoopMode::Until,
+                variable: "count".into(),
+                op: CompareOp::Equals,
+                value: "3".into(),
+                check: LoopCheck::Head,
+                from: "1".into(),
+                to: "10".into(),
+                step: "1".into(),
+                interval_ms: 100,
+                timeout_ms: 0,
+                timeout_id: "t".into(),
+                end_id: "e".into()
+            }
+        );
+        let json = serde_json::to_value(&a).unwrap();
+        assert_eq!(json["mode"], "until");
+        assert_eq!(json["check"], "head");
+        assert_eq!(json["intervalMs"], 100);
+        assert_eq!(json["timeoutMs"], 0);
+        let c: Action = serde_json::from_str(r#"{"id":"c","type":"loopStart","mode":"count","from":"0","to":"{{n}}","step":"2","timeoutId":"t","endId":"e"}"#).unwrap();
+        match c.kind {
+            ActionKind::LoopStart { mode, to, step, .. } => {
+                assert_eq!(mode, LoopMode::Count);
+                assert_eq!(to, "{{n}}");
+                assert_eq!(step, "2");
+            }
+            other => panic!("{other:?}"),
+        }
+        let t: Action = serde_json::from_str(r#"{"id":"t","type":"loopTimeout","startId":"l","endId":"e"}"#).unwrap();
+        assert_eq!(t.kind, ActionKind::LoopTimeout { start_id: "l".into(), end_id: "e".into() });
+        let e: Action = serde_json::from_str(r#"{"id":"e","type":"loopEnd","startId":"l","timeoutId":"t"}"#).unwrap();
+        assert_eq!(e.kind, ActionKind::LoopEnd { start_id: "l".into(), timeout_id: "t".into() });
     }
 
     #[test]

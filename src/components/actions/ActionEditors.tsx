@@ -8,7 +8,7 @@ import { Select } from "../Select";
 import { clampTarget } from "./actionUtils";
 import { HotkeyEditor } from "./HotkeyEditor";
 import { HttpEditor } from "./HttpEditor";
-import { AddToVariableEditor, BranchEditor, ScriptEditor, SetVariableEditor } from "./VariableEditors";
+import { AddToVariableEditor, BranchEditor, LoopEditor, ScriptEditor, SetVariableEditor } from "./VariableEditors";
 import { LaunchEditor } from "./LaunchEditor";
 import { DebugEditor } from "./DebugEditor";
 import { GetScreenEditor, GetWindowEditor, MouseEditor, MousePositionEditor, SetWindowEditor } from "./DesktopEditors";
@@ -128,6 +128,8 @@ export function ActionEditor({ action, onChange, pages, layout, button }: Props)
       return <ScriptEditor action={action} onChange={onChange} button={button} />;
     case "ifStart":
       return <BranchEditor action={action} onChange={onChange} button={button} />;
+    case "loopStart":
+      return <LoopEditor action={action} onChange={onChange} button={button} />;
     case "obsSwitchScene":
     case "obsToggleSource":
     case "obsSetAudio":

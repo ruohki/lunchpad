@@ -550,6 +550,9 @@ export type ActionKind =
   | { type: "ifStart"; variable: string; op: CompareOp; value: string; elseId: string; endId: string }
   | { type: "ifElse"; startId: string; endId: string }
   | { type: "ifEnd"; startId: string; elseId: string }
+  | { type: "loopStart"; mode: LoopMode; variable: string; op: CompareOp; value: string; check: LoopCheck; from: string; to: string; step: string; intervalMs: number; timeoutMs: number; timeoutId: string; endId: string }
+  | { type: "loopTimeout"; startId: string; endId: string }
+  | { type: "loopEnd"; startId: string; timeoutId: string }
   | { type: "setVariable"; name: string; value: string; scope: VarScope }
   | { type: "runScript"; code: string; saveTo: string | null; saveScope: VarScope };
 
@@ -612,6 +615,12 @@ export interface WindowInfo {
   minimized: boolean;
 }
 export type CompareOp = "equals" | "notEquals" | "contains" | "startsWith" | "endsWith" | "greaterThan" | "lessThan" | "isEmpty" | "isNotEmpty" | "matches";
+/** What makes a loop go round: a counter, a check, or nothing but a stop. */
+export type LoopMode = "count" | "until" | "forever";
+/** Where an "until" loop checks: before a round (the body may never run) or after it (it runs at least once). */
+export type LoopCheck = "head" | "tail";
+export const LOOP_MODES: LoopMode[] = ["count", "until", "forever"];
+export const LOOP_CHECKS: LoopCheck[] = ["head", "tail"];
 export const COMPARE_OPS: CompareOp[] = ["equals", "notEquals", "contains", "startsWith", "endsWith", "greaterThan", "lessThan", "isEmpty", "isNotEmpty", "matches"];
 /** Names Lunchpad provides to every macro (the press, the page, the clock); mirrors `macros/builtins.rs`. Actions cannot write them. */
 export const BUILTIN_VARIABLES = [
@@ -786,6 +795,9 @@ export const AVAILABLE_ACTIONS: ReadonlySet<ActionType> = new Set<ActionType>([
   "ifStart",
   "ifElse",
   "ifEnd",
+  "loopStart",
+  "loopTimeout",
+  "loopEnd",
 ]);
 
 export function newActionId(): string {
