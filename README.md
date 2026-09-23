@@ -92,6 +92,8 @@ When a change alters what users see, update the docs in the same release:
 
 Set the same version in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`, then push a tag `vX.Y.Z`. The release workflow builds every platform, signs the updater artifacts and publishes a draft release with the update manifest. Publishing the draft makes installed copies offer the update. The workflow expects the `TAURI_SIGNING_PRIVATE_KEY` secret and, for a notarized macOS build, the Apple secrets listed at the top of `.github/workflows/release.yml`.
 
+Every release also carries `actions.json`, the action contract: what each action is called, how it is grouped and drawn, and the JSON it is, generated from this checkout by `tools/actions-contract.ts` (`bun run actions:contract`; CI checks it on every push). The docs site and the community hub sync from it. With a `SYNC_TOKEN` secret (a fine-grained token for `ruohki/lunchpad-docs` and `ruohki/lunchpad-hub` with Contents read and write), the release workflow tells both repositories about the release and each opens a pull request with the new data.
+
 ---
 
 If you need any assistance feel free to join the Discord: [https://discord.gg/4Ys9TRR](https://discord.gg/4Ys9TRR)

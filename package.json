@@ -8,6 +8,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "actions:contract": "bun tools/actions-contract.ts",
     "tauri": "tauri"
   },
   "dependencies": {

@@ -585,27 +585,27 @@
       },
       "obsSwitchScene": {
         "name": "OBS: switch scene",
-        "desc": ""
+        "desc": "Make a scene live, optionally in another scene collection."
       },
       "obsToggleSource": {
         "name": "OBS: show or hide source",
-        "desc": ""
+        "desc": "Show or hide a source in a scene."
       },
       "obsSetAudio": {
         "name": "OBS: set audio",
-        "desc": ""
+        "desc": "Mute or unmute an audio source and set its volume."
       },
       "obsToggleFilter": {
         "name": "OBS: toggle filter",
-        "desc": ""
+        "desc": "Turn a filter of a source on or off."
       },
       "obsStream": {
         "name": "OBS: stream, record, replay",
-        "desc": ""
+        "desc": "Start, stop or toggle the stream, the recording or the replay buffer."
       },
       "obsSaveReplay": {
         "name": "OBS: save replay",
-        "desc": ""
+        "desc": "Save the replay buffer to a file."
       },
       "obsStudioMode": {
         "name": "OBS: studio mode",

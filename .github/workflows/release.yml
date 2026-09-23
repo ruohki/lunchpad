@@ -7,6 +7,11 @@ name: Release
 # Required secrets:
 #   TAURI_SIGNING_PRIVATE_KEY            updater signing key (contents of ~/.tauri/lunchpad.key)
 #   TAURI_SIGNING_PRIVATE_KEY_PASSWORD   its password (empty if the key has none)
+# Optional: tell the docs site and the community hub about the release, so each opens a
+# pull request that syncs its action data (tools/actions-contract.ts is attached to every
+# release as actions.json):
+#   SYNC_TOKEN                           a fine-grained token for ruohki/lunchpad-docs and
+#                                        ruohki/lunchpad-hub with Contents: read and write
 # Optional secrets for a signed and notarized macOS build:
 #   APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD   Developer ID Application .p12 as base64 + password
 #   APPLE_SIGNING_IDENTITY                          e.g. "Developer ID Application: Name (TEAMID)"
@@ -55,6 +60,16 @@ jobs:
               --notes "Download the installer for your system below. Installed copies update themselves."
             echo "Created draft release $tag."
           fi
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Attach the action contract, which the docs and the hub sync from
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="v$(node -p "require('./src-tauri/tauri.conf.json').version")"
+          bun tools/actions-contract.ts --check
+          bun tools/actions-contract.ts --out actions.json
+          gh release upload "$tag" actions.json --clobber
 
   build:
     name: Build (${{ matrix.target }})
@@ -194,4 +209,24 @@ jobs:
             xcrun stapler staple "$dmg"
             xcrun stapler validate "$dmg"
             gh release upload "$tag" "$dmg" --clobber
+          done
+
+  sync:
+    name: Tell the docs and the hub
+    needs: [draft, build]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch a sync to lunchpad-docs and lunchpad-hub
+        env:
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [ -z "$SYNC_TOKEN" ]; then
+            echo "No SYNC_TOKEN secret: the docs and the hub are not told about $TAG (see the notes at the top of this workflow)."
+            exit 0
+          fi
+          for repo in ruohki/lunchpad-docs ruohki/lunchpad-hub; do
+            GH_TOKEN="$SYNC_TOKEN" gh api "repos/$repo/dispatches" -f event_type=lunchpad-release -f "client_payload[version]=${TAG#v}" -f "client_payload[tag]=$TAG"
+            echo "Told $repo about $TAG."
           done

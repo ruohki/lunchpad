@@ -11,6 +11,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  contract:
+    name: Action contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Every action has a name, a description, an icon and a JSON payload
+        run: bun tools/actions-contract.ts --check
+
   check:
     name: Check (${{ matrix.os }})
     strategy:
