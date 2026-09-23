@@ -272,6 +272,42 @@ function choicesFor(access: Access, suggestions: string[], globals: string[]): C
 
 type Language = "javascript" | "markdown";
 
+const INDENT = "  ";
+
+/**
+ * Tab indents and Shift+Tab outdents: the caret's line, or every line a selection
+ * touches. The text goes in as an edit (`insertText`) so undo still works and the
+ * textarea's change event carries it to the field's state.
+ */
+function indent(el: HTMLTextAreaElement, outdent: boolean) {
+  const { value, selectionStart: start, selectionEnd: end } = el;
+  const replace = (from: number, to: number, text: string) => {
+    el.setSelectionRange(from, to);
+    if (!document.execCommand("insertText", false, text)) {
+      el.setRangeText(text, from, to, "end");
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  };
+  if (!outdent && !value.slice(start, end).includes("\n")) {
+    replace(start, end, INDENT);
+    return;
+  }
+  const from = value.lastIndexOf("\n", start - 1) + 1;
+  // A selection ending right after a line break does not take the next line with it.
+  const last = end > start && value[end - 1] === "\n" ? end - 1 : end;
+  const lineEnd = value.indexOf("\n", last);
+  const to = lineEnd === -1 ? value.length : lineEnd;
+  const lines = value.slice(from, to).split("\n");
+  const changed = lines.map((line) => (outdent ? line.replace(/^ {1,2}/, "") : line.length ? INDENT + line : line));
+  const text = changed.join("\n");
+  if (text === lines.join("\n")) return;
+  replace(from, to, text);
+  const first = changed[0].length - lines[0].length;
+  const total = text.length - (to - from);
+  const newStart = Math.max(from, start + first);
+  el.setSelectionRange(newStart, Math.max(newStart, end + total));
+}
+
 /** The highlighted copy with the transparent textarea on top of it, and the completion list. */
 function Surface({
   value,
@@ -316,6 +352,8 @@ function Surface({
   // Inside a `Lunchpad.…(` call the signature shows, with the argument being typed marked, until Escape.
   const [focused, setFocused] = useState(false);
   const [dismissedAt, setDismissedAt] = useState<number | null>(null);
+  // Tab indents, so Escape frees the next Tab to move on; a second Escape reaches the dialog.
+  const tabLeaves = useRef(false);
   const call = useMemo(() => callAt(value, caret, language), [value, caret, language]);
   const hintOpen = focused && !open && !!call && dismissedAt !== caret;
   const hintAt = () => (call && caret !== null ? typedRect(copy.current, call.from, caret) : null);
@@ -362,13 +400,34 @@ function Surface({
         onClick={track}
         onKeyUp={track}
         onSelect={track}
-        onFocus={() => setFocused(true)}
+        onFocus={() => {
+          setFocused(true);
+          tabLeaves.current = false;
+        }}
         onBlur={() => {
           setTyping(false);
           setFocused(false);
+          tabLeaves.current = false;
         }}
         onKeyDown={(e) => {
-          if (!open) return;
+          if (!open) {
+            if (e.key === "Tab") {
+              if (tabLeaves.current) {
+                tabLeaves.current = false;
+                return;
+              }
+              e.preventDefault();
+              indent(e.currentTarget, e.shiftKey);
+            } else if (e.key === "Escape") {
+              if (!tabLeaves.current) {
+                tabLeaves.current = true;
+                e.stopPropagation();
+              }
+            } else {
+              tabLeaves.current = false;
+            }
+            return;
+          }
           if (e.key === "ArrowDown") {
             e.preventDefault();
             setHighlighted((h) => Math.min(matches.length - 1, h + 1));

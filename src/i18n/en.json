@@ -1096,7 +1096,7 @@
     "minimize": "Done"
   },
   "script": {
-    "hint": "vars and globals hold the variables, Lunchpad drives the app, and the last expression (or return) is the result.",
+    "hint": "vars and globals hold the variables, Lunchpad drives the app, and the last expression (or return) is the result. Tab indents; Escape and then Tab moves on.",
     "saveTo": "Save result to",
     "test": "Run test",
     "result": "Ran in {{ms}} ms",
