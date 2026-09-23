@@ -74,6 +74,8 @@ export function ActionsTab({ button, onChange, pages, layout, lists = ["down", "
   const root = useRef<HTMLDivElement>(null);
   /** The list a dragged row is over while it is outside its own list. */
   const [dropList, setDropList] = useState<ListKey | null>(null);
+  /** A row is being dragged: folded markers open up so they can take the drop. */
+  const [dragging, setDragging] = useState(false);
 
   const setList = (key: ListKey, list: Action[]) => onChange({ ...button, [key]: list });
 
@@ -243,6 +245,7 @@ export function ActionsTab({ button, onChange, pages, layout, lists = ["down", "
                     key={action.id}
                     action={action}
                     depth={depths(button[key])[i]}
+                    slim={!dragging && slimRows(button[key])[i]}
                     pages={pages}
                     layout={layout}
                     button={button}
@@ -251,8 +254,12 @@ export function ActionsTab({ button, onChange, pages, layout, lists = ["down", "
                     onRemove={() => setList(key, removeAction(button[key], action.id))}
                     onChange={(next) => setList(key, button[key].map((a) => (a.id === next.id ? next : a)))}
                     onContextMenu={(e) => openRowMenu(e, key, action)}
+                    onDragStart={() => setDragging(true)}
                     onDrag={(x, y) => dragOver(key, x, y)}
-                    onDragEnd={(x, y) => dropInto(key, action, x, y)}
+                    onDragEnd={(x, y) => {
+                      setDragging(false);
+                      dropInto(key, action, x, y);
+                    }}
                   />
                 ))}
               </AnimatePresence>
@@ -299,9 +306,34 @@ function depths(list: Action[]): number[] {
   });
 }
 
+/**
+ * Rows that fold to a single line while nothing is dragged: end markers, which only
+ * close a block, and middle markers (otherwise, if it takes too long, B) whose branch
+ * is empty. A start marker keeps its size; it carries the block's settings.
+ */
+function slimRows(list: Action[]): boolean[] {
+  const pos = new Map(list.map((a, i) => [a.id, i]));
+  return list.map((a, i) => {
+    switch (a.type) {
+      case "ifEnd":
+      case "loopEnd":
+      case "flipFlopEnd":
+      case "pushToTalkEnd":
+        return true;
+      case "ifElse":
+      case "loopTimeout":
+      case "flipFlopMiddle":
+        return pos.get(a.endId) === i + 1;
+      default:
+        return false;
+    }
+  });
+}
+
 function ActionRow({
   action,
   depth,
+  slim,
   pages,
   layout,
   button,
@@ -310,12 +342,15 @@ function ActionRow({
   onRemove,
   onChange,
   onContextMenu,
+  onDragStart,
   onDrag,
   onDragEnd,
 }: {
   action: Action;
   /** How many blocks (branch, flip-flop, push-to-talk) the row sits in; each one indents it. */
   depth: number;
+  /** Folded to one line: a marker with nothing of its own to show (see `slimRows`). */
+  slim: boolean;
   pages: Page[];
   layout: Layout | null;
   button: Button;
@@ -324,6 +359,7 @@ function ActionRow({
   onRemove: () => void;
   onChange: (next: Action) => void;
   onContextMenu: (e: React.MouseEvent) => void;
+  onDragStart: () => void;
   /** The pointer's viewport position while the row is dragged, and where it was let go. */
   onDrag: (x: number, y: number) => void;
   onDragEnd: (x: number, y: number) => void;
@@ -341,6 +377,7 @@ function ActionRow({
       data-action-id={action.id}
       dragListener={false}
       dragControls={controls}
+      onDragStart={onDragStart}
       onDrag={(e: PointerEvent | MouseEvent | TouchEvent, info: PanInfo) => {
         const [x, y] = clientPoint(e, info);
         onDrag(x, y);
@@ -364,9 +401,33 @@ function ActionRow({
       className={clsx(
         "rounded-lg border",
         marker ? "border-dashed border-stage-600 bg-stage-900/60" : "border-stage-700 bg-stage-800/70",
+        slim && "border-stage-700/70 bg-transparent",
         !available && "opacity-80",
       )}
     >
+      {slim ? (
+        <div className="flex items-center gap-2 px-2 py-0.5 text-xs text-stage-500">
+          <Tooltip content={t("actions.dragHandle")}>
+            <button
+              type="button"
+              aria-label={t("actions.dragHandle")}
+              onPointerDown={(e) => controls.start(e)}
+              className="cursor-grab touch-none select-none rounded px-1 py-0.5 text-stage-600 hover:bg-stage-700 hover:text-stage-200 active:cursor-grabbing"
+            >
+              <Icon name="GripVertical" />
+            </button>
+          </Tooltip>
+          <Icon name={ACTION_ICONS[action.type]} className="shrink-0 text-sm text-stage-500" />
+          <span className="shrink-0 font-medium text-stage-400">{t(`actions.types.${action.type}.name`)}</span>
+          {action.type !== "ifEnd" && action.type !== "loopEnd" && action.type !== "flipFlopEnd" && action.type !== "pushToTalkEnd" && <span className="truncate">{t("actions.emptyBranch")}</span>}
+          <span className="flex-1" />
+          <Tooltip content={t("actions.remove")}>
+            <button type="button" aria-label={t("actions.remove")} onClick={onRemove} className="rounded-md px-1.5 py-0.5 leading-none text-stage-600 hover:bg-danger/15 hover:text-danger">
+              <Icon name="X" />
+            </button>
+          </Tooltip>
+        </div>
+      ) : (
       <div className="flex items-center gap-2 px-2 py-2">
         <Tooltip content={t("actions.dragHandle")}>
           <button
@@ -421,6 +482,7 @@ function ActionRow({
           </button>
         </Tooltip>
       </div>
+      )}
 
       <AnimatePresence initial={false}>
         {hasBody && expanded && (

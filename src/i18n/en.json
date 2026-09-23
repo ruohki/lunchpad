@@ -665,7 +665,7 @@
       },
       "loopStart": {
         "name": "Loop",
-        "desc": "Actions up to “If it takes too long” repeat: a set number of times, until a check holds, or until stopped, with a pause between rounds."
+        "desc": "Repeats the actions up to “If it takes too long”, with a pause between rounds."
       },
       "loopTimeout": {
         "name": "If it takes too long",
@@ -758,6 +758,7 @@
     "heldEmptyHint": "Add actions here for a long press. A press longer than {{ms}} ms counts as holding.",
     "tapHintImmediate": "These run right away on every press; the held actions come on top after the hold time.",
     "holdWait": "Pressed actions wait until it is clear this is a tap",
+    "emptyBranch": "nothing here yet",
     "copy": "Copy action",
     "copyBlock": "Copy block",
     "duplicate": "Duplicate",
