@@ -1837,6 +1837,37 @@ mod tests {
         assert!(engine.globals().get("applied").is_none(), "the fader's actions did not run");
     }
 
+    /// The "wait" switch of a launch: on, the list waits until the program ends; off,
+    /// the next action runs right after the start and the runner lasts as long as the
+    /// program does. An app on macOS goes the same way (`open -W`).
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_launch_waits_for_the_program_only_when_asked_to() {
+        let (engine, profile) = engine();
+        let launch = |wait: bool| {
+            let mut l = a(ActionKind::LaunchApplication { executable: "sleep".into(), arguments: "0.3".into(), hidden: false, kill_on_stop: false, save_output_to: None, save_scope: VarScope::Local });
+            l.wait = wait;
+            l
+        };
+        let mark = |name: &str| a(ActionKind::SetVariable { name: name.into(), value: "1".into(), scope: VarScope::Global });
+        set_button(&profile, 0, 0, vec![launch(true), mark("after_wait")], vec![], false);
+        set_button(&profile, 1, 1, vec![launch(false), mark("after_start")], vec![], false);
+
+        let started = Instant::now();
+        let rx = engine.start(DEFAULT_PAGE_ID, 0, 0, ActionList::Down, 127, 0, None).unwrap();
+        assert_eq!(global_once(&engine, "after_wait", "1").await.as_deref(), Some("1"));
+        assert!(started.elapsed() >= Duration::from_millis(250), "with wait on, the next action came after the program ended");
+        wait_done(rx).await;
+
+        let started = Instant::now();
+        let rx = engine.start(DEFAULT_PAGE_ID, 1, 1, ActionList::Down, 127, 0, None).unwrap();
+        assert_eq!(global_once(&engine, "after_start", "1").await.as_deref(), Some("1"));
+        assert!(started.elapsed() < Duration::from_millis(250), "with wait off, the next action ran right after the start");
+        assert!(!engine.running().is_empty(), "the runner lasts as long as the program");
+        wait_done(rx).await;
+        assert!(started.elapsed() >= Duration::from_millis(250), "and ends with it");
+    }
+
     /// A script hands back every global it saw; only the ones it changed count.
     /// An untouched `fader.*` value must not move that fader (and run its actions
     /// again) just because the level reads differently as rounded text.
