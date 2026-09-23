@@ -1838,20 +1838,22 @@ mod tests {
     }
 
     /// The "wait" switch of a launch: on, the list waits until the program ends; off,
-    /// the next action runs right after the start and the runner lasts as long as the
-    /// program does. An app on macOS goes the same way (`open -W`).
+    /// the program is started and left alone, so the next action runs at once and the
+    /// runner ends without waiting for the program. Only "stop the program when the
+    /// macro stops" or an output variable keep the runner alive while the program runs.
     #[cfg(unix)]
     #[tokio::test]
     async fn a_launch_waits_for_the_program_only_when_asked_to() {
         let (engine, profile) = engine();
-        let launch = |wait: bool| {
-            let mut l = a(ActionKind::LaunchApplication { executable: "sleep".into(), arguments: "0.3".into(), hidden: false, kill_on_stop: false, save_output_to: None, save_scope: VarScope::Local });
+        let launch = |wait: bool, kill_on_stop: bool| {
+            let mut l = a(ActionKind::LaunchApplication { executable: "sleep".into(), arguments: "0.3".into(), hidden: false, kill_on_stop, save_output_to: None, save_scope: VarScope::Local });
             l.wait = wait;
             l
         };
         let mark = |name: &str| a(ActionKind::SetVariable { name: name.into(), value: "1".into(), scope: VarScope::Global });
-        set_button(&profile, 0, 0, vec![launch(true), mark("after_wait")], vec![], false);
-        set_button(&profile, 1, 1, vec![launch(false), mark("after_start")], vec![], false);
+        set_button(&profile, 0, 0, vec![launch(true, false), mark("after_wait")], vec![], false);
+        set_button(&profile, 1, 1, vec![launch(false, false), mark("after_start")], vec![], false);
+        set_button(&profile, 2, 2, vec![launch(false, true), mark("after_owned")], vec![], false);
 
         let started = Instant::now();
         let rx = engine.start(DEFAULT_PAGE_ID, 0, 0, ActionList::Down, 127, 0, None).unwrap();
@@ -1862,7 +1864,15 @@ mod tests {
         let started = Instant::now();
         let rx = engine.start(DEFAULT_PAGE_ID, 1, 1, ActionList::Down, 127, 0, None).unwrap();
         assert_eq!(global_once(&engine, "after_start", "1").await.as_deref(), Some("1"));
-        assert!(started.elapsed() < Duration::from_millis(250), "with wait off, the next action ran right after the start");
+        wait_done(rx).await;
+        assert!(started.elapsed() < Duration::from_millis(250), "with wait off, the next action ran at once and the runner ended without the program");
+
+        // "Stop the program when the macro stops" needs a living macro: the runner then
+        // lasts as long as the program, while the next action still runs at once.
+        let started = Instant::now();
+        let rx = engine.start(DEFAULT_PAGE_ID, 2, 2, ActionList::Down, 127, 0, None).unwrap();
+        assert_eq!(global_once(&engine, "after_owned", "1").await.as_deref(), Some("1"));
+        assert!(started.elapsed() < Duration::from_millis(250), "the next action ran right after the start");
         assert!(!engine.running().is_empty(), "the runner lasts as long as the program");
         wait_done(rx).await;
         assert!(started.elapsed() >= Duration::from_millis(250), "and ends with it");

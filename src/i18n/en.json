@@ -798,7 +798,7 @@
     "arguments": "Arguments",
     "argumentsPlaceholder": "--flag \"value with spaces\"",
     "killOnStop": "Stop the program when the macro stops",
-    "killOnStopHint": "Otherwise it keeps running on its own. An app on macOS is asked to quit.",
+    "killOnStopHint": "Otherwise it keeps running on its own and the macro does not wait for it. With this on, the macro stays alive while the program runs; an app on macOS is asked to quit.",
     "hidden": "Start without a window",
     "saveOutput": "Save output to variable"
   },

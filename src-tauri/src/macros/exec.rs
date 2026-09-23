@@ -210,7 +210,7 @@ pub async fn execute_external(ctx: &RunContext, action: &Action) {
         }
 
         ActionKind::LaunchApplication { executable, arguments, hidden, kill_on_stop, save_output_to, save_scope } => {
-            let output = launch(ctx, &ctx.expand(executable), &ctx.expand(arguments), *hidden, *kill_on_stop, save_output_to.is_some()).await;
+            let output = launch(ctx, &ctx.expand(executable), &ctx.expand(arguments), *hidden, *kill_on_stop, save_output_to.is_some(), action.wait).await;
             if let (Some(name), Some(text)) = (save_output_to, output) {
                 ctx.set_var(name, text, *save_scope);
             }
@@ -659,11 +659,15 @@ fn is_app_bundle(executable: &str) -> bool {
     name.len() > 4 && name.to_ascii_lowercase().ends_with(".app")
 }
 
-/// `open -W -a <app> [--args …]`: waits while the app runs, so the action lasts as long
-/// as a started program would; an app that is already running comes forward instead
-/// of starting twice. "Start without a window" keeps it hidden and in the background.
-fn app_open_args(app: &str, args: &[String], hidden: bool) -> Vec<String> {
-    let mut out = vec!["-W".to_string()];
+/// `open -a <app> [--args …]`: an app that is already running comes forward instead of
+/// starting twice. With `wait`, `open -W` stays while the app runs, so the action lasts
+/// as long as a started program would. "Start without a window" keeps the app hidden
+/// and in the background.
+fn app_open_args(app: &str, args: &[String], hidden: bool, wait: bool) -> Vec<String> {
+    let mut out = Vec::new();
+    if wait {
+        out.push("-W".to_string());
+    }
     if hidden {
         out.push("-j".into());
         out.push("-g".into());
@@ -715,11 +719,11 @@ async fn quit_app(app: &str) {
 async fn quit_app(_app: &str) {}
 
 /// The command for a launch: the executable itself, or `open` for an app on macOS.
-fn launch_command(executable: &str, app: Option<&str>, args: &[String], hidden: bool, kill_on_stop: bool, capture: bool) -> tokio::process::Command {
+fn launch_command(executable: &str, app: Option<&str>, args: &[String], hidden: bool, kill_on_stop: bool, capture: bool, wait: bool) -> tokio::process::Command {
     let mut cmd = match app {
         Some(app) => {
             let mut cmd = tokio::process::Command::new("open");
-            cmd.args(app_open_args(app, args, hidden));
+            cmd.args(app_open_args(app, args, hidden, wait));
             cmd
         }
         None => {
@@ -747,20 +751,24 @@ fn launch_command(executable: &str, app: Option<&str>, args: &[String], hidden: 
     cmd
 }
 
-async fn launch(ctx: &RunContext, executable: &str, arguments: &str, hidden: bool, kill_on_stop: bool, capture: bool) -> Option<String> {
+/// `wait` is the action's own switch. Off, and with nothing that needs the macro to
+/// outlive the start (no "stop the program when the macro stops", no output variable),
+/// the program is started and left alone: the macro goes on and ends without it.
+async fn launch(ctx: &RunContext, executable: &str, arguments: &str, hidden: bool, kill_on_stop: bool, capture: bool, wait: bool) -> Option<String> {
     let executable = executable.trim();
     if executable.is_empty() {
         tracing::warn!("launch application: no executable set");
         return None;
     }
     let args = shlex::split(arguments).unwrap_or_else(|| arguments.split_whitespace().map(str::to_string).collect());
+    let detached = !wait && !kill_on_stop && !capture;
     let mut app = app_for(executable);
-    let mut cmd = launch_command(executable, app.as_deref(), &args, hidden, kill_on_stop, capture);
+    let mut cmd = launch_command(executable, app.as_deref(), &args, hidden, kill_on_stop, capture, !detached);
     let mut child = match cmd.spawn() {
         Ok(c) => c,
         Err(e) => match app_fallback(executable, &e) {
             Some(name) => {
-                let mut cmd = launch_command(executable, Some(&name), &args, hidden, kill_on_stop, capture);
+                let mut cmd = launch_command(executable, Some(&name), &args, hidden, kill_on_stop, capture, !detached);
                 app = Some(name);
                 match cmd.spawn() {
                     Ok(c) => c,
@@ -777,7 +785,14 @@ async fn launch(ctx: &RunContext, executable: &str, arguments: &str, hidden: boo
         },
     };
     let pid = child.id();
-    tracing::info!(executable, ?args, pid, app = app.is_some(), "application started");
+    tracing::info!(executable, ?args, pid, app = app.is_some(), detached, "application started");
+    if detached {
+        // Reap it in the background; nothing waits for it.
+        tokio::spawn(async move {
+            let _ = child.wait().await;
+        });
+        return None;
+    }
 
     if capture {
         tokio::select! {
@@ -838,9 +853,9 @@ mod launch_tests {
     }
 
     #[test]
-    fn open_waits_and_passes_the_arguments_on() {
-        assert_eq!(app_open_args("/Applications/Spotify.app/", &[], false), ["-W", "-a", "/Applications/Spotify.app"]);
+    fn open_waits_only_when_asked_and_passes_the_arguments_on() {
+        assert_eq!(app_open_args("/Applications/Spotify.app/", &[], false, false), ["-a", "/Applications/Spotify.app"]);
         let args = vec!["--minimized".to_string(), "a b".to_string()];
-        assert_eq!(app_open_args("Spotify", &args, true), ["-W", "-j", "-g", "-a", "Spotify", "--args", "--minimized", "a b"]);
+        assert_eq!(app_open_args("Spotify", &args, true, true), ["-W", "-j", "-g", "-a", "Spotify", "--args", "--minimized", "a b"]);
     }
 }
