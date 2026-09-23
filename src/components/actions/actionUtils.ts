@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import { BUILTIN_VARIABLES, newActionId, type Action, type ActionKind, type ActionType, type Layout, type MouseStep, type Page } from "../../lib/api";
+import { BUILTIN_VARIABLES, newActionId, type Action, type ActionKind, type ActionType, type Layout, type MouseStep, type Page, type TitleMatch, type WindowTarget } from "../../lib/api";
 import type { IconName } from "../../icons/Icon";
 
 /** Icon per action type; the legacy app's choices where it had the action. */
@@ -387,6 +387,23 @@ function summarizeMouseStep(step: MouseStep, t: TFunction): string {
   }
 }
 
+/**
+ * What a window action looks for, for its row: the title with its match rule, the
+ * program when the title is empty (the engine matches a program by "contains" on its
+ * own), both when both are set, or any window. A handle or a placeholder stands as is.
+ */
+function windowWhat(t: TFunction, action: { target: WindowTarget; title: string; matching: TitleMatch; app: string }): string {
+  if (action.target === "foreground") return t("window.foregroundShort");
+  const title = action.title.trim();
+  const app = action.app.trim();
+  const literal = title.startsWith("window:") || title.startsWith("{{");
+  const titled = !title ? "" : literal ? `“${title}”` : action.matching === "regex" ? t("window.summaryPattern", { pattern: title }) : `${t(`window.match.${action.matching}`)} “${title}”`;
+  if (titled && app) return t("window.summaryTitleOf", { title: titled, app });
+  if (titled) return titled;
+  if (app) return t("window.summaryApp", { app });
+  return t("window.summaryAny");
+}
+
 export function summarize(t: TFunction, action: Action, pages: Page[]): string {
   switch (action.type) {
     case "delay":
@@ -456,9 +473,9 @@ export function summarize(t: TFunction, action: Action, pages: Page[]): string {
     case "setVariable":
       return `${action.name} = ${action.value}`;
     case "getWindow":
-      return t("actions.summary.getWindow", { what: action.target === "foreground" ? t("window.foregroundShort") : `“${action.title}”`, name: action.saveTo });
+      return t("actions.summary.getWindow", { what: windowWhat(t, action), name: action.saveTo });
     case "setWindow":
-      return t("actions.summary.setWindow", { op: t(`window.ops.${action.op}`), what: action.target === "foreground" ? t("window.foregroundShort") : `“${action.title}”` });
+      return t("actions.summary.setWindow", { op: t(`window.ops.${action.op}`), what: windowWhat(t, action) });
     case "mouse":
       return action.steps.map((step) => summarizeMouseStep(step, t)).join(", ");
     case "mousePosition":
