@@ -124,6 +124,15 @@ pub async fn set_press_threshold(threshold: Option<u8>, state: State<'_, AppStat
     Ok(m.state())
 }
 
+/// Start or stop sending every incoming MIDI message to the window. The MIDI
+/// monitor turns this on while it is on screen; the rest of the time the
+/// messages are not worth the crossing.
+#[tauri::command]
+pub async fn set_midi_monitor(enabled: bool, state: State<'_, AppState>) -> CmdResult<()> {
+    state.manager.lock().set_midi_monitor(enabled);
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn forget_device(state: State<'_, AppState>) -> CmdResult<DeviceState> {
     let manager = state.manager.clone();

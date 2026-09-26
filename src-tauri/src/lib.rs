@@ -336,6 +336,7 @@ pub fn run() {
             set_auto_connect,
             set_press_feedback,
             set_press_threshold,
+            set_midi_monitor,
             forget_device,
             get_layout,
             list_models,

@@ -22,6 +22,7 @@ use parking_lot::Mutex;
 use serde::Serialize;
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
 
@@ -170,6 +171,8 @@ pub struct DeviceManager {
     press_feedback: Arc<Mutex<bool>>,
     /// Velocity that counts as a press; `None` = the model's default.
     press_threshold: Arc<Mutex<Option<u8>>>,
+    /// Someone is watching the MIDI monitor, so raw messages are worth sending.
+    monitor: Arc<AtomicBool>,
     live: SharedLive,
     next_auto_connect: Instant,
 }
@@ -248,6 +251,7 @@ impl DeviceManager {
             state_listeners: Arc::new(Mutex::new(Vec::new())),
             press_feedback: Arc::new(Mutex::new(press_feedback)),
             press_threshold: Arc::new(Mutex::new(press_threshold)),
+            monitor: Arc::new(AtomicBool::new(false)),
             live: Arc::new(Mutex::new(Default::default())),
             next_auto_connect: Instant::now(),
         }
@@ -348,6 +352,15 @@ impl DeviceManager {
 
     pub fn press_threshold(&self) -> Option<u8> {
         *self.press_threshold.lock()
+    }
+
+    /// Send every incoming MIDI message to the window, or stop doing so. The
+    /// monitor is the only thing that reads them, and a knob or a pressure-
+    /// sensitive pad produces hundreds a second, so this is off unless it is
+    /// on screen.
+    pub fn set_midi_monitor(&self, enabled: bool) {
+        self.monitor.store(enabled, Ordering::Relaxed);
+        tracing::debug!(enabled, "midi monitor");
     }
 
     /// Shared set of pads with a running macro; the renderer shows their
@@ -681,6 +694,7 @@ impl DeviceManager {
             pressure_listeners: self.pressure_listeners.clone(),
             control_listeners: self.control_listeners.clone(),
             threshold: self.press_threshold.clone(),
+            monitor: self.monitor.clone(),
             late_firmware: Arc::new(Mutex::new(None)),
         };
         let late_firmware = sink.late_firmware.clone();
@@ -805,6 +819,8 @@ struct InputSink {
     control_listeners: Arc<Mutex<Vec<ControlListener>>>,
     /// Custom press threshold, `None` = the model's default.
     threshold: Arc<Mutex<Option<u8>>>,
+    /// The MIDI monitor is open; see [`DeviceManager::set_midi_monitor`].
+    monitor: Arc<AtomicBool>,
     /// Firmware reported over the live connection when the scan got no inquiry reply.
     late_firmware: Arc<Mutex<Option<String>>>,
 }
@@ -817,7 +833,7 @@ impl InputSink {
     /// A message from the interface the app talks to: inquiry replies, knob and
     /// strip values, presses and aftertouch.
     fn primary(&self, timestamp: u64, msg: &[u8]) {
-        let _ = self.app.emit(EVENT_RAW, RawMidiEvent { timestamp, bytes: msg.to_vec(), hex: hex(msg) });
+        self.monitored(timestamp, msg);
         if is_inquiry_reply(msg) {
             // The answer to the inquiry sent after connecting (see `open`).
             if let Some(reply) = parse_inquiry_reply(msg) {
@@ -861,12 +877,23 @@ impl InputSink {
 
     /// A message from the device's second interface (the Launchkey keys and strips).
     fn secondary(&self, timestamp: u64, msg: &[u8]) {
-        let _ = self.app.emit(EVENT_RAW, RawMidiEvent { timestamp, bytes: msg.to_vec(), hex: hex(msg) });
+        self.monitored(timestamp, msg);
         if let Some(control) = self.driver.parse_secondary_control(msg) {
             self.control(control);
         } else if let Some(event) = self.driver.parse_secondary_input(msg, self.threshold()) {
             self.button(event);
         }
+    }
+
+    /// The MIDI monitor's copy of a message, when it is open. Building the
+    /// event costs a vector and a hex string per message, which a knob turning
+    /// or a pad under pressure would otherwise pay for hundreds of times a
+    /// second with nothing on screen to read it.
+    fn monitored(&self, timestamp: u64, msg: &[u8]) {
+        if !self.monitor.load(Ordering::Relaxed) {
+            return;
+        }
+        let _ = self.app.emit(EVENT_RAW, RawMidiEvent { timestamp, bytes: msg.to_vec(), hex: hex(msg) });
     }
 
     fn control(&self, control: ControlEvent) {

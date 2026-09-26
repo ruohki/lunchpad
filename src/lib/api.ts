@@ -1006,6 +1006,8 @@ export const api = {
   importButtonFile: (pageId: string, x: number, y: number, path: string) => invoke<ImportReport>("import_button_file", { pageId, x, y, path }),
   restoreProfileBackup: () => invoke<Profile>("restore_profile_backup"),
   profileHealth: () => invoke<ProfileHealth>("profile_health"),
+  /** Ask the backend for raw MIDI while the monitor is on screen. */
+  setMidiMonitor: (enabled: boolean) => invoke<void>("set_midi_monitor", { enabled }),
   readImageDataUri: (path: string) => invoke<string>("read_image_data_uri", { path }),
 
   diagnostics: () => invoke<Diagnostics>("diagnostics"),

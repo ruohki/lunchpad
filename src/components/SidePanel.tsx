@@ -1,5 +1,6 @@
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import type { Layout } from "../lib/api";
+import { api, type Layout } from "../lib/api";
 import { useDeviceStore } from "../store/device";
 import { useProfileStore } from "../store/profile";
 import { useVariablesStore } from "../store/variables";
@@ -24,6 +25,17 @@ export function SidePanel({ layout }: Props) {
   const page = useProfileStore((s) => s.activePage());
   const globals = useVariablesStore((s) => s.globals);
   const globalNames = Object.keys(globals).sort();
+
+  // The monitor below is the only reader of raw MIDI, and a knob or a pad
+  // under pressure sends hundreds of messages a second: ask for them only
+  // while this panel is on screen.
+  useEffect(() => {
+    void api.setMidiMonitor(true).catch(() => undefined);
+    return () => {
+      void api.setMidiMonitor(false).catch(() => undefined);
+      useDeviceStore.setState({ midiLog: [] });
+    };
+  }, []);
 
   const padCount = layout.pads.filter((p) => p.shape !== "empty" && p.shape !== "logo").length;
 
