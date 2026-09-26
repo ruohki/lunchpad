@@ -10,4 +10,4 @@ pub mod store;
 
 pub use model::*;
 pub use service::{mutate, SharedProfile};
-pub use store::ProfileStore;
+pub use store::{LoadFailure, ProfileStore, SaveKind};

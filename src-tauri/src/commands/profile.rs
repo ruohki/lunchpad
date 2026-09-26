@@ -136,8 +136,14 @@ fn emit_history(app: &AppHandle, state: &AppState) {
 /// Apply an edit from the UI. With `record`, the profile before the edit goes
 /// on the undo stack and the redo stack is dropped (page switches are not recorded).
 pub(crate) fn mutate<T>(app: &AppHandle, state: &AppState, record: bool, f: impl FnOnce(&mut Profile) -> Result<T, ProfileError>) -> CmdResult<T> {
+    mutate_as(app, state, record, SaveKind::Edit, f)
+}
+
+/// As [`mutate`], for a change that is not the user arranging something and
+/// so must not push their profile out of the backup (which page is showing).
+pub(crate) fn mutate_as<T>(app: &AppHandle, state: &AppState, record: bool, kind: SaveKind, f: impl FnOnce(&mut Profile) -> Result<T, ProfileError>) -> CmdResult<T> {
     let before = if record { Some(state.profile.lock().profile.clone()) } else { None };
-    let (result, profile) = crate::profile::mutate(&state.profile, f).map_err(err)?;
+    let (result, profile) = crate::profile::mutate(&state.profile, kind, f).map_err(err)?;
     if let Some(before) = before {
         let mut history = state.history.lock();
         history.push(before);
@@ -224,7 +230,8 @@ pub async fn get_profile(state: State<'_, AppState>) -> CmdResult<Profile> {
 
 #[tauri::command]
 pub async fn set_active_page(page_id: String, app: AppHandle, state: State<'_, AppState>) -> CmdResult<()> {
-    mutate(&app, &state, false, |p| {
+    // Which page is showing is not an arrangement; it must not spend the backup.
+    mutate_as(&app, &state, false, SaveKind::Runtime, |p| {
         p.page(&page_id).ok_or_else(|| ProfileError::PageNotFound(page_id.clone()))?;
         p.active_page = page_id.clone();
         Ok(())

@@ -804,8 +804,14 @@ impl RunContext {
                 self.locals.lock().insert(name.to_string(), value);
             }
             VarScope::Global => {
-                self.inner.globals.lock().insert(name.to_string(), value.clone());
-                self.inner.sink.variables_changed(&self.inner.globals.lock());
+                // Snapshot first: the sink saves the variables, and holding the
+                // lock across that would stall every macro reading a placeholder.
+                let snapshot = {
+                    let mut globals = self.inner.globals.lock();
+                    globals.insert(name.to_string(), value.clone());
+                    globals.clone()
+                };
+                self.inner.sink.variables_changed(&snapshot);
                 self.follow_fader_variable(name, &value);
             }
         }
@@ -822,11 +828,12 @@ impl RunContext {
         if values.is_empty() {
             return;
         }
-        {
+        let snapshot = {
             let mut g = self.inner.globals.lock();
             g.extend(values.clone());
-            self.inner.sink.variables_changed(&g);
-        }
+            g.clone()
+        };
+        self.inner.sink.variables_changed(&snapshot);
         for (name, value) in &values {
             self.follow_fader_variable(name, value);
         }
@@ -888,7 +895,7 @@ impl Inner {
     }
 
     fn commit<T>(&self, f: impl FnOnce(&mut Profile) -> Result<T, crate::profile::store::ProfileError>) -> Option<T> {
-        match profile::mutate(&self.profile, f) {
+        match profile::mutate(&self.profile, crate::profile::SaveKind::Runtime, f) {
             Ok((out, profile)) => {
                 self.sink.profile_changed(&profile);
                 self.sink.repaint();

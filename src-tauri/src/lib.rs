@@ -43,6 +43,56 @@ use tauri::{AppHandle, Emitter, Manager, WindowEvent};
 pub const EVENT_MACROS: &str = "macro:running";
 pub const EVENT_VARIABLES: &str = "vars:changed";
 
+/// Writes `variables.json` on a thread of its own, collecting what arrives
+/// in between: a loop setting a variable produces hundreds of changes a
+/// second, and each one would otherwise be a file write inside the macro.
+struct VariablesWriter {
+    tx: crossbeam_channel::Sender<std::collections::HashMap<String, String>>,
+}
+
+impl VariablesWriter {
+    fn new(path: std::path::PathBuf) -> VariablesWriter {
+        let (tx, rx) = crossbeam_channel::unbounded::<std::collections::HashMap<String, String>>();
+        let _ = std::thread::Builder::new().name("lunchpad-variables-write".into()).spawn(move || {
+            let mut pending = None;
+            loop {
+                let next = match &pending {
+                    None => rx.recv().ok(),
+                    Some(_) => match rx.recv_timeout(std::time::Duration::from_millis(300)) {
+                        Ok(globals) => Some(globals),
+                        Err(crossbeam_channel::RecvTimeoutError::Timeout) => {
+                            write_variables(&path, &pending.take().unwrap_or_default());
+                            continue;
+                        }
+                        Err(crossbeam_channel::RecvTimeoutError::Disconnected) => None,
+                    },
+                };
+                match next {
+                    Some(globals) => pending = Some(globals),
+                    None => {
+                        if let Some(last) = pending.take() {
+                            write_variables(&path, &last);
+                        }
+                        break;
+                    }
+                }
+            }
+        });
+        VariablesWriter { tx }
+    }
+}
+
+fn write_variables(path: &std::path::Path, globals: &std::collections::HashMap<String, String>) {
+    match serde_json::to_string_pretty(globals) {
+        Ok(json) => {
+            if let Err(e) = std::fs::write(path, json) {
+                tracing::warn!(error = %e, "variables could not be saved");
+            }
+        }
+        Err(e) => tracing::warn!(error = %e, "variables could not be serialised"),
+    }
+}
+
 /// Connects the macro engine to the window, the LEDs and the keyboard.
 struct TauriSink {
     app: AppHandle,
@@ -50,7 +100,7 @@ struct TauriSink {
     settings: SharedSettings,
     keyboard: SharedKeyboard,
     /// `variables.json` in the config folder: shared variables survive restarts.
-    variables_path: std::path::PathBuf,
+    variables: VariablesWriter,
 }
 
 impl EngineSink for TauriSink {
@@ -83,14 +133,7 @@ impl EngineSink for TauriSink {
     }
     fn variables_changed(&self, globals: &std::collections::HashMap<String, String>) {
         let _ = self.app.emit(EVENT_VARIABLES, globals);
-        match serde_json::to_string_pretty(globals) {
-            Ok(json) => {
-                if let Err(e) = std::fs::write(&self.variables_path, json) {
-                    tracing::warn!(error = %e, "variables could not be saved");
-                }
-            }
-            Err(e) => tracing::warn!(error = %e, "variables could not be serialised"),
-        }
+        let _ = self.variables.tx.send(globals.clone());
     }
 }
 
@@ -231,7 +274,7 @@ pub fn run() {
                 render_slot,
                 settings: settings.clone(),
                 keyboard: keyboard.clone(),
-                variables_path: config_dir.join("variables.json"),
+                variables: VariablesWriter::new(config_dir.join("variables.json")),
             });
             let services = Services {
                 audio: Some(audio.clone()),
@@ -414,6 +457,12 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app, event| {
+            // The profile is written on its own thread; on the way out, wait for
+            // whatever a fader or a macro changed in the last moment.
+            if let tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit = event {
+                let flusher = app.state::<AppState>().profile.lock().flusher();
+                flusher.flush();
+            }
             // macOS: clicking the dock icon while the window is hidden brings it back.
             #[cfg(target_os = "macos")]
             if let tauri::RunEvent::Reopen { has_visible_windows, .. } = event {
@@ -421,7 +470,5 @@ pub fn run() {
                     tray::show_main(app);
                 }
             }
-            #[cfg(not(target_os = "macos"))]
-            let _ = (app, event);
         });
 }
