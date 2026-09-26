@@ -1211,16 +1211,39 @@ async fn run_pass(ctx: &RunContext, actions: &[Action]) {
     }
 }
 
+/// Remember which branch a flip-flop takes next. The marker is looked for in
+/// every list of the pad it ran at - a button's pressed, released and held
+/// lists, or a fader's - because a flip-flop can sit in any of them, and one
+/// whose side is never written down stays on branch A forever.
 fn persist_flip(ctx: &RunContext, start_id: &str, next_is_a: bool) {
     let (page_id, x, y, start_id) = (ctx.page_id.clone(), ctx.x, ctx.y, start_id.to_string());
     ctx.inner.commit(move |p| {
-        let button = p.page_mut(&page_id).and_then(|pg| pg.get_mut(x, y)).ok_or(crate::profile::store::ProfileError::PageNotFound(page_id.clone()))?;
-        for a in button.down.iter_mut().chain(button.up.iter_mut()) {
-            if a.id == start_id {
-                if let ActionKind::FlipFlopStart { is_a, .. } = &mut a.kind {
-                    *is_a = next_is_a;
+        let page = p.page_mut(&page_id).ok_or(crate::profile::store::ProfileError::PageNotFound(page_id.clone()))?;
+        let mut found = false;
+        {
+            let mut mark = |list: &mut Vec<Action>| {
+                for a in list.iter_mut() {
+                    if a.id == start_id {
+                        if let ActionKind::FlipFlopStart { is_a, .. } = &mut a.kind {
+                            *is_a = next_is_a;
+                            found = true;
+                        }
+                    }
                 }
+            };
+            if let Some(fader) = page.faders.iter_mut().find(|f| f.step_of(x, y).is_some()) {
+                mark(&mut fader.on_change);
+                mark(&mut fader.on_touch);
+                mark(&mut fader.on_release);
             }
+            if let Some(button) = page.get_mut(x, y) {
+                mark(&mut button.down);
+                mark(&mut button.up);
+                mark(&mut button.hold);
+            }
+        }
+        if !found {
+            return Err(crate::profile::store::ProfileError::Invalid(format!("no flip-flop {start_id} at ({x}, {y})")));
         }
         Ok(())
     });
@@ -1861,6 +1884,58 @@ mod tests {
         assert_eq!(color(&profile), PadColor::Palette { index: 2 }, "branch B second");
         wait_done(engine.start(DEFAULT_PAGE_ID, 4, 4, ActionList::Down, 127, 0, None).unwrap()).await;
         assert_eq!(color(&profile), PadColor::Palette { index: 1 }, "back to A");
+    }
+
+    /// The three markers of a flip-flop whose branches set a variable.
+    fn flip_flop_writing(marker: &str) -> Vec<Action> {
+        let start = a(ActionKind::FlipFlopStart { middle_id: "m".into(), end_id: "e".into(), is_a: true });
+        let start_id = start.id.clone();
+        vec![
+            start,
+            a(ActionKind::SetVariable { name: marker.into(), value: "A".into(), scope: VarScope::Global }),
+            Action { id: "m".into(), wait: true, kind: ActionKind::FlipFlopMiddle { start_id: start_id.clone(), end_id: "e".into() } },
+            a(ActionKind::SetVariable { name: marker.into(), value: "B".into(), scope: VarScope::Global }),
+            Action { id: "e".into(), wait: true, kind: ActionKind::FlipFlopEnd { start_id, middle_id: "m".into() } },
+        ]
+    }
+
+    #[tokio::test]
+    async fn flip_flop_alternates_in_the_held_list() {
+        let (engine, profile) = engine();
+        {
+            let mut store = profile.lock();
+            let page = store.profile.page_mut(DEFAULT_PAGE_ID).unwrap();
+            page.set(4, 4, Button { hold: flip_flop_writing("held"), hold_ms: 100, ..Default::default() });
+        }
+        for expected in ["A", "B", "A"] {
+            wait_done(engine.start(DEFAULT_PAGE_ID, 4, 4, ActionList::Hold, 127, 0, None).unwrap()).await;
+            assert_eq!(engine.globals().get("held").map(String::as_str), Some(expected), "the held list alternates");
+        }
+    }
+
+    #[tokio::test]
+    async fn flip_flop_alternates_in_a_fader_list() {
+        let (engine, profile) = engine();
+        {
+            let mut store = profile.lock();
+            let page = store.profile.page_mut(DEFAULT_PAGE_ID).unwrap();
+            page.set_fader(Fader {
+                id: "f1".into(),
+                name: "mic".into(),
+                x: 0,
+                y: 0,
+                direction: FaderDirection::Up,
+                length: 4,
+                min: 0.0,
+                max: 100.0,
+                on_change: flip_flop_writing("moved"),
+                ..Fader::default()
+            });
+        }
+        for (step, expected) in [(1u8, "A"), (2, "B"), (3, "A")] {
+            wait_done(engine.start(DEFAULT_PAGE_ID, 0, step, ActionList::Fader, 127, 0, None).unwrap()).await;
+            assert_eq!(engine.globals().get("moved").map(String::as_str), Some(expected), "a fader's list alternates");
+        }
     }
 
     #[tokio::test]
