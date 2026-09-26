@@ -474,3 +474,34 @@ pub fn run() {
             }
         });
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    /// A loop setting a variable produces hundreds of changes a second; they
+    /// have to end up as one write holding the newest value, not hundreds.
+    #[test]
+    fn variables_are_written_in_batches() {
+        let dir = std::env::temp_dir().join(format!("lunchpad-vars-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("variables.json");
+        let writer = VariablesWriter::new(path.clone());
+        for i in 0..300 {
+            writer.tx.send(HashMap::from([("n".to_string(), i.to_string())])).unwrap();
+        }
+        assert!(!path.exists(), "nothing is written while the changes keep coming");
+
+        // Dropping the writer ends its thread, which writes what is pending.
+        drop(writer);
+        let mut waited = std::time::Duration::ZERO;
+        while !path.exists() && waited < std::time::Duration::from_secs(3) {
+            std::thread::sleep(std::time::Duration::from_millis(20));
+            waited += std::time::Duration::from_millis(20);
+        }
+        let written: HashMap<String, String> = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(written.get("n").map(String::as_str), Some("299"), "the last value is the one on disk");
+        let _ = std::fs::remove_dir_all(dir);
+    }
+}
