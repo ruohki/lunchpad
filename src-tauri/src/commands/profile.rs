@@ -612,6 +612,28 @@ pub async fn import_page_file(path: String, app: AppHandle, state: State<'_, App
     import_page_json(json, app, state).await
 }
 
+/// Whether the profile on disk was usable at start-up, and whether the last
+/// write worked. The interface says so instead of showing an empty grid and
+/// letting the user believe their pages are gone.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProfileHealth {
+    pub load_failure: Option<crate::profile::LoadFailure>,
+    pub save_error: Option<String>,
+    /// A backup exists to offer as a way back.
+    pub backup_available: bool,
+}
+
+#[tauri::command]
+pub async fn profile_health(state: State<'_, AppState>) -> CmdResult<ProfileHealth> {
+    let store = state.profile.lock();
+    Ok(ProfileHealth {
+        load_failure: store.load_failure().cloned(),
+        save_error: store.save_error(),
+        backup_available: store.path().with_extension("json.bak").exists(),
+    })
+}
+
 #[tauri::command]
 pub async fn restore_profile_backup(app: AppHandle, state: State<'_, AppState>) -> CmdResult<Profile> {
     let profile = {

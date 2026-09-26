@@ -24,6 +24,10 @@ export function Notices() {
   const undoHint = useProfileStore((s) => s.undoHint);
   const undo = useProfileStore((s) => s.undo);
   const dismissUndo = useProfileStore((s) => s.dismissUndo);
+  const health = useProfileStore((s) => s.health);
+  const healthDismissed = useProfileStore((s) => s.healthDismissed);
+  const dismissHealth = useProfileStore((s) => s.dismissHealth);
+  const restoreBackup = useProfileStore((s) => s.restoreBackup);
   const missingFiles = useProfileStore((s) => s.missingFiles);
   const missingDismissed = useProfileStore((s) => s.missingDismissed);
   const dismissMissing = useProfileStore((s) => s.dismissMissing);
@@ -53,6 +57,26 @@ export function Notices() {
       lines: [t("hub.arrivedLine", { title: arrival.title, by: arrival.author ? t("hub.by", { name: arrival.author.name }) : "" }).replace(/\s{2,}/g, " ")],
       onClose: dismissArrival,
       action: { label: t("hub.openInbox"), run: openInbox },
+    });
+  }
+  if (health?.loadFailure && !healthDismissed) {
+    const { reason, keptAt } = health.loadFailure;
+    items.push({
+      key: "profile-unreadable",
+      tone: "error",
+      title: t("notices.unreadableTitle"),
+      lines: [t("notices.unreadableHint", { file: keptAt.split(/[\\/]/).pop() || "profile.json.unreadable" }), t("notices.unreadableReason", { reason })],
+      onClose: dismissHealth,
+      action: health.backupAvailable ? { label: t("notices.unreadableRestore"), run: () => void restoreBackup() } : undefined,
+    });
+  }
+  if (health?.saveError) {
+    items.push({
+      key: "profile-unsaved",
+      tone: "error",
+      title: t("notices.unsavedTitle"),
+      lines: [t("notices.unsavedHint", { reason: health.saveError })],
+      onClose: dismissHealth,
     });
   }
   if (inputProblem) {

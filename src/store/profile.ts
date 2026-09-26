@@ -11,6 +11,7 @@ import {
   type ImportReport,
   type Page,
   type Profile,
+  type ProfileHealth,
 } from "../lib/api";
 
 export interface PadRef {
@@ -61,6 +62,11 @@ interface ProfileStore {
   importButtonFile: (x: number, y: number, path: string) => Promise<ImportReport | null>;
   exportPageFile: (pageId: string, path: string) => Promise<void>;
   restoreBackup: () => Promise<void>;
+  /** Whether the profile could be read at start-up and whether saving works. */
+  health: ProfileHealth | null;
+  healthDismissed: boolean;
+  refreshHealth: () => Promise<void>;
+  dismissHealth: () => void;
   clearError: () => void;
   /** Sound files referenced by actions that are gone from disk. */
   missingFiles: string[];
@@ -102,6 +108,8 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
   faderEditor: null,
   lastImport: null,
   error: null,
+  health: null,
+  healthDismissed: false,
   missingFiles: [],
   missingDismissed: false,
   undoHint: null,
@@ -118,6 +126,7 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
     const profile = await api.getProfile();
     set({ profile });
     void get().refreshMissing();
+    void get().refreshHealth();
     api
       .historyState()
       .then((history) => set({ history }))
@@ -242,7 +251,16 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
   },
   restoreBackup: async () => {
     await guard(set, () => api.restoreProfileBackup());
+    void get().refreshHealth();
   },
+  refreshHealth: async () => {
+    try {
+      set({ health: await api.profileHealth() });
+    } catch {
+      /* the app works without knowing; the next change asks again */
+    }
+  },
+  dismissHealth: () => set({ healthDismissed: true }),
   clearError: () => set({ error: null, lastImport: null }),
 
   refreshMissing: async () => {

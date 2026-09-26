@@ -931,6 +931,13 @@ export interface ConnectRequest {
   manual?: boolean;
 }
 
+/** Whether the profile on disk could be read, and whether saving works. */
+export interface ProfileHealth {
+  loadFailure: { reason: string; keptAt: string } | null;
+  saveError: string | null;
+  backupAvailable: boolean;
+}
+
 export const api = {
   scanLaunchpads: () => invoke<DiscoveredLaunchpad[]>("scan_launchpads"),
   connect: (request: ConnectRequest) => invoke<DeviceState>("connect_launchpad", { request }),
@@ -998,6 +1005,7 @@ export const api = {
   /** Put a button export on a pad, replacing what is there. */
   importButtonFile: (pageId: string, x: number, y: number, path: string) => invoke<ImportReport>("import_button_file", { pageId, x, y, path }),
   restoreProfileBackup: () => invoke<Profile>("restore_profile_backup"),
+  profileHealth: () => invoke<ProfileHealth>("profile_health"),
   readImageDataUri: (path: string) => invoke<string>("read_image_data_uri", { path }),
 
   diagnostics: () => invoke<Diagnostics>("diagnostics"),

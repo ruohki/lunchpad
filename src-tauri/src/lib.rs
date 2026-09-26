@@ -378,6 +378,7 @@ pub fn run() {
             import_page_file,
             review_button_file,
             import_button_file,
+            profile_health,
             restore_profile_backup,
             read_image_data_uri,
             // macros
