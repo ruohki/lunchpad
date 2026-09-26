@@ -349,16 +349,17 @@ impl MacroEngine {
                 press.up = Some(Instant::now());
             }
         }
-        let (page_id, hold_ms, fader) = {
+        let (page_id, hold_ms, loops, fader) = {
             let store = self.inner.profile.lock();
             let Some(page) = store.profile.active() else { return };
             let hold = page.get(event.x, event.y).filter(|b| !b.hold.is_empty()).map(|b| (b.hold_ms, b.hold_wait));
+            let loops = page.get(event.x, event.y).map(|b| b.loop_down).unwrap_or(false);
             let fader = page.fader_at(event.x, event.y).map(|(f, step)| {
                 let mut at = f.clone();
                 at.value = f.value_at_step(step);
                 FaderHit { id: f.id.clone(), key: f.variable_key(), step, steps: f.steps(), value: at.value, min: f.min, max: f.max, decimals: f.decimals, display: at.display_text() }
             });
-            (page.id.clone(), hold, fader)
+            (page.id.clone(), hold, loops, fader)
         };
         let velocity = event.value.max(1);
         let (x, y) = (event.x, event.y);
@@ -423,14 +424,37 @@ impl MacroEngine {
                 }
             });
         } else {
-            let arm = self.inner.holds.lock().remove(&key);
-            if let Some(arm) = arm {
-                if arm.state.compare_exchange(HOLD_ARMED, HOLD_RELEASED, Ordering::AcqRel, Ordering::Acquire).is_ok() {
+            let tapped = match self.inner.holds.lock().remove(&key) {
+                Some(arm) if arm.state.compare_exchange(HOLD_ARMED, HOLD_RELEASED, Ordering::AcqRel, Ordering::Acquire).is_ok() => {
                     arm.token.cancel();
-                    let _ = self.start(&page_id, x, y, ActionList::Down, velocity, 0, None);
+                    true
+                }
+                _ => false,
+            };
+            // A tap is a press and a release in that order, so the released
+            // list waits for the pressed one - the way "tap" behaves when
+            // another button runs this one. Both used to start at once, which
+            // ran a button's "release the key" before its "hold the key".
+            let down = tapped.then(|| self.start(&page_id, x, y, ActionList::Down, velocity, 0, None)).flatten();
+            // A looping button is the exception: its released list is what
+            // stops the loop, so it cannot wait for the loop to end first.
+            match down.filter(|_| !loops) {
+                None => {
+                    let _ = self.start(&page_id, x, y, ActionList::Up, velocity, 0, None);
+                }
+                Some(mut done) => {
+                    let engine = self.clone();
+                    let page = page_id.clone();
+                    self.inner.runtime.spawn(async move {
+                        while !*done.borrow() {
+                            if done.changed().await.is_err() {
+                                break;
+                            }
+                        }
+                        let _ = engine.start(&page, x, y, ActionList::Up, velocity, 0, None);
+                    });
                 }
             }
-            let _ = self.start(&page_id, x, y, ActionList::Up, velocity, 0, None);
         }
     }
 
@@ -1448,6 +1472,69 @@ mod tests {
             }
             tokio::time::sleep(Duration::from_millis(20)).await;
         }
+    }
+
+    /// Appends a letter to the global "seq", so an order can be asserted.
+    fn mark(letter: &str) -> Action {
+        a(ActionKind::SetVariable { name: "seq".into(), value: format!("{{{{seq}}}}{letter}"), scope: VarScope::Global })
+    }
+
+    #[tokio::test]
+    async fn a_tap_runs_the_pressed_list_before_the_released_one() {
+        let (engine, profile) = engine();
+        {
+            let mut store = profile.lock();
+            let page = store.profile.page_mut(DEFAULT_PAGE_ID).unwrap();
+            page.set(
+                0,
+                0,
+                Button {
+                    hold_wait: true,
+                    hold_ms: 400,
+                    hold: vec![mark("H")],
+                    down: vec![a(ActionKind::Delay { ms: 150, ms_from: None }), mark("D")],
+                    up: vec![mark("U")],
+                    ..Default::default()
+                },
+            );
+        }
+        engine.set_global("seq", String::new()).unwrap();
+        engine.on_button(&ButtonEvent { x: 0, y: 0, pressed: true, note: 0, cc: false, value: 127 });
+        tokio::time::sleep(Duration::from_millis(60)).await; // a tap, well inside hold_ms
+        engine.on_button(&ButtonEvent { x: 0, y: 0, pressed: false, note: 0, cc: false, value: 0 });
+        assert_eq!(global_once(&engine, "seq", "DU").await.as_deref(), Some("DU"), "the release waits for the slow press list");
+    }
+
+    #[tokio::test]
+    async fn a_looping_button_does_not_wait_for_its_own_loop_to_end() {
+        let (engine, profile) = engine();
+        {
+            let mut store = profile.lock();
+            let page = store.profile.page_mut(DEFAULT_PAGE_ID).unwrap();
+            page.set(
+                1,
+                1,
+                Button {
+                    hold_wait: true,
+                    hold_ms: 400,
+                    loop_down: true,
+                    hold: vec![mark("H")],
+                    down: vec![mark("D")],
+                    // What the editor adds by itself when looping is turned on.
+                    up: vec![a(ActionKind::StopThisMacro)],
+                    ..Default::default()
+                },
+            );
+        }
+        engine.set_global("seq", String::new()).unwrap();
+        engine.on_button(&ButtonEvent { x: 1, y: 1, pressed: true, note: 0, cc: false, value: 127 });
+        tokio::time::sleep(Duration::from_millis(60)).await;
+        engine.on_button(&ButtonEvent { x: 1, y: 1, pressed: false, note: 0, cc: false, value: 0 });
+        let deadline = Instant::now() + Duration::from_secs(2);
+        while !engine.running().is_empty() && Instant::now() < deadline {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        assert!(engine.running().is_empty(), "the released list still got to stop the loop");
     }
 
     #[tokio::test]
