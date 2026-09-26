@@ -1428,6 +1428,32 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn stopping_a_macro_does_not_wait_for_a_runaway_script() {
+        let (engine, profile) = engine();
+        set_button(
+            &profile,
+            0,
+            0,
+            vec![a(ActionKind::RunScript { code: "var i = 0; while (true) { i++; } i".into(), save_to: None, save_scope: VarScope::Local })],
+            vec![],
+            false,
+        );
+        engine.on_button(&ButtonEvent { x: 0, y: 0, pressed: true, note: 0, cc: false, value: 127 });
+        // The snippet is running by now; boa will not stop for anything.
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        assert_eq!(engine.running().len(), 1, "the macro is running");
+
+        let asked = Instant::now();
+        engine.stop_all();
+        let deadline = asked + Duration::from_secs(2);
+        while !engine.running().is_empty() && Instant::now() < deadline {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        assert!(engine.running().is_empty(), "the runner let go of the script instead of waiting it out");
+        assert!(asked.elapsed() < Duration::from_secs(2), "stopping took {:?}", asked.elapsed());
+    }
+
+    #[tokio::test]
     async fn fader_press_sets_the_level_and_runs_its_actions() {
         let (engine, profile) = engine();
         {

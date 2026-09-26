@@ -12,6 +12,10 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 const MAX_KEYSTROKE_DELAY: u64 = 5000;
+/// How long a macro waits for a snippet before going on without it. Boa
+/// cannot be interrupted from outside, so this is the macro letting go, not
+/// the snippet being stopped; it runs on until its own iteration limit.
+const SCRIPT_DEADLINE: Duration = Duration::from_secs(15);
 
 pub async fn execute_external(ctx: &RunContext, action: &Action) {
     let services = ctx.services();
@@ -441,9 +445,35 @@ pub async fn execute_external(ctx: &RunContext, action: &Action) {
             let builtins = super::builtins::values(&ctx.press(), &ctx.env());
             let lunchpad = ctx.script_info();
             let code = code.clone();
-            let job = tokio::task::spawn_blocking(move || script::run(ScriptInput { code: &code, locals: &input_locals, globals: &input_globals, builtins: &builtins, lunchpad }));
-            match job.await {
-                Ok(Ok(out)) => {
+            // On a thread of its own, not the blocking pool: a snippet that
+            // will not finish must not take a pool slot the rest of the app
+            // needs, and stopping the macro has to let go of it at once
+            // instead of waiting out boa's iteration limit.
+            let (tx, rx) = tokio::sync::oneshot::channel();
+            if let Err(e) = std::thread::Builder::new()
+                .name("lunchpad-script".into())
+                .spawn(move || {
+                    let _ = tx.send(script::run(ScriptInput { code: &code, locals: &input_locals, globals: &input_globals, builtins: &builtins, lunchpad }));
+                })
+            {
+                tracing::warn!(action = %action.id, error = %e, "the script thread could not start");
+                return;
+            }
+            let finished = tokio::select! {
+                result = rx => Some(result),
+                _ = ctx.token.cancelled() => {
+                    tracing::info!(action = %action.id, "macro stopped; the script's result is dropped");
+                    None
+                }
+                _ = tokio::time::sleep(SCRIPT_DEADLINE) => {
+                    tracing::warn!(action = %action.id, seconds = SCRIPT_DEADLINE.as_secs(), "the script is still running; the macro goes on without it");
+                    None
+                }
+            };
+            match finished {
+                None => {}
+                Some(Err(_)) => tracing::warn!(action = %action.id, "the script ended without a result"),
+                Some(Ok(Ok(out))) => {
                     tracing::debug!(action = %action.id, ms = out.elapsed_ms, result = %out.result.chars().take(120).collect::<String>(), "script done");
                     {
                         let mut locals = ctx.locals.lock();
@@ -460,8 +490,7 @@ pub async fn execute_external(ctx: &RunContext, action: &Action) {
                     }
                     run_queued(ctx, action, out.actions).await;
                 }
-                Ok(Err(e)) => tracing::warn!(action = %action.id, error = %e, "script failed"),
-                Err(e) => tracing::warn!(action = %action.id, error = %e, "script task failed"),
+                Some(Ok(Err(e))) => tracing::warn!(action = %action.id, error = %e, "script failed"),
             }
         }
 
