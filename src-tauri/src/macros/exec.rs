@@ -330,7 +330,10 @@ pub async fn execute_external(ctx: &RunContext, action: &Action) {
             report(action, "Audio device", crate::audio_devices::set_default(*target, &ctx.expand(device)).await);
         }
         ActionKind::AddToVariable { name, amount, scope } => {
-            let current = ctx.variables().get(name.as_str()).and_then(|v| v.trim().parse::<f64>().ok()).unwrap_or(0.0);
+            // Trimmed on the way in as well as out: set_var writes the trimmed
+            // name, so a name typed with a stray space used to read nothing and
+            // start again from zero on every round.
+            let current = ctx.variables().get(name.trim()).and_then(|v| v.trim().parse::<f64>().ok()).unwrap_or(0.0);
             let delta = ctx.expand(amount).trim().parse::<f64>().unwrap_or(0.0);
             ctx.set_var(name, number_text(current + delta), *scope);
         }

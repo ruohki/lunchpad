@@ -304,7 +304,6 @@ impl Fader {
         self.length.max(1) as usize
     }
 
-    /// The pads in order from the minimum; stops at the edge of the grid.
     /// The variable key: the variable name, else the name with spaces as underscores, else the id.
     pub fn variable_key(&self) -> String {
         let clean = |raw: &str| -> String { raw.trim().split_whitespace().collect::<Vec<_>>().join("_").chars().filter(|c| *c != '{' && *c != '}').collect() };
@@ -319,6 +318,11 @@ impl Fader {
         self.id.clone()
     }
 
+    /// The pads in order from the minimum. Only the coordinate space is
+    /// enforced, not the grid: which pads exist depends on the model that is
+    /// connected, and a page made for a bigger Launchpad keeps its faders the
+    /// way it keeps buttons that have no pad here. The editor is what stops a
+    /// fader being drawn over an edge in the first place.
     pub fn pads(&self) -> Vec<(u8, u8)> {
         let (dx, dy): (i16, i16) = match self.direction {
             FaderDirection::Up => (0, 1),

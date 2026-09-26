@@ -631,20 +631,20 @@ impl MacroEngine {
         *self.inner.globals.lock() = globals;
     }
 
-    /// Drop the named shared variables. Returns how many existed.
+    /// Drop the named shared variables. Returns how many of them existed.
     pub fn remove_globals(&self, names: &[String]) -> usize {
-        let snapshot = {
+        let (removed, snapshot) = {
             let mut globals = self.inner.globals.lock();
             let before = globals.len();
             for name in names {
                 globals.remove(name.trim());
             }
-            if globals.len() == before {
+            let removed = before - globals.len();
+            if removed == 0 {
                 return 0;
             }
-            globals.clone()
+            (removed, globals.clone())
         };
-        let removed = names.len();
         self.inner.sink.variables_changed(&snapshot);
         removed
     }
@@ -1480,6 +1480,18 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn adding_to_a_variable_finds_a_name_written_with_spaces() {
+        let (engine, profile) = engine();
+        let add = |name: &str| a(ActionKind::AddToVariable { name: name.into(), amount: "1".into(), scope: VarScope::Global });
+        // The name is trimmed when it is written, so it has to be trimmed when read.
+        set_button(&profile, 0, 0, vec![add(" tally ")], vec![], false);
+        for expected in ["1", "2", "3"] {
+            wait_done(engine.start(DEFAULT_PAGE_ID, 0, 0, ActionList::Down, 127, 0, None).unwrap()).await;
+            assert_eq!(engine.globals().get("tally").map(String::as_str), Some(expected), "the counter keeps counting");
+        }
+    }
+
+    #[tokio::test]
     async fn a_tap_runs_the_pressed_list_before_the_released_one() {
         let (engine, profile) = engine();
         {
@@ -1771,6 +1783,8 @@ mod tests {
         assert!(!left.contains_key("fader.old name") && !left.contains_key("fader.deadbeef"));
         assert_eq!(engine.prune_fader_variables(), 0);
         assert_eq!(engine.remove_globals(&["count".into()]), 1);
+        engine.set_global("one", "1".into()).unwrap();
+        assert_eq!(engine.remove_globals(&["one".into(), "never".into(), "set".into()]), 1, "only the ones that existed count");
         engine.clear_globals();
         assert!(engine.globals().is_empty());
     }
