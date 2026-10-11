@@ -5,8 +5,10 @@
 //! * actions run in order; an action with `wait = false` runs concurrently
 //!   and is joined at the end of the pass;
 //! * `loop` repeats the down list until the runner is stopped;
-//! * pressing a running button starts another runner; StopThisMacro cancels
-//!   every runner at that pad, RestartThisMacro cancels the others;
+//! * pressing a running button starts another runner unless the button's
+//!   `run_mode` says otherwise (start over, wait in line, or drop the press);
+//!   StopThisMacro cancels every runner at that pad, RestartThisMacro cancels
+//!   the others;
 //! * FlipFlop markers alternate between two branches, persisted in the profile;
 //! * push-to-talk is a reference counter shared by all runners.
 //!
@@ -22,7 +24,7 @@ use super::model::*;
 use super::services::Services;
 use super::sink::EngineSink;
 use crate::midi::types::{ButtonEvent, ControlEvent, ControlKind, PressureEvent};
-use crate::profile::{self, Fader, PadColor, Profile, SharedProfile};
+use crate::profile::{self, Fader, PadColor, Profile, RunMode, SharedProfile, MAX_QUEUE_SIZE};
 use parking_lot::Mutex;
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
@@ -99,6 +101,12 @@ pub struct RunningMacro {
 struct RunnerHandle {
     info: RunningMacro,
     token: CancellationToken,
+    /// Flips to `true` when the run is over; a queued press waits on it.
+    done: watch::Receiver<bool>,
+    /// Queued behind earlier runs of its list, not started yet.
+    waiting: bool,
+    /// The runner whose `RunButton` started this one.
+    parent: Option<String>,
 }
 
 struct Inner {
@@ -530,7 +538,8 @@ impl MacroEngine {
     }
 
     /// Run one list of a button. Returns a receiver that flips to `true` when
-    /// the runner finished, or `None` if the button has nothing to run.
+    /// the runner finished, or `None` if the button has nothing to run or its
+    /// `run_mode` drops the press (busy, or the queue is full).
     pub fn start(
         &self,
         page_id: &str,
@@ -539,7 +548,7 @@ impl MacroEngine {
         list: ActionList,
         velocity: u8,
         depth: u8,
-        parent: Option<&CancellationToken>,
+        parent: Option<&RunContext>,
     ) -> Option<watch::Receiver<bool>> {
         self.start_with(page_id, x, y, list, velocity, depth, parent, None)
     }
@@ -553,22 +562,24 @@ impl MacroEngine {
         list: ActionList,
         velocity: u8,
         depth: u8,
-        parent: Option<&CancellationToken>,
+        parent: Option<&RunContext>,
         locals: Option<Arc<Mutex<HashMap<String, String>>>>,
     ) -> Option<watch::Receiver<bool>> {
-        let has_actions = {
+        let (has_actions, mode, queue_size) = {
             let store = self.inner.profile.lock();
             let page = store.profile.page(page_id)?;
             if list.is_fader() {
-                page.fader_at(x, y).map(|(f, _)| !fader_list(f, list).is_empty()).unwrap_or(false)
+                // A fader paces its own runs (see `on_control`).
+                (page.fader_at(x, y).map(|(f, _)| !fader_list(f, list).is_empty()).unwrap_or(false), RunMode::Parallel, 0)
             } else {
                 let button = page.get(x, y)?;
-                match list {
+                let has_actions = match list {
                     ActionList::Down => !button.down.is_empty(),
                     ActionList::Up => !button.up.is_empty(),
                     ActionList::Hold => !button.hold.is_empty(),
                     ActionList::Fader | ActionList::FaderTouch | ActionList::FaderRelease => false,
-                }
+                };
+                (has_actions, button.run_mode, button.queue_size.clamp(1, MAX_QUEUE_SIZE) as usize)
             }
         };
         if !has_actions {
@@ -580,7 +591,7 @@ impl MacroEngine {
         }
 
         let id = uuid::Uuid::new_v4().to_string();
-        let token = parent.map(|p| p.child_token()).unwrap_or_default();
+        let token = parent.map(|p| p.token.child_token()).unwrap_or_default();
         let (done_tx, done_rx) = watch::channel(false);
         let info = RunningMacro {
             id: id.clone(),
@@ -590,7 +601,44 @@ impl MacroEngine {
             list,
             started_at_ms: self.inner.epoch.elapsed().as_millis() as u64,
         };
-        self.inner.runners.lock().insert(id.clone(), RunnerHandle { info: info.clone(), token: token.clone() });
+        // The button's run mode against the runs of this list still going. Deciding
+        // and registering under one lock keeps two presses from both getting through.
+        let ahead = {
+            let mut runners = self.inner.runners.lock();
+            // The runs this one is a part of (a button running itself through
+            // `RunButton`) never count: waiting for them would never end, and
+            // stopping them would stop this run too.
+            let mut callers: HashSet<String> = HashSet::new();
+            let mut caller = parent.map(|p| p.runner_id.clone());
+            while let Some(c) = caller.filter(|c| callers.insert(c.clone())) {
+                caller = runners.get(&c).and_then(|r| r.parent.clone());
+            }
+            let earlier = |r: &&RunnerHandle| r.info.page_id == page_id && r.info.x == x && r.info.y == y && r.info.list == list && !callers.contains(&r.info.id);
+            let ahead: Vec<watch::Receiver<bool>> = match mode {
+                RunMode::Parallel => Vec::new(),
+                RunMode::Restart => {
+                    runners.values().filter(earlier).for_each(|r| r.token.cancel());
+                    Vec::new()
+                }
+                RunMode::Single => {
+                    if runners.values().any(|r| earlier(&r)) {
+                        tracing::debug!(page = page_id, x, y, ?list, "still running, press dropped");
+                        return None;
+                    }
+                    Vec::new()
+                }
+                RunMode::Queue => {
+                    if runners.values().filter(earlier).filter(|r| r.waiting).count() >= queue_size {
+                        tracing::debug!(page = page_id, x, y, ?list, queue_size, "queue full, press dropped");
+                        return None;
+                    }
+                    runners.values().filter(earlier).map(|r| r.done.clone()).collect()
+                }
+            };
+            let handle = RunnerHandle { info: info.clone(), token: token.clone(), done: done_rx.clone(), waiting: !ahead.is_empty(), parent: parent.map(|p| p.runner_id.clone()) };
+            runners.insert(id.clone(), handle);
+            ahead
+        };
         self.inner.publish_running();
 
         let ctx = RunContext {
@@ -605,9 +653,30 @@ impl MacroEngine {
             locals: locals.unwrap_or_default(),
             depth,
         };
-        tracing::info!(id = %id, page = page_id, x, y, ?list, velocity, "macro started");
+        tracing::info!(id = %id, page = page_id, x, y, ?list, velocity, queued = !ahead.is_empty(), "macro started");
         self.inner.runtime.spawn(async move {
-            run_lists(ctx.clone(), list).await;
+            if !ahead.is_empty() {
+                // Queued: its turn comes when every run before it is over.
+                tokio::select! {
+                    biased;
+                    _ = ctx.token.cancelled() => {}
+                    _ = async {
+                        for mut done in ahead {
+                            while !*done.borrow() {
+                                if done.changed().await.is_err() {
+                                    break;
+                                }
+                            }
+                        }
+                    } => {}
+                }
+                if let Some(runner) = ctx.inner.runners.lock().get_mut(&ctx.runner_id) {
+                    runner.waiting = false;
+                }
+            }
+            if !ctx.token.is_cancelled() {
+                run_lists(ctx.clone(), list).await;
+            }
             ctx.inner.finish(&ctx.runner_id);
             let _ = done_tx.send(true);
         });
@@ -1330,7 +1399,7 @@ pub(super) async fn execute(ctx: &RunContext, action: &Action) {
                 if ctx.token.is_cancelled() {
                     break;
                 }
-                if let Some(mut done) = engine.start_with(&page_id, x, y, *list, ctx.velocity, ctx.depth + 1, Some(&ctx.token), Some(ctx.locals.clone())) {
+                if let Some(mut done) = engine.start_with(&page_id, x, y, *list, ctx.velocity, ctx.depth + 1, Some(ctx), Some(ctx.locals.clone())) {
                     // Waiting is what makes "tap" sequential and lets chains finish in order.
                     tokio::select! {
                         _ = async { while !*done.borrow() { if done.changed().await.is_err() { break } } } => {}
@@ -2404,5 +2473,139 @@ mod tests {
         assert_eq!(engine.globals().get("fader.aux").map(String::as_str), Some("7"));
         let value = profile.lock().profile.page(DEFAULT_PAGE_ID).unwrap().faders[0].value;
         assert!((value - 6.7).abs() < 1e-3, "the fader kept its level, got {value}");
+    }
+
+    /// A button whose pressed list marks its start ("a"), takes 80 ms and marks its end ("b").
+    fn set_slow_button(profile: &SharedProfile, x: u8, y: u8, run_mode: RunMode, queue_size: u32) {
+        let down = vec![mark("a"), a(ActionKind::Delay { ms: 80, ms_from: None }), mark("b")];
+        let mut store = profile.lock();
+        store.profile.page_mut(DEFAULT_PAGE_ID).unwrap().set(x, y, Button { down, run_mode, queue_size, ..Default::default() });
+    }
+
+    fn press(engine: &MacroEngine, x: u8, y: u8) -> Option<watch::Receiver<bool>> {
+        engine.start(DEFAULT_PAGE_ID, x, y, ActionList::Down, 127, 0, None)
+    }
+
+    fn seq(engine: &MacroEngine) -> String {
+        engine.globals().get("seq").cloned().unwrap_or_default()
+    }
+
+    #[tokio::test]
+    async fn parallel_presses_run_side_by_side() {
+        let (engine, profile) = engine();
+        set_slow_button(&profile, 0, 0, RunMode::Parallel, 1);
+        engine.set_global("seq", String::new()).unwrap();
+        let first = press(&engine, 0, 0).unwrap();
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        let second = press(&engine, 0, 0).unwrap();
+        wait_done(first).await;
+        wait_done(second).await;
+        assert_eq!(seq(&engine), "aabb", "the second run started while the first was going");
+    }
+
+    #[tokio::test]
+    async fn a_restarting_button_stops_the_run_in_progress_and_starts_over() {
+        let (engine, profile) = engine();
+        set_slow_button(&profile, 0, 0, RunMode::Restart, 1);
+        engine.set_global("seq", String::new()).unwrap();
+        let first = press(&engine, 0, 0).unwrap();
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        let second = press(&engine, 0, 0).unwrap();
+        tokio::time::timeout(Duration::from_millis(50), wait_done(first)).await.expect("the first run was stopped by the second press");
+        wait_done(second).await;
+        assert_eq!(seq(&engine), "aab", "the first run never reached its end");
+        assert!(engine.running().is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_queueing_button_runs_waiting_presses_in_turn_and_drops_the_rest() {
+        let (engine, profile) = engine();
+        set_slow_button(&profile, 0, 0, RunMode::Queue, 2);
+        engine.set_global("seq", String::new()).unwrap();
+        let first = press(&engine, 0, 0).unwrap();
+        tokio::time::sleep(Duration::from_millis(10)).await;
+        let second = press(&engine, 0, 0).expect("the first waiting press");
+        let third = press(&engine, 0, 0).expect("the second waiting press");
+        assert!(press(&engine, 0, 0).is_none(), "the queue holds two presses");
+        assert_eq!(engine.running().len(), 3, "waiting presses count as runs of the button");
+        assert_eq!(seq(&engine), "a", "nothing of the waiting presses ran yet");
+        wait_done(first).await;
+        // A place in the queue is free again once the next press has taken its turn.
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        let fourth = press(&engine, 0, 0).expect("a place came free");
+        for run in [second, third, fourth] {
+            wait_done(run).await;
+        }
+        assert_eq!(seq(&engine), "abababab", "one run after the other");
+        assert!(engine.running().is_empty());
+    }
+
+    #[tokio::test]
+    async fn stopping_a_button_empties_its_queue() {
+        let (engine, profile) = engine();
+        set_slow_button(&profile, 0, 0, RunMode::Queue, 5);
+        engine.set_global("seq", String::new()).unwrap();
+        let runs: Vec<_> = (0..3).map(|_| press(&engine, 0, 0).unwrap()).collect();
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        engine.stop_at(DEFAULT_PAGE_ID, 0, 0);
+        for run in runs {
+            tokio::time::timeout(Duration::from_millis(200), wait_done(run)).await.expect("stopped, running or waiting");
+        }
+        assert_eq!(seq(&engine), "a", "the waiting presses never ran");
+        assert!(engine.running().is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_single_run_button_drops_presses_until_it_has_finished() {
+        let (engine, profile) = engine();
+        set_slow_button(&profile, 0, 0, RunMode::Single, 1);
+        engine.set_global("seq", String::new()).unwrap();
+        let first = press(&engine, 0, 0).unwrap();
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        assert!(press(&engine, 0, 0).is_none(), "busy: the press is dropped");
+        wait_done(first).await;
+        wait_done(press(&engine, 0, 0).expect("free again")).await;
+        assert_eq!(seq(&engine), "abab");
+    }
+
+    /// The pressed and the released list are counted apart: a release runs
+    /// while the press is still going, whatever the mode.
+    #[tokio::test]
+    async fn each_list_of_a_button_is_counted_on_its_own() {
+        let (engine, profile) = engine();
+        {
+            let mut store = profile.lock();
+            let down = vec![mark("a"), a(ActionKind::Delay { ms: 80, ms_from: None }), mark("b")];
+            store.profile.page_mut(DEFAULT_PAGE_ID).unwrap().set(0, 0, Button { down, up: vec![mark("U")], run_mode: RunMode::Single, ..Default::default() });
+        }
+        engine.set_global("seq", String::new()).unwrap();
+        let down = press(&engine, 0, 0).unwrap();
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        wait_done(engine.start(DEFAULT_PAGE_ID, 0, 0, ActionList::Up, 127, 0, None).expect("the released list is free")).await;
+        wait_done(down).await;
+        assert_eq!(seq(&engine), "aUb");
+    }
+
+    /// A button that runs itself is part of its own run: the inner run must not
+    /// wait for the outer one (which waits for it), be dropped, or stop it.
+    #[tokio::test]
+    async fn a_button_running_itself_is_not_held_up_by_its_own_run() {
+        for run_mode in [RunMode::Queue, RunMode::Single, RunMode::Restart] {
+            let (engine, profile) = engine();
+            {
+                let mut store = profile.lock();
+                let down = vec![
+                    a(ActionKind::AddToVariable { name: "depth".into(), amount: "1".into(), scope: VarScope::Global }),
+                    a(ActionKind::RunButton { target: ButtonRef { page_id: None, x: 0, y: 0 }, trigger: ButtonTrigger::Press }),
+                    mark("x"),
+                ];
+                store.profile.page_mut(DEFAULT_PAGE_ID).unwrap().set(0, 0, Button { down, run_mode, ..Default::default() });
+            }
+            engine.set_global("seq", String::new()).unwrap();
+            tokio::time::timeout(Duration::from_secs(2), wait_done(press(&engine, 0, 0).unwrap())).await.unwrap_or_else(|_| panic!("{run_mode:?}: the button waits for itself"));
+            let runs = MAX_DEPTH as usize + 1;
+            assert_eq!(engine.globals().get("depth").map(String::as_str), Some(runs.to_string().as_str()), "{run_mode:?}: every nested run started");
+            assert_eq!(seq(&engine), "x".repeat(runs), "{run_mode:?}: every nested run finished");
+        }
     }
 }

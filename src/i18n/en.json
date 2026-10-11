@@ -484,6 +484,23 @@
     "tapHint": "With held actions set, these wait and run when a shorter press is released, so a tap and a hold do different things.",
     "loop": "Repeat while held",
     "loopHint": "Runs the pressed actions again and again until the button is released.",
+    "runMode": {
+      "label": "Pressed again while still running",
+      "modes": {
+        "parallel": "Run alongside",
+        "restart": "Start over",
+        "queue": "Wait in line",
+        "single": "Ignore"
+      },
+      "hints": {
+        "parallel": "Every press starts its own run, next to the ones still going.",
+        "restart": "The run in progress is stopped and the actions start from the top.",
+        "queue_one": "The press waits until the run in progress has finished, then runs. One press can wait; any more are ignored.",
+        "queue_other": "Presses wait their turn and run one after the other. {{count}} can wait; any more are ignored.",
+        "single": "The press is ignored until the run in progress has finished."
+      },
+      "queueSize": "Presses that can wait"
+    },
     "add": "Add action",
     "empty": "Nothing happens yet. Add an action.",
     "moveUp": "Move up",

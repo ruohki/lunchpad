@@ -826,6 +826,12 @@ export interface StateLink {
   source: string;
 }
 
+/** What a press does while an earlier run of the same list (pressed, released or held) is still going. */
+export type RunMode = "parallel" | "restart" | "queue" | "single";
+export const RUN_MODES: RunMode[] = ["parallel", "restart", "queue", "single"];
+/** The longest line of waiting presses a button may ask for. */
+export const MAX_QUEUE_SIZE = 99;
+
 export interface Button {
   look: Look;
   color: PadColor;
@@ -841,6 +847,9 @@ export interface Button {
   stateLink: StateLink | null;
   /** Markdown shown as a tooltip over the pad. */
   description: string;
+  runMode: RunMode;
+  /** with "queue": how many presses may wait for their turn; the rest are dropped */
+  queueSize: number;
 }
 
 export interface PlacedButton extends Button {
@@ -916,6 +925,8 @@ export function emptyButton(): Button {
     holdWait: true,
     stateLink: null,
     description: "",
+    runMode: "parallel",
+    queueSize: 1,
     loop: false,
     down: [],
     up: [],

@@ -173,6 +173,35 @@ pub struct Button {
     /// Markdown shown as a tooltip over the pad.
     #[serde(default)]
     pub description: String,
+    /// What a press does while an earlier run of the same list is still going.
+    #[serde(default)]
+    pub run_mode: RunMode,
+    /// With `RunMode::Queue`: how many presses may wait for their turn.
+    #[serde(default = "default_queue_size")]
+    pub queue_size: u32,
+}
+
+/// What starting one of a button's lists does while an earlier run of that
+/// list has not finished. Each list (pressed, released, held) counts on its own.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum RunMode {
+    /// Every press starts its own run next to the ones still going.
+    #[default]
+    Parallel,
+    /// The runs in progress are stopped and the list starts over.
+    Restart,
+    /// The press waits for the runs before it; `queue_size` presses may wait, the rest are dropped.
+    Queue,
+    /// The press is dropped until the run in progress has finished.
+    Single,
+}
+
+/// The longest line of waiting presses a button may ask for.
+pub const MAX_QUEUE_SIZE: u32 = 99;
+
+pub fn default_queue_size() -> u32 {
+    1
 }
 
 fn default_true() -> bool {
@@ -456,6 +485,8 @@ impl Default for Button {
             hold_wait: true,
             state_link: None,
             description: String::new(),
+            run_mode: RunMode::default(),
+            queue_size: default_queue_size(),
         }
     }
 }
@@ -529,6 +560,15 @@ mod tests {
         assert!(json.contains("\"loop\": false"));
         let back: Profile = serde_json::from_str(&json).unwrap();
         assert_eq!(back, p);
+    }
+
+    #[test]
+    fn a_button_saved_before_run_modes_runs_side_by_side() {
+        let old = serde_json::json!({ "look": { "type": "text", "caption": "", "size": 16, "face": "sans", "color": "#ffffff" }, "color": { "mode": "palette", "index": 5 } });
+        let button: Button = serde_json::from_value(old).unwrap();
+        assert_eq!((button.run_mode, button.queue_size), (RunMode::Parallel, 1));
+        let json = serde_json::to_value(Button { run_mode: RunMode::Queue, queue_size: 3, ..Default::default() }).unwrap();
+        assert_eq!((&json["runMode"], &json["queueSize"]), (&serde_json::json!("queue"), &serde_json::json!(3)));
     }
 
     #[test]

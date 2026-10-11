@@ -2,9 +2,9 @@ import { clsx } from "clsx";
 import { AnimatePresence, Reorder, motion, useDragControls, type PanInfo } from "framer-motion";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AVAILABLE_ACTIONS, type Action, type ActionType, type Button, type Layout, type Page } from "../../lib/api";
+import { AVAILABLE_ACTIONS, MAX_QUEUE_SIZE, RUN_MODES, type Action, type ActionType, type Button, type Layout, type Page, type RunMode } from "../../lib/api";
 import { ContextMenu, type MenuEntry, type MenuState } from "../ContextMenu";
-import { Toggle } from "../ui";
+import { Segmented, Toggle } from "../ui";
 import { ActionEditor } from "./ActionEditors";
 import { Icon } from "../../icons/Icon";
 import { ACTION_ICONS, blockOf, cloneActions, createActions, GROUP_ICONS, hasWait, isMarker, markersOrdered, removeAction, summarize } from "./actionUtils";
@@ -22,6 +22,7 @@ interface Props {
   lists?: ListKey[];
   /** Titles per list, translation keys. */
   labels?: Partial<Record<ListKey, string>>;
+  /** A fader's lists: no repeating while held and no run mode, a fader paces its own runs. */
   hideLoop?: boolean;
   /** The list belongs to a fader: value actions start out reading the fader's own level. */
   faderContext?: boolean;
@@ -187,6 +188,23 @@ export function ActionsTab({ button, onChange, pages, layout, lists = ["down", "
   return (
     <div ref={root} className="flex flex-col gap-5">
       {!hideLoop && <Toggle checked={button.loop} onChange={setLoop} label={t("actions.loop")} hint={t("actions.loopHint")} />}
+      {!hideLoop && (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+            <span className="text-sm text-stage-100">{t("actions.runMode.label")}</span>
+            <Segmented<RunMode> value={button.runMode} options={RUN_MODES.map((mode) => ({ value: mode, label: t(`actions.runMode.modes.${mode}`) }))} onChange={(runMode) => onChange({ ...button, runMode })} />
+          </div>
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-xs text-stage-400">{t(`actions.runMode.hints.${button.runMode}`, { count: button.queueSize })}</p>
+            {button.runMode === "queue" && (
+              <label className="flex shrink-0 items-center gap-1.5 text-xs text-stage-400">
+                {t("actions.runMode.queueSize")}
+                <NumberInput value={button.queueSize} min={1} max={MAX_QUEUE_SIZE} onChange={(queueSize) => onChange({ ...button, queueSize })} className={holdInputCls} />
+              </label>
+            )}
+          </div>
+        </div>
+      )}
 
       {lists.map((key) => (
         <section
