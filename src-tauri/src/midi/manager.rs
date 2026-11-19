@@ -476,8 +476,8 @@ impl DeviceManager {
         if let Some(c) = connected {
             let inputs = scan::list_inputs()?;
             let outputs = scan::list_outputs()?;
-            let input = inputs.into_iter().find(|p| p.name == c.input_name);
-            let output = outputs.into_iter().find(|p| p.name == c.output_name);
+            let input = inputs.into_iter().find(|p| scan::same_port(&p.name, &c.input_name));
+            let output = outputs.into_iter().find(|p| scan::same_port(&p.name, &c.output_name));
             if let (Some(input), Some(output)) = (input, output) {
                 found.insert(
                     0,
@@ -605,11 +605,11 @@ impl DeviceManager {
             return Ok(true);
         }
         let ports = port_fingerprint();
-        if !ports.contains(&format!("in:{}", saved.input_name)) || !ports.contains(&format!("out:{}", saved.output_name)) {
+        if !scan::fingerprint_has(&ports, "in", &saved.input_name) || !scan::fingerprint_has(&ports, "out", &saved.output_name) {
             return Ok(false);
         }
         let found = scan::scan_launchpads(&[])?;
-        let matching = found.into_iter().find(|d| d.input.name == saved.input_name && d.output.name == saved.output_name);
+        let matching = found.into_iter().find(|d| scan::same_port(&d.input.name, &saved.input_name) && scan::same_port(&d.output.name, &saved.output_name));
         match matching {
             Some(d) if d.model == saved.model => {
                 self.connect(&d.input.name, &d.output.name, d.model, d.firmware, saved.manual)?;
@@ -635,16 +635,13 @@ impl DeviceManager {
         midi_in.ignore(Ignore::None);
         let midi_out = MidiOutput::new("Lunchpad").map_err(|e| MidiError::Init(e.to_string()))?;
 
-        let in_port = midi_in
-            .ports()
-            .into_iter()
-            .find(|p| midi_in.port_name(p).map(|n| n == input_name).unwrap_or(false))
+        // The names the ports have now: on Linux a re-plugged device can be back under another
+        // ALSA address, and the watcher and the saved device should see the current one.
+        let (in_port, input_now) = find_port(midi_in.ports().into_iter().filter_map(|p| midi_in.port_name(&p).ok().map(|n| (p, n))).collect(), input_name)
             .ok_or_else(|| MidiError::PortNotFound(input_name.to_string()))?;
-        let out_port = midi_out
-            .ports()
-            .into_iter()
-            .find(|p| midi_out.port_name(p).map(|n| n == output_name).unwrap_or(false))
+        let (out_port, output_now) = find_port(midi_out.ports().into_iter().filter_map(|p| midi_out.port_name(&p).ok().map(|n| (p, n))).collect(), output_name)
             .ok_or_else(|| MidiError::PortNotFound(output_name.to_string()))?;
+        let (input_name, output_name) = (input_now.as_str(), output_now.as_str());
 
         // Output thread ------------------------------------------------------
         let mut out_conn = midi_out.connect(&out_port, "lunchpad-out").map_err(|e| MidiError::Connection(e.to_string()))?;
@@ -925,6 +922,13 @@ impl InputSink {
     }
 }
 
+/// The port called `name`, or else the same port under another ALSA address
+/// (see `scan::port_key`), with the name it has now.
+fn find_port<P>(ports: Vec<(P, String)>, name: &str) -> Option<(P, String)> {
+    let index = ports.iter().position(|(_, n)| n == name).or_else(|| ports.iter().position(|(_, n)| scan::same_port(n, name)))?;
+    ports.into_iter().nth(index)
+}
+
 /// Open a device's second input interface with its own MIDI client.
 fn open_secondary_input(name: &str, sink: InputSink) -> MidiResult<MidiInputConnection<()>> {
     let mut midi_in = MidiInput::new("Lunchpad secondary").map_err(|e| MidiError::Init(e.to_string()))?;
@@ -994,8 +998,8 @@ pub fn spawn_watcher(app: AppHandle, manager: SharedManager) {
                     if active.info.is_virtual {
                         continue;
                     }
-                    let in_ok = ports.contains(&format!("in:{}", active.info.input_name));
-                    let out_ok = ports.contains(&format!("out:{}", active.info.output_name));
+                    let in_ok = scan::fingerprint_has(&ports, "in", &active.info.input_name);
+                    let out_ok = scan::fingerprint_has(&ports, "out", &active.info.output_name);
                     if !in_ok || !out_ok {
                         m.device_lost();
                     }
@@ -1016,7 +1020,7 @@ pub fn spawn_watcher(app: AppHandle, manager: SharedManager) {
                     }
                     continue;
                 }
-                let present = ports.contains(&format!("in:{}", saved.input_name)) && ports.contains(&format!("out:{}", saved.output_name));
+                let present = scan::fingerprint_has(&ports, "in", &saved.input_name) && scan::fingerprint_has(&ports, "out", &saved.output_name);
                 if !present {
                     continue;
                 }

@@ -29,6 +29,54 @@ fn new_output(name: &str) -> MidiResult<MidiOutput> {
     MidiOutput::new(name).map_err(|e| MidiError::Init(e.to_string()))
 }
 
+/// ALSA (Linux) ends a port name with the port's sequencer address,
+/// `client:port`: "Launchpad MK2:Launchpad MK2 MIDI 1 20:0". The address
+/// changes when the device comes back in another slot, so ports are compared
+/// without it there. Other systems' names are used as they are.
+pub fn port_key(name: &str) -> &str {
+    if cfg!(target_os = "linux") {
+        strip_alsa_address(name)
+    } else {
+        name
+    }
+}
+
+fn strip_alsa_address(name: &str) -> &str {
+    let Some((head, address)) = name.rsplit_once(' ') else { return name };
+    let digits = |s: &str| !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit());
+    match address.split_once(':') {
+        Some((client, port)) if digits(client) && digits(port) && !head.is_empty() => head,
+        _ => name,
+    }
+}
+
+/// Whether two port names mean the same port (see `port_key`).
+pub fn same_port(a: &str, b: &str) -> bool {
+    port_key(a) == port_key(b)
+}
+
+/// Whether a `port_fingerprint` lists the port `name`; `direction` is `in` or `out`.
+pub fn fingerprint_has(ports: &[String], direction: &str, name: &str) -> bool {
+    ports.iter().any(|p| p.strip_prefix(direction).and_then(|rest| rest.strip_prefix(':')).is_some_and(|n| same_port(n, name)))
+}
+
+/// Ports of Lunchpad's own MIDI clients ("Lunchpad", "Lunchpad scanner" …).
+/// ALSA lists the ports a program opens next to the devices' ports; they must
+/// not be offered, scanned or talked to.
+fn is_own_port(name: &str) -> bool {
+    cfg!(target_os = "linux") && is_own_alsa_port(name)
+}
+
+fn is_own_alsa_port(name: &str) -> bool {
+    name.split_once(':').is_some_and(|(client, _)| client.starts_with("Lunchpad"))
+}
+
+/// ALSA's loopback ("Midi Through:Midi Through Port-0 14:0") echoes whatever it
+/// is sent: never a Launchpad, so a scan does not spend time asking it.
+fn not_worth_asking(name: &str) -> bool {
+    cfg!(target_os = "linux") && name.starts_with("Midi Through:")
+}
+
 /// List all MIDI input ports.
 pub fn list_inputs() -> MidiResult<Vec<MidiPortInfo>> {
     let input = new_input("Lunchpad scanner")?;
@@ -40,6 +88,7 @@ pub fn list_inputs() -> MidiResult<Vec<MidiPortInfo>> {
             index,
             name: input.port_name(port).unwrap_or_else(|_| format!("Input {index}")),
         })
+        .filter(|p| !is_own_port(&p.name))
         .collect())
 }
 
@@ -54,6 +103,7 @@ pub fn list_outputs() -> MidiResult<Vec<MidiPortInfo>> {
             index,
             name: output.port_name(port).unwrap_or_else(|_| format!("Output {index}")),
         })
+        .filter(|p| !is_own_port(&p.name))
         .collect())
 }
 
@@ -87,7 +137,7 @@ pub fn scan_launchpads(exclude: &[String]) -> MidiResult<Vec<DiscoveredLaunchpad
     let (tx, rx) = unbounded::<(usize, Vec<u8>)>();
     let mut open_inputs: Vec<MidiInputConnection<()>> = Vec::new();
     for port in &inputs {
-        if excluded.contains(port.name.as_str()) {
+        if excluded.contains(port.name.as_str()) || not_worth_asking(&port.name) {
             continue;
         }
         let midi_in = new_input("Lunchpad scanner input")?;
@@ -114,7 +164,7 @@ pub fn scan_launchpads(exclude: &[String]) -> MidiResult<Vec<DiscoveredLaunchpad
     let mut claimed_inputs: HashSet<usize> = HashSet::new();
 
     for out_port in &outputs {
-        if excluded.contains(out_port.name.as_str()) {
+        if excluded.contains(out_port.name.as_str()) || not_worth_asking(&out_port.name) {
             continue;
         }
         let midi_out = new_output("Lunchpad scanner output")?;
@@ -498,3 +548,49 @@ mod interface_tests {
     }
 }
 
+
+#[cfg(test)]
+mod port_name_tests {
+    use super::*;
+
+    #[test]
+    fn alsa_address_is_dropped() {
+        assert_eq!(strip_alsa_address("Launchpad MK2:Launchpad MK2 MIDI 1 20:0"), "Launchpad MK2:Launchpad MK2 MIDI 1");
+        assert_eq!(strip_alsa_address("Launchpad MK2:Launchpad MK2 MIDI 1 24:0"), "Launchpad MK2:Launchpad MK2 MIDI 1");
+        assert_eq!(strip_alsa_address("Launchpad X:Launchpad X LPX MIDI In 28:1"), "Launchpad X:Launchpad X LPX MIDI In");
+    }
+
+    #[test]
+    fn names_without_an_address_stay_whole() {
+        for name in ["Launchpad X LPX MIDI", "MIDIIN2 (LKMK3 MIDI)", "Port 12:", "Port :3", "Launchpad 3:a", "12:0", "Launchpad Pro MK3 LPProMK3 MIDI"] {
+            assert_eq!(strip_alsa_address(name), name, "{name}");
+        }
+    }
+
+    #[test]
+    fn lunchpads_own_clients_are_recognised() {
+        assert!(is_own_alsa_port("Lunchpad:lunchpad-out 131:0"));
+        assert!(is_own_alsa_port("Lunchpad scanner input:lunchpad-scan 132:0"));
+        assert!(is_own_alsa_port("Lunchpad secondary:lunchpad-in-secondary 133:0"));
+        assert!(!is_own_alsa_port("Launchpad MK2:Launchpad MK2 MIDI 1 20:0"));
+        assert!(!is_own_alsa_port("Midi Through:Midi Through Port-0 14:0"));
+        assert!(!is_own_alsa_port("Lunchpad"));
+    }
+
+    #[test]
+    fn fingerprint_lookup_keeps_directions_apart() {
+        let ports = vec!["in:Launchpad X LPX MIDI".to_string(), "out:Launchpad X LPX DAW".to_string()];
+        assert!(fingerprint_has(&ports, "in", "Launchpad X LPX MIDI"));
+        assert!(fingerprint_has(&ports, "out", "Launchpad X LPX DAW"));
+        assert!(!fingerprint_has(&ports, "out", "Launchpad X LPX MIDI"));
+        assert!(!fingerprint_has(&ports, "in", "Launchpad X"));
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_device_back_in_another_slot_is_the_same_port() {
+        assert!(same_port("Launchpad MK2:Launchpad MK2 MIDI 1 20:0", "Launchpad MK2:Launchpad MK2 MIDI 1 24:0"));
+        let ports = vec!["in:Launchpad MK2:Launchpad MK2 MIDI 1 24:0".to_string()];
+        assert!(fingerprint_has(&ports, "in", "Launchpad MK2:Launchpad MK2 MIDI 1 20:0"));
+    }
+}
