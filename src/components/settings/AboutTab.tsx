@@ -3,7 +3,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import logo from "../../assets/lunchpad-icon.png";
-import { useUpdateStore } from "../../store/update";
+import { selfUpdates, useUpdateStore } from "../../store/update";
 import { Button } from "../ui";
 import { Section } from "./SettingsDialog";
 
@@ -77,14 +77,14 @@ export function AboutTab() {
         </div>
       </div>
 
-      <Section title={t("about.updatesTitle")} description={t("about.updatesHint")}>
+      <Section title={t("about.updatesTitle")} description={t(selfUpdates() ? "about.updatesHint" : "about.updatesManualHint")}>
         <div className="flex flex-wrap items-center gap-3 text-sm text-stage-300">
           <Button size="sm" onClick={() => void check(true)} disabled={status === "checking" || status === "installing" || status === "ready"}>
             {t("about.checkUpdates")}
           </Button>
           {status === "available" && (
             <Button size="sm" variant="primary" onClick={() => void install()}>
-              {t("updater.install")}
+              {t(selfUpdates() ? "updater.install" : "updater.download")}
             </Button>
           )}
           {statusText && <span className={status === "error" ? "text-danger" : ""}>{statusText}</span>}

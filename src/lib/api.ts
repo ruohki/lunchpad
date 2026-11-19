@@ -459,6 +459,8 @@ export interface PlatformInfo {
   windows: PlatformMissing | null;
   /** Keeping Lunchpad's own windows above the others */
   stayOnTop: PlatformMissing | null;
+  /** Installs new versions itself; false for the plain Linux binary, which is replaced by hand */
+  selfUpdate: boolean;
 }
 
 // ----- profile ---------------------------------------------------------------

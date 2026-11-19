@@ -1,6 +1,11 @@
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { create } from "zustand";
+import { useSettingsStore } from "./settings";
+
+/** False for a copy that cannot replace itself (the plain Linux binary): it gets the download page instead. */
+export const selfUpdates = () => useSettingsStore.getState().platform?.selfUpdate !== false;
 
 export type UpdateStatus = "idle" | "checking" | "upToDate" | "available" | "installing" | "ready" | "error";
 
@@ -51,6 +56,11 @@ export const useUpdateStore = create<UpdateStore>((set, get) => ({
   install: async () => {
     const update = pending;
     if (!update || get().status === "installing") return;
+    if (!selfUpdates()) {
+      // The updater would treat the plain binary as an AppImage and write the package over it.
+      await openUrl(`https://github.com/ruohki/lunchpad/releases/tag/v${update.version}`);
+      return;
+    }
     set({ status: "installing", downloaded: 0, total: null, error: null });
     try {
       await update.downloadAndInstall((event) => {

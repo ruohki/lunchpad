@@ -461,6 +461,7 @@
     "releases": "Releases",
     "updatesTitle": "Updates",
     "updatesHint": "Lunchpad looks for a new release on GitHub when it starts.",
+    "updatesManualHint": "Lunchpad looks for a new release on GitHub when it starts. This copy is the plain binary, which cannot replace itself: Download opens the release page, where you get the new one. The .deb and .rpm packages update themselves.",
     "checkUpdates": "Check for updates",
     "legalTitle": "Legal",
     "license": "This software is free under the GNU General Public License v3. Anyone who passes it on has to keep the credits and share the source. If you paid money for it, you got ripped off.",
@@ -479,6 +480,7 @@
     "ready": "Restarting…",
     "error": "Update check failed: {{error}}",
     "install": "Install and restart",
+    "download": "Download",
     "noticeTitle": "Update available",
     "later": "Later"
   },

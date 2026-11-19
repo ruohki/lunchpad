@@ -9,6 +9,9 @@
 //!
 //! The UI leaves what is missing out of its menus and greys out the settings;
 //! the engine refuses it, so a profile made on another system runs the rest.
+//!
+//! Updates, too: the plain Linux binary is no package the updater can replace,
+//! so it sends people to the release page instead of installing.
 
 use serde::Serialize;
 use std::sync::OnceLock;
@@ -37,6 +40,9 @@ pub struct Platform {
     pub windows: Option<Missing>,
     /// Keeping Lunchpad's own windows above the others.
     pub stay_on_top: Option<Missing>,
+    /// Installs new versions itself. False for the plain Linux binary: the
+    /// updater can only swap a .deb, an .rpm or an AppImage.
+    pub self_update: bool,
 }
 
 impl Platform {
@@ -52,7 +58,8 @@ impl Platform {
 pub fn current() -> &'static Platform {
     static PLATFORM: OnceLock<Platform> = OnceLock::new();
     PLATFORM.get_or_init(|| {
-        let platform = detect(std::env::consts::OS, |name| std::env::var(name).ok());
+        let packaged = tauri::utils::platform::bundle_type().is_some();
+        let platform = detect(std::env::consts::OS, packaged, |name| std::env::var(name).ok());
         tracing::info!(?platform, "platform");
         platform
     })
@@ -72,7 +79,9 @@ fn session(var: &impl Fn(&str) -> Option<String>) -> Option<&'static str> {
     }
 }
 
-fn detect(os: &'static str, var: impl Fn(&str) -> Option<String>) -> Platform {
+/// `packaged`: the bundler marked this binary as part of a package (always so
+/// on macOS, for the installer on Windows, a .deb or .rpm on Linux).
+fn detect(os: &'static str, packaged: bool, var: impl Fn(&str) -> Option<String>) -> Platform {
     let session = if os == "linux" { session(&var) } else { None };
     let wayland = session == Some("wayland");
     let wayland_blocks = wayland.then_some(Missing::Wayland);
@@ -85,6 +94,7 @@ fn detect(os: &'static str, var: impl Fn(&str) -> Option<String>) -> Platform {
             _ => Some(if wayland { Missing::Wayland } else { Missing::System }),
         },
         stay_on_top: wayland_blocks,
+        self_update: os != "linux" || packaged,
     }
 }
 
@@ -101,7 +111,7 @@ mod tests {
     #[test]
     fn macos_and_windows_have_everything() {
         for os in ["macos", "windows"] {
-            let p = detect(os, env(&[("WAYLAND_DISPLAY", "wayland-0")]));
+            let p = detect(os, true, env(&[("WAYLAND_DISPLAY", "wayland-0")]));
             assert_eq!(p.session, None);
             assert_eq!((p.input, p.windows, p.stay_on_top), (None, None, None), "{os}");
         }
@@ -109,7 +119,7 @@ mod tests {
 
     #[test]
     fn wayland_session_blocks_input_windows_and_stay_on_top() {
-        let p = detect("linux", env(&[("XDG_SESSION_TYPE", "wayland"), ("WAYLAND_DISPLAY", "wayland-0"), ("DISPLAY", ":0")]));
+        let p = detect("linux", true, env(&[("XDG_SESSION_TYPE", "wayland"), ("WAYLAND_DISPLAY", "wayland-0"), ("DISPLAY", ":0")]));
         assert_eq!(p.session, Some("wayland"));
         assert_eq!(p.input, Some(Missing::Wayland));
         assert_eq!(p.windows, Some(Missing::Wayland));
@@ -119,14 +129,14 @@ mod tests {
     #[test]
     fn wayland_is_found_by_its_socket_alone() {
         // XWayland apps (GDK_BACKEND=x11) see DISPLAY too; the session is still Wayland.
-        let p = detect("linux", env(&[("WAYLAND_DISPLAY", "wayland-1"), ("DISPLAY", ":1")]));
+        let p = detect("linux", true, env(&[("WAYLAND_DISPLAY", "wayland-1"), ("DISPLAY", ":1")]));
         assert_eq!(p.session, Some("wayland"));
         assert!(!p.input_available());
     }
 
     #[test]
     fn x11_session_keeps_input_but_has_no_window_control() {
-        let p = detect("linux", env(&[("XDG_SESSION_TYPE", "x11"), ("DISPLAY", ":0"), ("WAYLAND_DISPLAY", "")]));
+        let p = detect("linux", true, env(&[("XDG_SESSION_TYPE", "x11"), ("DISPLAY", ":0"), ("WAYLAND_DISPLAY", "")]));
         assert_eq!(p.session, Some("x11"));
         assert!(p.input_available());
         assert!(p.stay_on_top_available());
@@ -135,20 +145,30 @@ mod tests {
 
     #[test]
     fn unknown_linux_session_leaves_input_to_the_connection() {
-        let p = detect("linux", env(&[]));
+        let p = detect("linux", true, env(&[]));
         assert_eq!(p.session, None);
         assert!(p.input_available());
         assert_eq!(p.windows, Some(Missing::System));
     }
 
     #[test]
+    fn only_the_plain_linux_binary_leaves_updates_to_the_user() {
+        assert!(detect("linux", true, env(&[])).self_update);
+        assert!(!detect("linux", false, env(&[])).self_update);
+        // A Windows build outside the installer (a dev build) keeps its updater, as before.
+        assert!(detect("windows", false, env(&[])).self_update);
+        assert!(detect("macos", false, env(&[])).self_update);
+    }
+
+    #[test]
     fn serializes_for_the_interface() {
-        let p = detect("linux", env(&[("XDG_SESSION_TYPE", "wayland")]));
+        let p = detect("linux", true, env(&[("XDG_SESSION_TYPE", "wayland")]));
         let json = serde_json::to_value(&p).unwrap();
         assert_eq!(json["os"], "linux");
         assert_eq!(json["session"], "wayland");
         assert_eq!(json["input"], "wayland");
         assert_eq!(json["stayOnTop"], "wayland");
         assert_eq!(json["windows"], "wayland");
+        assert_eq!(json["selfUpdate"], true);
     }
 }

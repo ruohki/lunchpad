@@ -35,7 +35,20 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "createUpdaterArtifacts": true
+    "createUpdaterArtifacts": true,
+    "category": "Utility",
+    "shortDescription": "Turn a Novation Launchpad into a macro controller",
+    "longDescription": "Lunchpad turns Novation Launchpads and Launchkey Minis into macro controllers: sounds, hotkeys, OBS and Streamlabs, Home Assistant, web requests and scripts on every pad.",
+    "linux": {
+      "deb": {
+        "depends": ["libasound2", "libspeechd2", "libdbus-1-3"],
+        "recommends": ["speech-dispatcher", "pulseaudio-utils"]
+      },
+      "rpm": {
+        "depends": ["libasound.so.2()(64bit)", "libspeechd.so.2()(64bit)", "libdbus-1.so.3()(64bit)"],
+        "recommends": ["speech-dispatcher", "pulseaudio-utils"]
+      }
+    }
   },
   "plugins": {
     "updater": {

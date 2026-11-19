@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useDeviceStore } from "../store/device";
 import { useProfileStore } from "../store/profile";
 import { useSettingsStore } from "../store/settings";
-import { useUpdateStore } from "../store/update";
+import { selfUpdates, useUpdateStore } from "../store/update";
 import { Button, IconClose } from "./ui";
 import { useState } from "react";
 import { useUiStore } from "../store/ui";
@@ -138,7 +138,7 @@ export function Notices() {
       title: t("updater.noticeTitle"),
       lines: [t("updater.available", { version: updateVersion }), ...(updateNotes ? [updateNotes.split("\n")[0].slice(0, 160)] : [])],
       onClose: dismissUpdate,
-      action: { label: t("updater.install"), run: () => void installUpdate() },
+      action: { label: t(selfUpdates() ? "updater.install" : "updater.download"), run: () => void installUpdate() },
     });
   }
   if (deviceError && !connected) {

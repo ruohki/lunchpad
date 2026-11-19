@@ -1,8 +1,9 @@
 name: Release
 
 # Tag a commit `vX.Y.Z` (matching the version in package.json, Cargo.toml and
-# tauri.conf.json) to build macOS (Apple Silicon + Intel) and Windows, sign the
-# updater artifacts and publish a draft GitHub release with `latest.json`.
+# tauri.conf.json) to build macOS (Apple Silicon + Intel), Windows and Linux
+# (x86_64 + arm64: .deb, .rpm and the plain binary as .tar.gz), sign the updater
+# artifacts and publish a draft GitHub release with `latest.json`.
 #
 # Required secrets:
 #   TAURI_SIGNING_PRIVATE_KEY            updater signing key (contents of ~/.tauri/lunchpad.key)
@@ -57,7 +58,7 @@ jobs:
             echo "Release $tag already exists, the build jobs will attach to it."
           else
             gh release create "$tag" --draft --title "Lunchpad $tag" --target "$GITHUB_SHA" \
-              --notes "Download the installer for your system below. Installed copies update themselves."
+              --notes "Download the installer for your system below; on Linux the .deb or .rpm package, or the plain binary in the .tar.gz. Installed copies update themselves."
             echo "Created draft release $tag."
           fi
       - uses: oven-sh/setup-bun@v2
@@ -87,9 +88,25 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             bundles: nsis
+          # Ubuntu 22.04 sets the glibc baseline (2.35): the packages and the binary run on it and
+          # everything newer. The arm runner is free for public repositories.
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            bundles: deb,rpm
+          - os: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+            bundles: deb,rpm
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - name: Linux build dependencies
+        if: runner.os == 'Linux'
+        # WebKitGTK and GTK for the window, AppIndicator for the tray, ALSA for MIDI and sound,
+        # Speech Dispatcher for text to speech (its bindings run bindgen, hence libclang), D-Bus
+        # for the Secret Service.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libasound2-dev libspeechd-dev libdbus-1-dev libxkbcommon-dev libclang-dev
       - uses: oven-sh/setup-bun@v2
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -180,7 +197,7 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: "Lunchpad v__VERSION__"
-          releaseBody: "Download the installer for your system below. Installed copies update themselves."
+          releaseBody: "Download the installer for your system below; on Linux the .deb or .rpm package, or the plain binary in the .tar.gz. Installed copies update themselves."
           releaseDraft: true
           # Release candidates are published as normal releases on purpose: the updater reads
           # releases/latest/download/latest.json, and GitHub's "latest" skips pre-releases, so a
@@ -189,6 +206,31 @@ jobs:
           prerelease: false
           includeUpdaterJson: true
           args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+
+      - name: Attach the plain Linux binary
+        if: runner.os == 'Linux'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          target=${{ matrix.target }}
+          name="Lunchpad_${version}_linux_${target%%-*}"
+          dir="$RUNNER_TEMP/$name"
+          mkdir -p "$dir"
+          cp "src-tauri/target/$target/release/lunchpad" "$dir/lunchpad"
+          cp LICENSE.md "$dir/"
+          # The bundler stamps each package's copy of the binary with its type (.deb, .rpm); the
+          # updater reads the stamp to know how to install over it. The plain binary must carry
+          # none, so the app offers the release page instead of writing a package over itself.
+          # The copy in target/ comes out unstamped; this clears a stamp should that ever change.
+          perl -0777 -pi -e 's/__TAURI_BUNDLE_TYPE_VAR_(?:DEB|RPM|APP)/__TAURI_BUNDLE_TYPE_VAR_UNK/g' "$dir/lunchpad"
+          if grep -aqE '__TAURI_BUNDLE_TYPE_VAR_(DEB|RPM|APP)' "$dir/lunchpad" || ! grep -aq '__TAURI_BUNDLE_TYPE_VAR_UNK' "$dir/lunchpad"; then
+            echo "The bundle stamp of the plain binary could not be reset."
+            exit 1
+          fi
+          tar -C "$RUNNER_TEMP" -czf "$RUNNER_TEMP/$name.tar.gz" "$name"
+          gh release upload "v$version" "$RUNNER_TEMP/$name.tar.gz" --clobber
 
       - name: Notarize and staple the DMG (only when the secrets exist)
         if: runner.os == 'macOS'

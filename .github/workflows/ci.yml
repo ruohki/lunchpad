@@ -26,10 +26,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest]
+        # Linux builds on the oldest supported Ubuntu, like the release, so its glibc baseline is tested.
+        os: [macos-latest, windows-latest, ubuntu-22.04]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - name: Linux build dependencies
+        if: runner.os == 'Linux'
+        # WebKitGTK and GTK for the window, AppIndicator for the tray, ALSA for MIDI and sound,
+        # Speech Dispatcher for text to speech (its bindings run bindgen, hence libclang), D-Bus
+        # for the Secret Service.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libasound2-dev libspeechd-dev libdbus-1-dev libxkbcommon-dev libclang-dev
       - uses: oven-sh/setup-bun@v2
       - uses: dtolnay/rust-toolchain@stable
       - uses: swatinem/rust-cache@v2
