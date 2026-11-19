@@ -118,6 +118,18 @@ struct Worker {
 
 impl Worker {
     fn connection(&mut self) -> Option<&mut Enigo> {
+        if !crate::platform::current().input_available() {
+            // Under Wayland a connection would reach XWayland programs at best and
+            // report success for keys nobody receives: refuse openly instead.
+            if !self.reported {
+                self.reported = true;
+                tracing::warn!("keyboard and mouse synthesis are not available in a Wayland session");
+                if let Some(app) = &self.app {
+                    let _ = app.emit(EVENT_INPUT_UNAVAILABLE, InputUnavailable { reason: "wayland".into(), needs_permission: false });
+                }
+            }
+            return None;
+        }
         if self.enigo.is_none() {
             let settings = Settings { open_prompt_to_get_permissions: true, ..Default::default() };
             match Enigo::new(&settings) {

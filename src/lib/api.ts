@@ -121,6 +121,7 @@ export interface Diagnostics {
   tauriVersion: string;
   webviewVersion: string | null;
   os: { name: string; version: string; arch: string };
+  platform: PlatformInfo;
   configDir: string;
   logDir: string;
   device: {
@@ -439,8 +440,25 @@ export interface HistoryState {
 }
 
 export interface InputUnavailable {
+  /** An error text, or `wayland` when the session does not allow input to other programs. */
   reason: string;
   needsPermission: boolean;
+}
+
+/** Why a feature is missing on this system: the Wayland session refuses it, or Lunchpad has no implementation for this OS. */
+export type PlatformMissing = "wayland" | "system";
+
+/** What this system lets Lunchpad do; `null` = available. */
+export interface PlatformInfo {
+  os: "macos" | "windows" | "linux" | string;
+  /** Linux display server */
+  session: "wayland" | "x11" | null;
+  /** Keys, text and the mouse sent to other programs, the pointer position, push-to-talk */
+  input: PlatformMissing | null;
+  /** Other programs' windows and the displays */
+  windows: PlatformMissing | null;
+  /** Keeping Lunchpad's own windows above the others */
+  stayOnTop: PlatformMissing | null;
 }
 
 // ----- profile ---------------------------------------------------------------
@@ -1025,6 +1043,7 @@ export const api = {
   getSettings: () => invoke<Settings>("get_settings"),
   setPushToTalk: (config: PushToTalkSettings) => invoke<Settings>("set_push_to_talk", { config }),
   checkKeyboardAccess: () => invoke<void>("check_keyboard_access"),
+  platformInfo: () => invoke<PlatformInfo>("platform_info"),
   setDeveloperMode: (enabled: boolean) => invoke<Settings>("set_developer_mode", { enabled }),
   /** Add or replace a named secret; the value is never read back. */
   setSecret: (name: string, value: string) => invoke<Settings>("set_secret", { name, value }),

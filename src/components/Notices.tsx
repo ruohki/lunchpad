@@ -79,7 +79,10 @@ export function Notices() {
       onClose: dismissHealth,
     });
   }
-  if (inputProblem) {
+  if (inputProblem?.reason === "wayland") {
+    // Not something to fix or check again: a profile from another computer ran a key or mouse action.
+    items.push({ key: "input", tone: "error", title: t("notices.inputTitle"), lines: [t("platform.missing.input.wayland")], onClose: dismissInput });
+  } else if (inputProblem) {
     items.push({
       key: "input",
       tone: "error",

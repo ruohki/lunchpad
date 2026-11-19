@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { Action, Button } from "../../lib/api";
+import { missingKey, useFeatureMissing } from "../../lib/platform";
 import { Toggle } from "../ui";
 import { PlaceholderField } from "./PlaceholderField";
 import { useVariableSuggestions } from "./VariableFields";
@@ -10,6 +11,7 @@ type DebugAction = Extract<Action, { type: "debug" }>;
 export function DebugEditor({ action, onChange, button }: { action: DebugAction; onChange: (next: Action) => void; button?: Button }) {
   const { t } = useTranslation();
   const suggestions = useVariableSuggestions(button);
+  const onTopMissing = useFeatureMissing("stayOnTop");
   return (
     <div className="flex flex-col gap-3">
       <label className="flex flex-col gap-1 text-xs text-stage-400">
@@ -22,7 +24,13 @@ export function DebugEditor({ action, onChange, button }: { action: DebugAction;
         {t("debug.text")}
         <PlaceholderField multiline rows={4} mono value={action.text} onChange={(text) => onChange({ ...action, text })} suggestions={suggestions} placeholder={t("debug.textPlaceholder")} ariaLabel={t("debug.text")} />
       </label>
-      <Toggle checked={action.alwaysOnTop} onChange={(alwaysOnTop) => onChange({ ...action, alwaysOnTop })} label={t("debug.onTop")} hint={t("debug.onTopHint")} />
+      <Toggle
+        checked={action.alwaysOnTop && !onTopMissing}
+        disabled={!!onTopMissing}
+        onChange={(alwaysOnTop) => onChange({ ...action, alwaysOnTop })}
+        label={t("debug.onTop")}
+        hint={onTopMissing ? t(missingKey("stayOnTop", onTopMissing)) : t("debug.onTopHint")}
+      />
       <p className="text-xs text-stage-500">{t("debug.hint")}</p>
     </div>
   );

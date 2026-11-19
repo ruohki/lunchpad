@@ -1,8 +1,10 @@
 import { create } from "zustand";
-import { api, events, type AudioSettings, type InputUnavailable, type ObsSettings, type PushToTalkSettings, type Settings, type SlobsSettings, type WindowSettings, type HomeAssistantSettings } from "../lib/api";
+import { api, events, type AudioSettings, type InputUnavailable, type ObsSettings, type PushToTalkSettings, type Settings, type SlobsSettings, type WindowSettings, type HomeAssistantSettings, type PlatformInfo } from "../lib/api";
 
 interface SettingsStore {
   settings: Settings | null;
+  /** What this system allows; `null` until known, and then everything counts as available. */
+  platform: PlatformInfo | null;
   inputProblem: InputUnavailable | null;
   init: () => Promise<() => void>;
   setPushToTalk: (config: PushToTalkSettings) => Promise<void>;
@@ -20,6 +22,7 @@ interface SettingsStore {
 
 export const useSettingsStore = create<SettingsStore>((set) => ({
   settings: null,
+  platform: null,
   inputProblem: null,
 
   init: async () => {
@@ -27,6 +30,10 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
       events.onSettings((settings) => set({ settings })),
       events.onInputUnavailable((problem) => set({ inputProblem: problem })),
     ]);
+    api
+      .platformInfo()
+      .then((platform) => set({ platform: platform ?? null }))
+      .catch(() => {});
     set({ settings: await api.getSettings() });
     return () => unlisten.forEach((fn) => fn());
   },

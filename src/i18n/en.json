@@ -393,6 +393,23 @@
     "magenta": "Magenta",
     "pink": "Pink"
   },
+  "platform": {
+    "kept": "It stays in the profile for other computers and does nothing here.",
+    "missing": {
+      "input": {
+        "wayland": "Not available in a Wayland session: Wayland does not let one program press keys, type, click or read the pointer in another.",
+        "system": "Not available on this system."
+      },
+      "windows": {
+        "wayland": "Not available in a Wayland session: Wayland does not let one program find, move or resize another program's windows.",
+        "system": "Not available on Linux: window control is built for macOS and Windows."
+      },
+      "stayOnTop": {
+        "wayland": "Not available in a Wayland session: the desktop decides which window stays on top.",
+        "system": "Not available on this system."
+      }
+    }
+  },
   "notices": {
     "errorTitle": "That did not work",
     "importTitle": "Imported {{pages}}",

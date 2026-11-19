@@ -19,6 +19,7 @@ pub mod live;
 pub mod macros;
 pub mod midi;
 pub mod obs;
+pub mod platform;
 pub mod profile;
 pub mod script;
 pub mod homeassistant;
@@ -117,7 +118,7 @@ impl EngineSink for TauriSink {
     }
     fn push_to_talk(&self, held: bool) {
         let ptt = self.settings.lock().settings.push_to_talk.clone();
-        if !ptt.enabled || ptt.key.is_empty() {
+        if !ptt.enabled || ptt.key.is_empty() || !platform::current().input_available() {
             return;
         }
         tracing::debug!(held, key = %ptt.key, modifiers = ?ptt.modifiers, "push-to-talk");
@@ -129,7 +130,7 @@ impl EngineSink for TauriSink {
     }
     fn push_to_talk_enabled(&self) -> bool {
         let ptt = &self.settings.lock().settings.push_to_talk;
-        ptt.enabled && !ptt.key.is_empty()
+        ptt.enabled && !ptt.key.is_empty() && platform::current().input_available()
     }
     fn variables_changed(&self, globals: &std::collections::HashMap<String, String>) {
         let _ = self.app.emit(EVENT_VARIABLES, globals);
@@ -203,6 +204,8 @@ fn init_tracing() -> LogState {
 pub fn run() {
     let log_state = init_tracing();
     tracing::info!(version = env!("CARGO_PKG_VERSION"), log_dir = ?log_state.dir, "starting Lunchpad");
+    // Logs the OS, the Linux display server and what they leave out.
+    let _ = platform::current();
 
     tauri::Builder::default()
         // One copy at a time: a second launch (the Start menu, a Dock click while the app sits in
@@ -397,6 +400,7 @@ pub fn run() {
             set_window_settings,
             set_tray_labels,
             diagnostics,
+            platform_info,
             open_log_dir,
             // media
             list_audio_devices,

@@ -12,6 +12,7 @@ import { Tooltip } from "../Tooltip";
 import { useSettingsStore } from "../../store/settings";
 import { useUiStore } from "../../store/ui";
 import { NumberInput } from "../NumberInput";
+import { actionMissing, missingKey } from "../../lib/platform";
 
 interface Props {
   button: Button;
@@ -69,6 +70,7 @@ export function ActionsTab({ button, onChange, pages, layout, lists = ["down", "
   const obsEnabled = useSettingsStore((s) => s.settings?.obs.enabled ?? false);
   const slobsEnabled = useSettingsStore((s) => s.settings?.slobs.enabled ?? false);
   const haEnabled = useSettingsStore((s) => s.settings?.homeAssistant?.enabled ?? false);
+  const platform = useSettingsStore((s) => s.platform);
   const clipboard = useUiStore((s) => s.actionClipboard);
   const copyActions = useUiStore((s) => s.copyActions);
 
@@ -163,8 +165,11 @@ export function ActionsTab({ button, onChange, pages, layout, lists = ["down", "
     if (clipboard) {
       items.push({ label: t("actions.paste", { count: clipboard.length }), onSelect: () => insertClones(key, clipboard, -1) }, "divider");
     }
-    // Integrations that are switched off in the settings stay out of the menu.
-    const groups = MENU_GROUPS.filter((g) => (g.group === "obs" ? obsEnabled : g.group === "slobs" ? slobsEnabled : g.group === "homeAssistant" ? haEnabled : true));
+    // Integrations that are switched off in the settings stay out of the menu, and so do
+    // actions this system cannot run (keys and windows under Wayland, say).
+    const groups = MENU_GROUPS.filter((g) => (g.group === "obs" ? obsEnabled : g.group === "slobs" ? slobsEnabled : g.group === "homeAssistant" ? haEnabled : true))
+      .map((g) => ({ ...g, types: g.types.filter((type) => !actionMissing(platform, type)) }))
+      .filter((g) => g.types.length > 0);
     groups.forEach((g, gi) => {
       const label = t(`actions.groups.${g.group}`);
       if (g.submenu) {
@@ -386,6 +391,9 @@ function ActionRow({
   const controls = useDragControls();
   const marker = isMarker(action);
   const available = AVAILABLE_ACTIONS.has(action.type);
+  const platform = useSettingsStore((s) => s.platform);
+  // Kept and editable (the profile may travel to another computer), but it does nothing here.
+  const lacking = actionMissing(platform, action.type);
   const summary = summarize(t, action, pages);
   const hasBody = available && (!marker || MARKERS_WITH_BODY.has(action.type)) && !NO_BODY.has(action.type);
 
@@ -405,7 +413,8 @@ function ActionRow({
         onDragEnd(x, y);
       }}
       initial={{ opacity: 0, x: -12 }}
-      animate={{ opacity: 1, x: 0 }}
+      // Faded through the animation, whose inline opacity would override a class.
+      animate={{ opacity: lacking ? 0.45 : available ? 1 : 0.8, x: 0 }}
       exit={{ opacity: 0, x: 12 }}
       transition={{ type: "spring", stiffness: 500, damping: 40 }}
       whileDrag={{ scale: 1.01, boxShadow: "0 12px 30px -10px rgba(0,0,0,0.8)" }}
@@ -420,7 +429,6 @@ function ActionRow({
         "rounded-lg border",
         marker ? "border-dashed border-stage-600 bg-stage-900/60" : "border-stage-700 bg-stage-800/70",
         slim && "border-stage-700/70 bg-transparent",
-        !available && "opacity-80",
       )}
     >
       {slim ? (
@@ -458,28 +466,31 @@ function ActionRow({
           </button>
         </Tooltip>
 
-        <button
-          type="button"
-          onClick={hasBody ? onToggle : undefined}
-          aria-expanded={hasBody ? expanded : undefined}
-          className={clsx("min-w-0 flex-1 text-left", hasBody && "cursor-pointer")}
-        >
-          <div className="flex items-center gap-2">
-            {hasBody && (
-              <Icon name="ChevronRight" className={clsx("w-3 shrink-0 text-xs text-stage-500 transition-transform", expanded && "rotate-90")} />
-            )}
-            <Icon name={ACTION_ICONS[action.type]} className="shrink-0 text-base text-stage-400" />
-            <span className="flex min-w-0 items-baseline gap-2">
-              <span className="shrink-0 text-sm font-medium text-stage-100">{t(`actions.types.${action.type}.name`)}</span>
-              {summary && <span className="truncate text-xs text-stage-400">{summary}</span>}
-            </span>
-          </div>
-          {(expanded || marker || !available) && (
-            <div className={clsx("text-xs text-stage-500", hasBody && "pl-5")}>
-              {available ? t(`actions.types.${action.type}.desc`) : t("actions.notAvailable")}
+        {/* An action this system cannot run stays faded; hovering says why. */}
+        <Tooltip content={lacking ? `${t(missingKey(lacking.feature, lacking.why))} ${t("platform.kept")}` : null} size="wide">
+          <button
+            type="button"
+            onClick={hasBody ? onToggle : undefined}
+            aria-expanded={hasBody ? expanded : undefined}
+            className={clsx("min-w-0 flex-1 text-left", hasBody && "cursor-pointer")}
+          >
+            <div className="flex items-center gap-2">
+              {hasBody && (
+                <Icon name="ChevronRight" className={clsx("w-3 shrink-0 text-xs text-stage-500 transition-transform", expanded && "rotate-90")} />
+              )}
+              <Icon name={ACTION_ICONS[action.type]} className="shrink-0 text-base text-stage-400" />
+              <span className="flex min-w-0 items-baseline gap-2">
+                <span className="shrink-0 text-sm font-medium text-stage-100">{t(`actions.types.${action.type}.name`)}</span>
+                {summary && <span className="truncate text-xs text-stage-400">{summary}</span>}
+              </span>
             </div>
-          )}
-        </button>
+            {(expanded || marker || !available) && (
+              <div className={clsx("text-xs text-stage-500", hasBody && "pl-5")}>
+                {available ? t(`actions.types.${action.type}.desc`) : t("actions.notAvailable")}
+              </div>
+            )}
+          </button>
+        </Tooltip>
 
         {hasWait(action.type) && (
           <Tooltip content={t("actions.waitHint")}>

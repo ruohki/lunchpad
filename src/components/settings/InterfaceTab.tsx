@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { missingKey, useFeatureMissing } from "../../lib/platform";
 import { useSettingsStore } from "../../store/settings";
 import { Toggle } from "../ui";
 import { Section } from "./SettingsDialog";
@@ -11,11 +12,18 @@ export function InterfaceTab() {
   const setDeveloperMode = useSettingsStore((s) => s.setDeveloperMode);
   const setWindow = useSettingsStore((s) => s.setWindow);
   const window = settings?.window ?? WINDOW_DEFAULTS;
+  const onTopMissing = useFeatureMissing("stayOnTop");
 
   return (
     <>
       <Section title={t("settings.windowTitle")} description={t("settings.windowHint")}>
-        <Toggle checked={window.stayOnTop} onChange={(stayOnTop) => void setWindow({ ...window, stayOnTop })} label={t("settings.stayOnTop")} />
+        <Toggle
+          checked={window.stayOnTop && !onTopMissing}
+          disabled={!!onTopMissing}
+          onChange={(stayOnTop) => void setWindow({ ...window, stayOnTop })}
+          label={t("settings.stayOnTop")}
+          hint={onTopMissing ? t(missingKey("stayOnTop", onTopMissing)) : undefined}
+        />
         <Toggle checked={window.minimizeToTray} onChange={(minimizeToTray) => void setWindow({ ...window, minimizeToTray })} label={t("settings.minimizeToTray")} hint={t("settings.minimizeToTrayHint")} />
         <Toggle checked={window.runAtStartup} onChange={(runAtStartup) => void setWindow({ ...window, runAtStartup })} label={t("settings.runAtStartup")} hint={t("settings.runAtStartupHint")} />
         <Toggle checked={window.startHidden} onChange={(startHidden) => void setWindow({ ...window, startHidden })} label={t("settings.startHidden")} hint={t("settings.startHiddenHint")} />

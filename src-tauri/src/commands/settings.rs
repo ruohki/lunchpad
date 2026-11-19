@@ -27,6 +27,12 @@ pub async fn set_push_to_talk(config: PushToTalkSettings, app: AppHandle, state:
 
 /// Create the keyboard connection now, so the OS permission prompt appears
 /// while the user is looking at the settings instead of mid-macro.
+/// What this system lets Lunchpad do (see `platform`); the interface hides the rest.
+#[tauri::command]
+pub async fn platform_info() -> CmdResult<crate::platform::Platform> {
+    Ok(crate::platform::current().clone())
+}
+
 #[tauri::command]
 pub async fn check_keyboard_access(state: State<'_, AppState>) -> CmdResult<()> {
     state.keyboard.probe();

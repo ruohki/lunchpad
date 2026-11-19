@@ -13,6 +13,8 @@ pub struct Diagnostics {
     pub tauri_version: String,
     pub webview_version: Option<String>,
     pub os: OsSummary,
+    /// The display server on Linux and which features this system lacks.
+    pub platform: crate::platform::Platform,
     pub config_dir: String,
     /// Where integration credentials are kept
     pub credential_store: String,
@@ -178,6 +180,7 @@ pub async fn diagnostics(app: AppHandle, state: State<'_, AppState>) -> CmdResul
         tauri_version: tauri::VERSION.to_string(),
         webview_version: tauri::webview_version().ok(),
         os,
+        platform: crate::platform::current().clone(),
         config_dir,
         credential_store: state.settings.lock().secrets.kind().to_string(),
         log_dir,

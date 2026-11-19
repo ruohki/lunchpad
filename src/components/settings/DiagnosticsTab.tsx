@@ -4,6 +4,14 @@ import { api, type Diagnostics } from "../../lib/api";
 import { Button } from "../ui";
 import { Section } from "./SettingsDialog";
 
+/** The features this system lacks, one report line, or none when it has them all. */
+function missingFeatures(d: Diagnostics): string[] {
+  const p = d.platform;
+  if (!p) return [];
+  const missing = (["input", "windows", "stayOnTop"] as const).filter((f) => p[f]).map((f) => `${f} (${p[f]})`);
+  return missing.length ? [`Not available here: ${missing.join(", ")}`] : [];
+}
+
 /** Plain-text report for bug reports; English on purpose so it reads the same everywhere. */
 function report(d: Diagnostics): string {
   const yn = (v: boolean) => (v ? "yes" : "no");
@@ -16,7 +24,8 @@ function report(d: Diagnostics): string {
       : `${d.device.status}${d.device.error ? ` (${d.device.error})` : ""}`;
   return [
     `Lunchpad ${d.appVersion} (Tauri ${d.tauriVersion}, WebView ${d.webviewVersion ?? "unknown"})`,
-    `OS: ${d.os.name} ${d.os.version} (${d.os.arch})`,
+    `OS: ${d.os.name} ${d.os.version} (${d.os.arch})${d.platform?.session ? `, ${d.platform.session} session` : ""}`,
+    ...missingFeatures(d),
     `Config: ${d.configDir}`,
     `Logs: ${d.logDir || "(none)"}`,
     "",

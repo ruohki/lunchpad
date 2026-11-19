@@ -9,7 +9,7 @@
 use crate::commands::{AppState, EVENT_SETTINGS};
 use crate::config::WindowSettings;
 use serde::Deserialize;
-use tauri::menu::{CheckMenuItem, IconMenuItem, Menu, MenuItem, PredefinedMenuItem};
+use tauri::menu::{CheckMenuItem, IconMenuItem, IsMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Emitter, Manager, Wry};
 use tauri_plugin_autostart::ManagerExt;
@@ -68,21 +68,14 @@ pub fn setup(app: &AppHandle, settings: &WindowSettings) -> tauri::Result<()> {
         stop_all: MenuItem::with_id(app, "stop_all", &l.stop_all, true, None::<&str>)?,
         quit: MenuItem::with_id(app, "quit", &l.quit, true, None::<&str>)?,
     };
-    let menu = Menu::with_items(
-        app,
-        &[
-            &items.discord,
-            &PredefinedMenuItem::separator(app)?,
-            &items.show,
-            &items.stay_on_top,
-            &items.minimize_to_tray,
-            &items.run_at_startup,
-            &PredefinedMenuItem::separator(app)?,
-            &items.stop_all,
-            &PredefinedMenuItem::separator(app)?,
-            &items.quit,
-        ],
-    )?;
+    let separators = [PredefinedMenuItem::separator(app)?, PredefinedMenuItem::separator(app)?, PredefinedMenuItem::separator(app)?];
+    let mut entries: Vec<&dyn IsMenuItem<Wry>> = vec![&items.discord, &separators[0], &items.show];
+    // Wayland stacks windows itself: no "stay on top" to offer there.
+    if crate::platform::current().stay_on_top_available() {
+        entries.push(&items.stay_on_top);
+    }
+    entries.extend([&items.minimize_to_tray as &dyn IsMenuItem<Wry>, &items.run_at_startup, &separators[1], &items.stop_all, &separators[2], &items.quit]);
+    let menu = Menu::with_items(app, &entries)?;
     let mut builder = TrayIconBuilder::with_id("main").tooltip("Lunchpad").menu(&menu).show_menu_on_left_click(true).on_menu_event(|app, event| on_menu(app, event.id().as_ref()));
     // macOS menu bars want a monochrome template image; Windows shows the coloured logo.
     #[cfg(target_os = "macos")]
@@ -118,8 +111,10 @@ fn discord_icon() -> Option<tauri::image::Image<'static>> {
 /// Push `settings` to the window, the OS autostart entry and the tray checks.
 pub fn apply(app: &AppHandle, settings: &WindowSettings) {
     if let Some(window) = app.get_webview_window(MAIN_WINDOW) {
-        if let Err(e) = window.set_always_on_top(settings.stay_on_top) {
-            tracing::warn!(error = %e, "could not change stay on top");
+        if crate::platform::current().stay_on_top_available() {
+            if let Err(e) = window.set_always_on_top(settings.stay_on_top) {
+                tracing::warn!(error = %e, "could not change stay on top");
+            }
         }
     }
     let launcher = app.autolaunch();
