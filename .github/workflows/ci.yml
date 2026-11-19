@@ -70,11 +70,17 @@ jobs:
             </dependency>
           </assembly>
           '@
-          $count = 0
-          Get-ChildItem src-tauri/target/debug/deps -Filter "*.exe" | ForEach-Object {
-            Set-Content -Path "$($_.FullName).manifest" -Value $manifest -Encoding utf8
-            $count++
+          # Cargo says where the test executables are: newer toolchains keep them under
+          # target/debug/build/<package>/<hash>/out instead of target/debug/deps. Asking again
+          # compiles nothing; the previous step built them.
+          $exes = cargo test --manifest-path src-tauri/Cargo.toml --no-run --message-format=json |
+            ForEach-Object { $_ | ConvertFrom-Json } |
+            Where-Object { $_.reason -eq "compiler-artifact" -and $_.executable } |
+            ForEach-Object { $_.executable }
+          if (-not $exes) { throw "cargo reported no test executables" }
+          foreach ($exe in $exes) {
+            Set-Content -Path "$exe.manifest" -Value $manifest -Encoding utf8
+            Write-Host "manifest for $exe"
           }
-          Write-Host "wrote $count manifest files"
       - name: Rust tests
         run: cargo test --manifest-path src-tauri/Cargo.toml
