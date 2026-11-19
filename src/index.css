@@ -27,6 +27,8 @@
   --color-danger: #ff5c5c;
   /* Variables Lunchpad provides (velocity, date, time …) */
   --color-builtin: #8cc4ff;
+  /* The moving line on a sound's waveform while it previews */
+  --color-playhead: #8cc4ff;
 }
 
 :root {

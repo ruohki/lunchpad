@@ -44,6 +44,7 @@ enum Cmd {
     Play { id: PlayId, req: PlayRequest, done: oneshot::Sender<PlayResult> },
     Stop(PlayId),
     StopAll,
+    Position(PlayId, oneshot::Sender<Option<f64>>),
     Devices(oneshot::Sender<AudioDevices>),
 }
 
@@ -73,6 +74,14 @@ impl AudioHandle {
         let _ = self.tx.send(Cmd::StopAll);
     }
 
+    /// Where a sound is right now, in seconds from the start of the file;
+    /// `None` once it finished, was stopped or never started.
+    pub async fn position(&self, id: PlayId) -> Option<f64> {
+        let (tx, rx) = oneshot::channel();
+        let _ = self.tx.send(Cmd::Position(id, tx));
+        rx.await.ok().flatten()
+    }
+
     pub async fn devices(&self) -> AudioDevices {
         let (tx, rx) = oneshot::channel();
         let _ = self.tx.send(Cmd::Devices(tx));
@@ -85,6 +94,8 @@ struct Playing {
     done: Option<oneshot::Sender<PlayResult>>,
     /// Safety net in case the device vanishes and the sink never drains.
     deadline: Option<Instant>,
+    /// Where in the file the sink's source begins (the trim start).
+    offset: Duration,
 }
 
 struct Worker {
@@ -136,8 +147,8 @@ impl Worker {
 
     fn play(&mut self, id: PlayId, req: PlayRequest, done: oneshot::Sender<PlayResult>) {
         match self.start(&req) {
-            Ok((sink, deadline)) => {
-                self.playing.insert(id, Playing { sink, done: Some(done), deadline });
+            Ok((sink, deadline, offset)) => {
+                self.playing.insert(id, Playing { sink, done: Some(done), deadline, offset });
             }
             Err(e) => {
                 tracing::warn!(file = %req.file.display(), error = %e, "could not play sound");
@@ -146,7 +157,7 @@ impl Worker {
         }
     }
 
-    fn start(&mut self, req: &PlayRequest) -> Result<(Sink, Option<Instant>), String> {
+    fn start(&mut self, req: &PlayRequest) -> Result<(Sink, Option<Instant>, Duration), String> {
         let file = File::open(&req.file).map_err(|e| format!("could not open {}: {e}", req.file.display()))?;
         let len = file.metadata().map(|m| m.len()).ok();
         let mut builder = Decoder::builder().with_data(BufReader::new(file)).with_seekable(true);
@@ -162,17 +173,17 @@ impl Worker {
         let stream = self.stream_for(&req.device)?;
         let sink = Sink::connect_new(stream.mixer());
         sink.set_volume(req.volume.max(0.0));
-        let deadline = match trimmed {
+        let (deadline, offset) = match trimmed {
             Some((skip, keep)) => {
                 sink.append(source.skip_duration(skip).take_duration(keep));
-                Some(Instant::now() + keep + Duration::from_secs(2))
+                (Some(Instant::now() + keep + Duration::from_secs(2)), skip)
             }
             None => {
                 sink.append(source);
-                None
+                (None, Duration::ZERO)
             }
         };
-        Ok((sink, deadline))
+        Ok((sink, deadline, offset))
     }
 
     fn tick(&mut self) {
@@ -190,6 +201,12 @@ impl Worker {
                 }
             }
         }
+    }
+
+    fn position(&self, id: PlayId) -> Option<f64> {
+        // The sink counts the samples the mixer pulled from its source, which
+        // starts at the trim start.
+        self.playing.get(&id).map(|p| (p.offset + p.sink.get_pos()).as_secs_f64())
     }
 
     fn stop(&mut self, id: PlayId) {
@@ -220,6 +237,10 @@ pub fn spawn_audio() -> AudioHandle {
                     Ok(Cmd::Play { id, req, done }) => worker.play(id, req, done),
                     Ok(Cmd::Stop(id)) => worker.stop(id),
                     Ok(Cmd::StopAll) => worker.stop_all(),
+                    Ok(Cmd::Position(id, reply)) => {
+                        worker.tick();
+                        let _ = reply.send(worker.position(id));
+                    }
                     Ok(Cmd::Devices(reply)) => {
                         let _ = reply.send(Worker::list_devices());
                     }

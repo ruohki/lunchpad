@@ -63,6 +63,13 @@ pub async fn stop_sound(id: u64, state: State<'_, AppState>) -> CmdResult<()> {
     Ok(())
 }
 
+/// Playback position of a sound in seconds from the start of its file;
+/// `None` once it is over.
+#[tauri::command]
+pub async fn sound_position(id: u64, state: State<'_, AppState>) -> CmdResult<Option<f64>> {
+    Ok(state.audio.position(id).await)
+}
+
 #[tauri::command]
 pub async fn stop_all_sounds(state: State<'_, AppState>) -> CmdResult<()> {
     state.audio.stop_all();

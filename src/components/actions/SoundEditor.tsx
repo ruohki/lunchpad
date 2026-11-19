@@ -1,5 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { api, type Action, type AudioInfo, type Button as ButtonModel } from "../../lib/api";
 import { useDeviceStore } from "../../store/device";
@@ -15,6 +15,13 @@ import { useVariableSuggestions } from "./VariableFields";
 type SoundAction = Extract<Action, { type: "playSound" }>;
 
 const DEFAULT_DEVICE = "__default__";
+/** How often a preview asks the audio thread where it is. */
+const POLL_MS = 100;
+/** The playhead runs on between answers, but never further than this. */
+const MAX_AHEAD_SECS = 0.25;
+
+/** The last position the audio thread reported for a preview. */
+type PlaybackSample = { secs: number; at: number; moving: boolean };
 
 export function SoundEditor({ action, onChange, button }: { action: SoundAction; onChange: (next: Action) => void; button?: ButtonModel }) {
   const { t } = useTranslation();
@@ -25,7 +32,9 @@ export function SoundEditor({ action, onChange, button }: { action: SoundAction;
   const loadAudioDevices = useMediaStore((s) => s.loadAudioDevices);
   const [info, setInfo] = useState<AudioInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [playing, setPlaying] = useState<number | null>(null);
+  // The preview that is playing and the end of the part it plays (a fraction).
+  const [playing, setPlaying] = useState<{ id: number; end: number } | null>(null);
+  const sample = usePlaybackPosition(playing?.id ?? null, () => setPlaying(null));
   const [name, setName] = useState("");
   // The path comes from a variable (an HTTP request's file, say): no waveform, trim or preview.
   const [manual, setManual] = useState(false);
@@ -72,15 +81,13 @@ export function SoundEditor({ action, onChange, button }: { action: SoundAction;
 
   const preview = async () => {
     if (playing !== null) {
-      await api.stopSound(playing).catch(() => undefined);
+      await api.stopSound(playing.id).catch(() => undefined);
       setPlaying(null);
       return;
     }
     try {
       const id = await api.previewSound({ file: action.file, outputDevice: action.outputDevice, volume: action.volume, start: action.start, end: action.end });
-      setPlaying(id);
-      const secs = info ? info.durationSecs * (action.end - action.start) : 3;
-      window.setTimeout(() => setPlaying((p) => (p === id ? null : p)), secs * 1000 + 200);
+      setPlaying({ id, end: action.end });
     } catch (e) {
       setError(String(e));
     }
@@ -134,6 +141,7 @@ export function SoundEditor({ action, onChange, button }: { action: SoundAction;
           start={action.start}
           end={action.end}
           onChange={(start, end) => onChange({ ...action, start, end })}
+          playhead={playing && { key: playing.id, sample, until: playing.end }}
         />
       )}
 
@@ -172,8 +180,92 @@ export function SoundEditor({ action, onChange, button }: { action: SoundAction;
   );
 }
 
+/**
+ * Asks the audio thread where a playing sound is, every POLL_MS, and calls
+ * `onEnded` once it is over (finished, stopped or failed to start).
+ */
+function usePlaybackPosition(id: number | null, onEnded: () => void) {
+  const sample = useRef<PlaybackSample | null>(null);
+  const ended = useRef(onEnded);
+  ended.current = onEnded;
+
+  useEffect(() => {
+    sample.current = null;
+    if (id === null) return;
+    let cancelled = false;
+    let timer = 0;
+    const poll = async () => {
+      const secs = await api.soundPosition(id).catch(() => null);
+      if (cancelled) return;
+      if (secs === null) {
+        sample.current = null;
+        ended.current();
+        return;
+      }
+      const prev = sample.current;
+      // Until the device takes the first samples the position stays put; only
+      // run ahead once it is seen moving.
+      sample.current = { secs, at: performance.now(), moving: prev !== null && secs > prev.secs };
+      timer = window.setTimeout(() => void poll(), POLL_MS);
+    };
+    void poll();
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [id]);
+
+  return sample;
+}
+
+/** The line that follows a preview across the waveform, moved every frame. */
+function Playhead({ sample, duration, until }: { sample: RefObject<PlaybackSample | null>; duration: number; until: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let frame = 0;
+    const draw = () => {
+      const el = ref.current;
+      const s = sample.current;
+      if (el) {
+        if (!s || duration <= 0) {
+          el.style.opacity = "0";
+        } else {
+          const ahead = s.moving ? Math.min((performance.now() - s.at) / 1000, MAX_AHEAD_SECS) : 0;
+          const f = Math.max(0, Math.min((s.secs + ahead) / duration, until, 1));
+          el.style.left = `${f * 100}%`;
+          el.style.opacity = "1";
+        }
+      }
+      frame = requestAnimationFrame(draw);
+    };
+    frame = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(frame);
+  }, [sample, duration, until]);
+
+  return (
+    <div
+      ref={ref}
+      aria-hidden
+      className="pointer-events-none absolute inset-y-0 w-0.5 -translate-x-1/2 bg-playhead opacity-0 shadow-[0_0_6px_var(--color-playhead)]"
+    />
+  );
+}
+
 /** Waveform with two draggable handles that pick the part of the file to play. */
-function Trimmer({ info, start, end, onChange }: { info: AudioInfo | null; start: number; end: number; onChange: (s: number, e: number) => void }) {
+function Trimmer({
+  info,
+  start,
+  end,
+  onChange,
+  playhead,
+}: {
+  info: AudioInfo | null;
+  start: number;
+  end: number;
+  onChange: (s: number, e: number) => void;
+  playhead: { key: number; sample: RefObject<PlaybackSample | null>; until: number } | null;
+}) {
   const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
   const dragging = useRef<"start" | "end" | null>(null);
@@ -225,6 +317,7 @@ function Trimmer({ info, start, end, onChange }: { info: AudioInfo | null; start
             <span className="absolute top-1 h-3 w-3 -translate-x-[5px] rounded-full bg-stage-100" />
           </div>
         ))}
+        {playhead && info && <Playhead key={playhead.key} sample={playhead.sample} duration={info.durationSecs} until={playhead.until} />}
         {!info && <div className="absolute inset-0 flex items-center justify-center text-xs text-stage-500">{t("sound.analyzing")}</div>}
       </div>
       <div className="flex justify-between font-mono text-[11px] text-stage-400">

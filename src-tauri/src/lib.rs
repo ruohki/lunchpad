@@ -404,6 +404,7 @@ pub fn run() {
             analyze_audio,
             preview_sound,
             stop_sound,
+            sound_position,
             stop_all_sounds,
             set_audio_settings,
             file_name,

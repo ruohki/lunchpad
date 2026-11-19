@@ -1038,6 +1038,8 @@ export const api = {
   previewSound: (request: { file: string; outputDevice: string | null; volume: number; start: number; end: number }) =>
     invoke<number>("preview_sound", { request }),
   stopSound: (id: number) => invoke<void>("stop_sound", { id }),
+  /** Seconds from the start of the file, `null` once the sound is over. */
+  soundPosition: (id: number) => invoke<number | null>("sound_position", { id }),
   stopAllSounds: () => invoke<void>("stop_all_sounds"),
   setAudioSettings: (config: AudioSettings) => invoke<Settings>("set_audio_settings", { config }),
   fileName: (path: string) => invoke<string>("file_name", { path }),
